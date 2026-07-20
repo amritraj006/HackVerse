@@ -25,6 +25,10 @@ const teamSchema = new mongoose.Schema({
     unique: true,
     required: true,
   },
+  logo: {
+    type: String,
+    default: '',
+  },
 }, {
   timestamps: true,
 });

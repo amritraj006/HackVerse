@@ -40,6 +40,7 @@ const Hackathons = () => {
   const [maxTeamSize, setMaxTeamSize] = useState(4);
   const [selectedJudges, setSelectedJudges] = useState([]);
   const [formLoading, setFormLoading] = useState(false);
+  const [bannerImage, setBannerImage] = useState('');
 
   // Fetch hackathons
   const fetchHackathons = async () => {
@@ -135,6 +136,7 @@ const Hackathons = () => {
         minTeamSize: parseInt(minTeamSize),
         maxTeamSize: parseInt(maxTeamSize),
         judges: selectedJudges,
+        bannerImage,
       });
 
       showToast('Hackathon event created successfully!', 'success');
@@ -148,10 +150,16 @@ const Hackathons = () => {
       setEndDate('');
       setRegistrationDeadline('');
       setSelectedJudges([]);
+      setBannerImage('');
       // Refresh list
       fetchHackathons();
     } catch (err) {
-      showToast(err.message || 'Failed to create hackathon', 'error');
+      // Surface the first field-level validation message from the backend if available
+      const firstError = err.errors?.[0];
+      const message = firstError
+        ? `${firstError.field ? firstError.field + ': ' : ''}${firstError.message}`
+        : err.message || 'Failed to create hackathon';
+      showToast(message, 'error');
     } finally {
       setFormLoading(false);
     }
@@ -306,6 +314,46 @@ const Hackathons = () => {
             placeholder="Stanford AI Sprint 2026"
             required
           />
+
+          <div className="space-y-1">
+            <label className="block text-xs font-semibold text-gray-600">Event Banner Image</label>
+            <div className="flex flex-col gap-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  
+                  const formData = new FormData();
+                  formData.append('image', file);
+                  
+                  setFormLoading(true);
+                  try {
+                    const res = await api.post('/upload?type=hackathon', formData, {
+                      headers: {
+                        'Content-Type': 'multipart/form-data'
+                      }
+                    });
+                    setBannerImage(res.data.data.url);
+                    showToast('Banner uploaded successfully!', 'success');
+                  } catch (err) {
+                    showToast(err.message || 'Image upload failed', 'error');
+                  } finally {
+                    setFormLoading(false);
+                  }
+                }}
+                className="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
+              />
+              {bannerImage && (
+                <img
+                  src={bannerImage}
+                  alt="Banner Preview"
+                  className="w-full h-32 object-cover rounded border border-gray-250 mt-1"
+                />
+              )}
+            </div>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input

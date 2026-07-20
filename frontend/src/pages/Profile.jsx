@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Button, Input } from '../components/common/UI';
+import api from '../services/api';
 
 const Profile = () => {
   const { user, updateProfile } = useAuth();
@@ -84,8 +85,42 @@ const Profile = () => {
           className="opacity-75"
         />
 
+        <div className="space-y-1">
+          <label className="block text-xs font-semibold text-gray-600">Profile Image</label>
+          <div className="flex gap-2">
+            <input
+              type="file"
+              accept="image/*"
+              id="avatarFile"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                setLoading(true);
+                try {
+                  const res = await api.post('/upload?type=profile', formData, {
+                    headers: {
+                      'Content-Type': 'multipart/form-data'
+                    }
+                  });
+                  setProfileImage(res.data.data.url);
+                  showToast('Avatar uploaded successfully!', 'success');
+                } catch (err) {
+                  showToast(err.message || 'Image upload failed', 'error');
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
+            />
+          </div>
+        </div>
+
         <Input
-          label="Profile Image URL"
+          label="Profile Image URL (Or upload above)"
           id="profileImage"
           value={profileImage}
           onChange={(e) => setProfileImage(e.target.value)}

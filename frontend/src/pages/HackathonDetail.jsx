@@ -38,6 +38,7 @@ const HackathonDetail = () => {
   // Form inputs
   const [teamName, setTeamName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
+  const [teamLogo, setTeamLogo] = useState('');
   
   // Submission form inputs
   const [projectName, setProjectName] = useState('');
@@ -106,10 +107,11 @@ const HackathonDetail = () => {
 
     setModalLoading(true);
     try {
-      await api.post('/teams', { name: teamName, hackathon: id });
+      await api.post('/teams', { name: teamName, hackathon: id, logo: teamLogo });
       showToast(`Team "${teamName}" created successfully!`, 'success');
       setIsTeamModalOpen(false);
       setTeamName('');
+      setTeamLogo('');
       fetchData();
     } catch (err) {
       showToast(err.message || 'Failed to create team', 'error');
@@ -475,9 +477,18 @@ const HackathonDetail = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="space-y-1">
-                    <span className="text-[10px] text-gray-400 uppercase font-semibold">Active Team</span>
-                    <span className="text-sm font-bold text-gray-800 block">{team.name}</span>
+                  <div className="flex items-center gap-3">
+                    {team.logo ? (
+                      <img src={team.logo} alt={team.name} className="w-10 h-10 rounded-lg object-cover border border-gray-200" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center text-gray-400 border border-gray-200 font-bold uppercase text-sm">
+                        {team.name.charAt(0)}
+                      </div>
+                    )}
+                    <div>
+                      <span className="text-[10px] text-gray-400 uppercase font-semibold block leading-none">Active Team</span>
+                      <span className="text-sm font-bold text-gray-800 block mt-1">{team.name}</span>
+                    </div>
                   </div>
 
                   <div className="bg-gray-50 border border-gray-150 p-3 rounded space-y-1.5">
@@ -524,6 +535,46 @@ const HackathonDetail = () => {
             placeholder="Syntax Errors"
             required
           />
+
+          <div className="space-y-1">
+            <label className="block text-xs font-semibold text-gray-600">Team Logo (Optional)</label>
+            <div className="flex flex-col gap-2">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  
+                  const formData = new FormData();
+                  formData.append('image', file);
+                  
+                  setModalLoading(true);
+                  try {
+                    const res = await api.post('/upload?type=team', formData, {
+                      headers: {
+                        'Content-Type': 'multipart/form-data'
+                      }
+                    });
+                    setTeamLogo(res.data.data.url);
+                    showToast('Team logo uploaded successfully!', 'success');
+                  } catch (err) {
+                    showToast(err.message || 'Logo upload failed', 'error');
+                  } finally {
+                    setModalLoading(false);
+                  }
+                }}
+                className="text-xs text-gray-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100 cursor-pointer"
+              />
+              {teamLogo && (
+                <img
+                  src={teamLogo}
+                  alt="Team Logo Preview"
+                  className="w-16 h-16 object-cover rounded-lg border border-gray-200 mt-1"
+                />
+              )}
+            </div>
+          </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button onClick={() => setIsTeamModalOpen(false)} variant="secondary">
               Cancel

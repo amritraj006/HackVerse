@@ -8,7 +8,7 @@ import {
   Users,
   Trophy,
   ClipboardList,
-  FolderCode,
+  FileCode,
   ArrowRight,
   TrendingUp,
   PlusCircle,
@@ -113,7 +113,7 @@ const Dashboard = () => {
               <h3 className="text-lg font-bold text-gray-800 mt-1">{stats?.totalSubmissions || 0}</h3>
             </div>
             <div className="p-3 bg-amber-50 rounded-full text-amber-600">
-              <FolderCode size={20} />
+              <FileCode size={20} />
             </div>
           </div>
         </div>
@@ -256,7 +256,7 @@ const Dashboard = () => {
               <h3 className="text-lg font-bold text-gray-800 mt-1">{stats?.submissionsCount || 0}</h3>
             </div>
             <div className="p-3 bg-amber-50 rounded-full text-amber-600">
-              <FolderCode size={20} />
+              <FileCode size={20} />
             </div>
           </div>
         </div>
@@ -436,7 +436,7 @@ const Dashboard = () => {
               <h3 className="text-lg font-bold text-emerald-600 mt-1">{stats?.completedReviewsCount || 0}</h3>
             </div>
             <div className="p-3 bg-emerald-50 rounded-full text-emerald-600">
-              <FolderCode size={20} />
+              <FileCode size={20} />
             </div>
           </div>
         </div>

@@ -9,7 +9,7 @@ const generateInviteCode = () => {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 };
 
-const createTeam = async (leaderId, { name, hackathon }) => {
+const createTeam = async (leaderId, { name, hackathon, logo }) => {
   // 1. Verify hackathon exists
   const hack = await Hackathon.findById(hackathon);
   if (!hack) {
@@ -47,6 +47,7 @@ const createTeam = async (leaderId, { name, hackathon }) => {
     leader: leaderId,
     members: [leaderId], // Leader is counted as a member
     inviteCode,
+    logo: logo || '',
   });
 
   // 6. Ensure Registration exists and link to team

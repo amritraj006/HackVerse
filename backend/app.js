@@ -14,6 +14,7 @@ const registrationRoutes = require('./routes/registration.routes');
 const submissionRoutes = require('./routes/submission.routes');
 const reviewRoutes = require('./routes/review.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
+const uploadRoutes = require('./routes/upload.routes');
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/api/registrations', registrationRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Catch-all 404 route
 app.use((req, res, next) => {
