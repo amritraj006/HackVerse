@@ -118,35 +118,51 @@ const DashboardLayout = () => {
 
           <div className="flex items-center gap-4">
             {user && (
-              <div className="flex items-center gap-3">
-                <div className="hidden sm:flex flex-col text-right">
-                  <span className="text-xs font-semibold text-gray-800">{user.name}</span>
-                  <span className="text-[10px] text-gray-400 capitalize">{user.role}</span>
-                </div>
-                <Badge variant={roleColors[user.role] || 'gray'}>
-                  {user.role}
-                </Badge>
-                {user.profileImage ? (
-                  <img
-                    src={user.profileImage}
-                    alt={user.name}
-                    className="w-8 h-8 rounded-full border border-gray-200 object-cover"
-                  />
-                ) : (
-                  <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold capitalize">
-                    {user.name.charAt(0)}
+              <div className="relative group py-2">
+                <div className="flex items-center gap-3 cursor-pointer">
+                  <div className="hidden sm:flex flex-col text-right">
+                    <span className="text-xs font-semibold text-gray-800">{user.name}</span>
+                    <span className="text-[10px] text-gray-400 capitalize">{user.role}</span>
                   </div>
-                )}
+                  <Badge variant={roleColors[user.role] || 'gray'}>
+                    {user.role}
+                  </Badge>
+                  {user.profileImage ? (
+                    <img
+                      src={user.profileImage}
+                      alt={user.name}
+                      className="w-8 h-8 rounded-full border border-gray-200 object-cover"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-xs font-bold capitalize">
+                      {user.name.charAt(0)}
+                    </div>
+                  )}
+                </div>
+
+                {/* Dropdown Menu on Hover */}
+                <div className="absolute right-0 top-full mt-1 w-44 bg-white border border-gray-200 rounded shadow-lg py-1.5 hidden group-hover:block z-50">
+                  <div className="px-3 py-1.5 border-b border-gray-100 mb-1">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Account</p>
+                    <p className="text-xs font-semibold text-gray-700 truncate">{user.email}</p>
+                  </div>
+                  <Link
+                    to="/profile"
+                    className="flex items-center gap-2 px-3 py-1.5 text-xs text-gray-700 hover:bg-gray-100 font-medium transition-colors"
+                  >
+                    <User size={14} />
+                    <span>My Profile</span>
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-50 font-medium transition-colors text-left"
+                  >
+                    <LogOut size={14} />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
               </div>
             )}
-            <div className="w-px h-6 bg-gray-200"></div>
-            <button
-              onClick={handleLogout}
-              className="text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
-              title="Sign Out"
-            >
-              <LogOut size={18} />
-            </button>
           </div>
         </div>
       </header>
@@ -170,15 +186,6 @@ const DashboardLayout = () => {
             ))}
           </div>
           
-          <div className="pt-6 border-t border-gray-100">
-            <NavLink
-              to="/profile"
-              className={({ isActive }) => (isActive ? activeLinkClass : inactiveLinkClass)}
-            >
-              <User size={16} />
-              <span>My Profile</span>
-            </NavLink>
-          </div>
         </aside>
 
         {/* Left Sidebar (Mobile Drawer) */}
@@ -205,16 +212,6 @@ const DashboardLayout = () => {
                     <span>{link.label}</span>
                   </NavLink>
                 ))}
-              </div>
-              <div className="pt-6 border-t border-gray-100">
-                <NavLink
-                  to="/profile"
-                  onClick={() => setSidebarOpen(false)}
-                  className={({ isActive }) => (isActive ? activeLinkClass : inactiveLinkClass)}
-                >
-                  <User size={16} />
-                  <span>My Profile</span>
-                </NavLink>
               </div>
             </aside>
           </div>
