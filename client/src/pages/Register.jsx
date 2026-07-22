@@ -1,20 +1,78 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Input } from '../components/Input';
+import { Select } from '../components/Select';
 import { Button } from '../components/Button';
+import { Alert } from '../components/Alert';
 import { useAuth } from '../hooks/useAuth';
-import { User, Mail, Lock } from 'lucide-react';
+import { User, Mail, Lock, UserCheck, UserPlus } from 'lucide-react';
+
+const ROLE_OPTIONS = [
+  { value: 'participant', label: 'Participant (Build & Compete)' },
+  { value: 'organizer', label: 'Organizer (Host Hackathons)' },
+  { value: 'judge', label: 'Judge (Evaluate Projects)' },
+];
 
 export const Register = () => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const { login } = useAuth();
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'participant',
+  });
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { signup } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({ ...prev, [id]: value }));
+    if (errors[id]) {
+      setErrors((prev) => ({ ...prev, [id]: '' }));
+    }
+    if (formError) setFormError('');
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.name.trim()) {
+      newErrors.name = 'Full name is required';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email address is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters long';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    login({ name: name || 'New Builder', email: email || 'builder@hackverse.io', role: 'participant' }, 'sample_jwt');
-    navigate('/dashboard');
+    if (!validate()) return;
+
+    setIsSubmitting(true);
+    setFormError('');
+
+    const result = await signup(formData);
+    setIsSubmitting(false);
+
+    if (result.success) {
+      navigate('/dashboard', { replace: true });
+    } else {
+      setFormError(result.error);
+    }
   };
 
   return (
@@ -24,54 +82,73 @@ export const Register = () => {
         <p className="text-xs text-slate-500">Join the developer community to organize and participate</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3.5 pt-2">
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-700">Full Name</label>
-          <div className="relative">
-            <User className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              required
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="John Doe"
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-            />
-          </div>
-        </div>
+      <Alert type="error" message={formError} onClose={() => setFormError('')} />
 
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-700">Email Address</label>
-          <div className="relative">
-            <Mail className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@company.com"
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-            />
-          </div>
-        </div>
+      <form onSubmit={handleSubmit} className="space-y-3 pt-1">
+        <Input
+          label="Full Name"
+          id="name"
+          type="text"
+          placeholder="John Doe"
+          value={formData.name}
+          onChange={handleChange}
+          error={errors.name}
+          icon={User}
+          required
+        />
 
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-700">Password</label>
-          <div className="relative">
-            <Lock className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 6 characters"
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-            />
-          </div>
-        </div>
+        <Input
+          label="Email Address"
+          id="email"
+          type="email"
+          placeholder="name@company.com"
+          value={formData.email}
+          onChange={handleChange}
+          error={errors.email}
+          icon={Mail}
+          required
+        />
 
-        <Button type="submit" variant="primary" size="md" className="w-full mt-2 font-semibold">
-          Create Account
+        <Input
+          label="Password"
+          id="password"
+          type="password"
+          placeholder="At least 6 characters"
+          value={formData.password}
+          onChange={handleChange}
+          error={errors.password}
+          icon={Lock}
+          required
+        />
+
+        <Select
+          label="Select Account Role"
+          id="role"
+          options={ROLE_OPTIONS}
+          value={formData.role}
+          onChange={handleChange}
+          error={errors.role}
+          icon={UserCheck}
+          required
+        />
+
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          className="w-full mt-2 font-semibold"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              Creating Account...
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5">
+              <UserPlus className="w-3.5 h-3.5" /> Create Account
+            </span>
+          )}
         </Button>
       </form>
 

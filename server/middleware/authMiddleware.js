@@ -1,10 +1,11 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 const { errorResponse } = require('../utils/apiResponse');
 
 /**
- * JWT Authentication Middleware Placeholder
+ * JWT Authentication Middleware
  */
-const protect = (req, res, next) => {
+const protect = async (req, res, next) => {
   let token;
 
   if (
@@ -15,7 +16,7 @@ const protect = (req, res, next) => {
   }
 
   if (!token) {
-    return errorResponse(res, 401, 'Access denied. No token provided.');
+    return errorResponse(res, 401, 'Access denied. Authorization token missing.');
   }
 
   try {
@@ -23,7 +24,20 @@ const protect = (req, res, next) => {
       token,
       process.env.JWT_SECRET || 'hackverse_super_secret_dev_key_987654321'
     );
-    req.user = decoded;
+
+    // Verify user still exists in database
+    const user = await User.findById(decoded.id).select('-password');
+    if (!user) {
+      return errorResponse(res, 401, 'User belonging to this token no longer exists.');
+    }
+
+    req.user = {
+      id: user._id.toString(),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    };
+
     next();
   } catch (error) {
     return errorResponse(res, 401, 'Invalid or expired authentication token.');
@@ -31,7 +45,7 @@ const protect = (req, res, next) => {
 };
 
 /**
- * Role-Based Access Control Placeholder
+ * Role-Based Access Control Middleware
  */
 const authorize = (...roles) => {
   return (req, res, next) => {
@@ -39,7 +53,7 @@ const authorize = (...roles) => {
       return errorResponse(
         res,
         403,
-        `User role '${req.user ? req.user.role : 'guest'}' is not authorized to access this resource.`
+        `Role '${req.user ? req.user.role : 'guest'}' is not authorized to perform this action.`
       );
     }
     next();

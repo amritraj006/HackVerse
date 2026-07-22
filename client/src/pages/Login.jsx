@@ -1,20 +1,65 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Input } from '../components/Input';
 import { Button } from '../components/Button';
+import { Alert } from '../components/Alert';
 import { useAuth } from '../hooks/useAuth';
-import { Mail, Lock } from 'lucide-react';
+import { Mail, Lock, LogIn } from 'lucide-react';
 
 export const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
+  const [errors, setErrors] = useState({});
+  const [formError, setFormError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || '/dashboard';
 
-  const handleSubmit = (e) => {
+  const handleChange = (e) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({ ...prev, [id]: value }));
+    if (errors[id]) {
+      setErrors((prev) => ({ ...prev, [id]: '' }));
+    }
+    if (formError) setFormError('');
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email address is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Simulate login
-    login({ name: 'Developer User', email: email || 'user@hackverse.io', role: 'participant' }, 'sample_jwt');
-    navigate('/dashboard');
+    if (!validate()) return;
+
+    setIsSubmitting(true);
+    setFormError('');
+
+    const result = await login(formData);
+    setIsSubmitting(false);
+
+    if (result.success) {
+      navigate(from, { replace: true });
+    } else {
+      setFormError(result.error);
+    }
   };
 
   return (
@@ -24,42 +69,52 @@ export const Login = () => {
         <p className="text-xs text-slate-500">Access your hackathons, submissions, and developer profile</p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-3.5 pt-2">
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-700">Email Address</label>
-          <div className="relative">
-            <Mail className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@company.com"
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-            />
-          </div>
-        </div>
+      <Alert type="error" message={formError} onClose={() => setFormError('')} />
+
+      <form onSubmit={handleSubmit} className="space-y-3.5 pt-1">
+        <Input
+          label="Email Address"
+          id="email"
+          type="email"
+          placeholder="name@company.com"
+          value={formData.email}
+          onChange={handleChange}
+          error={errors.email}
+          icon={Mail}
+          required
+        />
 
         <div className="space-y-1">
-          <div className="flex justify-between items-center">
-            <label className="text-xs font-semibold text-slate-700">Password</label>
-            <a href="#forgot" className="text-[11px] text-indigo-600 hover:underline">Forgot password?</a>
-          </div>
-          <div className="relative">
-            <Lock className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-            />
-          </div>
+          <Input
+            label="Password"
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            value={formData.password}
+            onChange={handleChange}
+            error={errors.password}
+            icon={Lock}
+            required
+          />
         </div>
 
-        <Button type="submit" variant="primary" size="md" className="w-full mt-2 font-semibold">
-          Sign In
+        <Button
+          type="submit"
+          variant="primary"
+          size="md"
+          className="w-full mt-2 font-semibold"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              Signing In...
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1.5">
+              <LogIn className="w-3.5 h-3.5" /> Sign In
+            </span>
+          )}
         </Button>
       </form>
 
