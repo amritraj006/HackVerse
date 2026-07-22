@@ -190,3 +190,4 @@ To run the full-stack system locally:
    npm run dev
    ```
    (Client boots on `http://localhost:5173`)
+# HackVerse
