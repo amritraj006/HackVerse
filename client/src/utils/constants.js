@@ -6,6 +6,7 @@ import {
   User,
   Shield,
   HelpCircle,
+  ClipboardList,
 } from 'lucide-react';
 
 export const ALL_NAV_ITEMS = [
@@ -14,6 +15,7 @@ export const ALL_NAV_ITEMS = [
   { name: 'Hackathons', path: '/hackathons', icon: Trophy, roles: ['participant', 'organizer', 'judge', 'admin'] },
   { name: 'Projects', path: '/projects', icon: FolderGit2, roles: ['participant', 'organizer', 'judge', 'admin'] },
   { name: 'Teams', path: '/teams', icon: Users, roles: ['participant'] },
+  { name: 'My Registrations', path: '/registrations', icon: ClipboardList, roles: ['participant'] },
   { name: 'My Events', path: '/dashboard', icon: Trophy, roles: ['organizer'] },
   { name: 'Admin Console', path: '/admin', icon: Shield, roles: ['admin'] },
 ];

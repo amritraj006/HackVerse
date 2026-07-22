@@ -18,6 +18,7 @@ import { Register } from './pages/Register';
 import { Unauthorized } from './pages/Unauthorized';
 import { NotFound } from './pages/NotFound';
 import { AdminConsole } from './pages/admin/AdminConsole';
+import { RegistrationHistory } from './pages/RegistrationHistory';
 
 function App() {
   return (
@@ -37,6 +38,7 @@ function App() {
               {/* Protected Routes (Requires Login) */}
               <Route element={<ProtectedRoute />}>
                 <Route path="dashboard" element={<Dashboard />} />
+                <Route path="registrations" element={<RegistrationHistory />} />
                 <Route path="profile" element={<Profile />} />
                 <Route path="teams" element={<Teams />} />
               </Route>
