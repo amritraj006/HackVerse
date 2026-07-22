@@ -7,26 +7,15 @@ const submissionSchema = new mongoose.Schema(
       ref: 'Hackathon',
       required: true,
     },
-    title: {
-      type: String,
-      required: [true, 'Project title is required'],
-      trim: true,
+    team: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Team',
+      default: null,
     },
-    tagline: {
-      type: String,
-      default: '',
-    },
-    description: {
-      type: String,
+    submittedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
       required: true,
-    },
-    repositoryUrl: {
-      type: String,
-      default: '',
-    },
-    demoUrl: {
-      type: String,
-      default: '',
     },
     teamMembers: [
       {
@@ -34,19 +23,81 @@ const submissionSchema = new mongoose.Schema(
         ref: 'User',
       },
     ],
-    submittedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
+    title: {
+      type: String,
+      required: [true, 'Project title is required'],
+      trim: true,
+    },
+    tagline: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    description: {
+      type: String,
+      required: [true, 'Project description is required'],
+    },
+    repositoryUrl: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    demoUrl: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    videoUrl: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    presentationFile: {
+      type: String,
+      default: '',
+    },
+    screenshots: [
+      {
+        type: String,
+      },
+    ],
+    status: {
+      type: String,
+      enum: ['draft', 'submitted'],
+      default: 'submitted',
     },
     score: {
       type: Number,
       default: 0,
     },
+    evaluations: [
+      {
+        judge: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        score: {
+          type: Number,
+          required: true,
+        },
+        feedback: {
+          type: String,
+          default: '',
+        },
+        evaluatedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,
   }
 );
+
+// Index for efficient hackathon & participant queries
+submissionSchema.index({ hackathon: 1, submittedBy: 1 });
+submissionSchema.index({ hackathon: 1, team: 1 });
 
 module.exports = mongoose.model('Submission', submissionSchema);

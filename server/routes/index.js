@@ -7,6 +7,7 @@ const userRoutes = require('./userRoutes');
 const adminRoutes = require('./adminRoutes');
 const registrationRoutes = require('./registrationRoutes');
 const teamRoutes = require('./teamRoutes');
+const submissionRoutes = require('./submissionRoutes');
 
 // API Health Check
 router.get('/health', (req, res) => {
@@ -24,5 +25,6 @@ router.use('/users', userRoutes);
 router.use('/admin', adminRoutes);
 router.use('/registrations', registrationRoutes);
 router.use('/teams', teamRoutes);
+router.use('/submissions', submissionRoutes);
 
 module.exports = router;

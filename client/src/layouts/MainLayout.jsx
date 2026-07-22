@@ -10,7 +10,7 @@ export const MainLayout = () => {
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
       <Navbar onToggleSidebar={() => setSidebarOpen((prev) => !prev)} />
-      <div className="flex-1 flex w-full max-w-7xl mx-auto">
+      <div className="flex-1 flex w-full">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <main className="flex-1 p-4 md:p-6 min-w-0 flex flex-col justify-between">
           <div className="animate-fade-in">
