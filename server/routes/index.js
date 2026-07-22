@@ -6,6 +6,7 @@ const hackathonRoutes = require('./hackathonRoutes');
 const userRoutes = require('./userRoutes');
 const adminRoutes = require('./adminRoutes');
 const registrationRoutes = require('./registrationRoutes');
+const teamRoutes = require('./teamRoutes');
 
 // API Health Check
 router.get('/health', (req, res) => {
@@ -22,5 +23,6 @@ router.use('/hackathons', hackathonRoutes);
 router.use('/users', userRoutes);
 router.use('/admin', adminRoutes);
 router.use('/registrations', registrationRoutes);
+router.use('/teams', teamRoutes);
 
 module.exports = router;
