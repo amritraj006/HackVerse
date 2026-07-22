@@ -3,19 +3,24 @@ import {
   Trophy,
   FolderGit2,
   Users,
-  Settings,
+  User,
+  Scale,
+  Shield,
   HelpCircle,
 } from 'lucide-react';
 
-export const NAV_ITEMS = [
-  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-  { name: 'Hackathons', path: '/hackathons', icon: Trophy },
-  { name: 'Projects', path: '/projects', icon: FolderGit2 },
-  { name: 'Teams', path: '/teams', icon: Users },
+export const ALL_NAV_ITEMS = [
+  { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['participant', 'organizer', 'judge', 'admin'] },
+  { name: 'Profile', path: '/profile', icon: User, roles: ['participant', 'organizer', 'judge', 'admin'] },
+  { name: 'Hackathons', path: '/hackathons', icon: Trophy, roles: ['participant', 'organizer', 'judge', 'admin'] },
+  { name: 'Projects', path: '/projects', icon: FolderGit2, roles: ['participant', 'organizer', 'judge', 'admin'] },
+  { name: 'Teams', path: '/teams', icon: Users, roles: ['participant'] },
+  { name: 'Host Hackathon', path: '/hackathons/new', icon: Trophy, roles: ['organizer', 'admin'] },
+  { name: 'Evaluations', path: '/evaluations', icon: Scale, roles: ['judge', 'admin'] },
+  { name: 'Admin Console', path: '/admin', icon: Shield, roles: ['admin'] },
 ];
 
 export const SECONDARY_NAV_ITEMS = [
-  { name: 'Settings', path: '/settings', icon: Settings },
   { name: 'Help & Docs', path: '/help', icon: HelpCircle },
 ];
 

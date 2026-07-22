@@ -1,7 +1,16 @@
 import { NavLink } from 'react-router-dom';
-import { NAV_ITEMS, SECONDARY_NAV_ITEMS } from '../utils/constants';
+import { ALL_NAV_ITEMS, SECONDARY_NAV_ITEMS } from '../utils/constants';
+import { useAuth } from '../hooks/useAuth';
 
 export const Sidebar = ({ isOpen, onClose }) => {
+  const { user, isAuthenticated } = useAuth();
+  const userRole = user?.role || 'participant';
+
+  // Filter items matching active role
+  const navItems = ALL_NAV_ITEMS.filter((item) =>
+    item.roles.includes(userRole)
+  );
+
   return (
     <>
       {/* Mobile backdrop overlay */}
@@ -22,10 +31,10 @@ export const Sidebar = ({ isOpen, onClose }) => {
           {/* Section: Main Menu */}
           <div>
             <p className="px-2 pb-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              Main Menu
+              Navigation
             </p>
             <nav className="space-y-0.5">
-              {NAV_ITEMS.map((item) => {
+              {navItems.map((item) => {
                 const Icon = item.icon;
                 return (
                   <NavLink
@@ -78,13 +87,17 @@ export const Sidebar = ({ isOpen, onClose }) => {
           </div>
         </div>
 
-        {/* Sidebar Footer info */}
+        {/* Sidebar Footer info with active Role badge */}
         <div className="pt-3 border-t border-slate-100 px-2">
           <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/60 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0"></span>
             <div className="min-w-0 flex-1">
-              <p className="text-[11px] font-semibold text-slate-800 truncate">Platform Active</p>
-              <p className="text-[10px] text-slate-500 truncate">v1.0.0 MVC Standard</p>
+              <p className="text-[11px] font-semibold text-slate-800 truncate">
+                {isAuthenticated ? user?.name || 'User' : 'Guest Mode'}
+              </p>
+              <p className="text-[10px] font-semibold uppercase text-indigo-600 truncate">
+                Role: {userRole}
+              </p>
             </div>
           </div>
         </div>

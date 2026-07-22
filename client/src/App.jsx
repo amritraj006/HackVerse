@@ -7,6 +7,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 
 import { Home } from './pages/Home';
 import { Dashboard } from './pages/Dashboard';
+import { Profile } from './pages/Profile';
 import { Hackathons } from './pages/Hackathons';
 import { HackathonDetail } from './pages/HackathonDetail';
 import { Projects } from './pages/Projects';
@@ -34,6 +35,7 @@ function App() {
               {/* Protected Routes (Requires Login) */}
               <Route element={<ProtectedRoute />}>
                 <Route path="dashboard" element={<Dashboard />} />
+                <Route path="profile" element={<Profile />} />
                 <Route path="teams" element={<Teams />} />
               </Route>
 
