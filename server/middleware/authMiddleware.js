@@ -31,6 +31,10 @@ const protect = async (req, res, next) => {
       return errorResponse(res, 401, 'User belonging to this token no longer exists.');
     }
 
+    if (user.isBlocked) {
+      return errorResponse(res, 403, 'Your account has been blocked by an administrator. Access denied.');
+    }
+
     req.user = {
       id: user._id.toString(),
       name: user.name,

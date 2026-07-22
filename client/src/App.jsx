@@ -16,6 +16,7 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Unauthorized } from './pages/Unauthorized';
 import { NotFound } from './pages/NotFound';
+import { AdminConsole } from './pages/admin/AdminConsole';
 
 function App() {
   return (
@@ -50,6 +51,11 @@ function App() {
                     </div>
                   }
                 />
+              </Route>
+
+              {/* Admin Only Exclusive Routes */}
+              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                <Route path="admin" element={<AdminConsole />} />
               </Route>
 
               {/* Fallback 404 Route */}
