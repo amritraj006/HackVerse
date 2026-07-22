@@ -10,6 +10,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Profile } from './pages/Profile';
 import { Hackathons } from './pages/Hackathons';
 import { HackathonDetail } from './pages/HackathonDetail';
+import { ManageHackathon } from './pages/organizer/ManageHackathon';
 import { Projects } from './pages/Projects';
 import { Teams } from './pages/Teams';
 import { Login } from './pages/Login';
@@ -42,15 +43,8 @@ function App() {
 
               {/* Organizer / Admin Only Protected Routes */}
               <Route element={<ProtectedRoute allowedRoles={['organizer', 'admin']} />}>
-                <Route
-                  path="hackathons/new"
-                  element={
-                    <div className="p-4 bg-white rounded-lg border border-slate-200 text-xs">
-                      <h2 className="font-bold text-sm text-slate-900 mb-1">Host New Hackathon</h2>
-                      <p className="text-slate-500">Organizer & Admin exclusive route protected by Role-Based Authorization.</p>
-                    </div>
-                  }
-                />
+                <Route path="hackathons/:id/manage" element={<ManageHackathon />} />
+                <Route path="hackathons/new" element={<Dashboard />} />
               </Route>
 
               {/* Admin Only Exclusive Routes */}

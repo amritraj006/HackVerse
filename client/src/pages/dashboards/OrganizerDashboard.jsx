@@ -1,10 +1,75 @@
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '../../components/Card';
 import { StatCard } from '../../components/StatCard';
 import { Button } from '../../components/Button';
-import { Trophy, Users, FolderGit2, Plus, Settings, CheckCircle2, Clock } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Alert } from '../../components/Alert';
+import { HackathonForm } from '../../components/HackathonForm';
+import { hackathonService } from '../../services/hackathonService';
+import { formatDate } from '../../utils/helpers';
+import { Trophy, Users, FolderGit2, Plus, Settings, Calendar, RefreshCw } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 export const OrganizerDashboard = ({ user }) => {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [alert, setAlert] = useState({ type: 'info', message: '' });
+
+  // Create Modal state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+
+  const loadMyEvents = useCallback(async () => {
+    try {
+      const res = await hackathonService.getMyEvents();
+      if (res && res.data) {
+        setEvents(res.data);
+      }
+    } catch (err) {
+      console.error(err);
+      setAlert({ type: 'error', message: err.message || 'Failed to load your events.' });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    hackathonService.getMyEvents()
+      .then((res) => {
+        if (isMounted && res && res.data) {
+          setEvents(res.data);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) setAlert({ type: 'error', message: err.message || 'Failed to load events' });
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => { isMounted = false; };
+  }, []);
+
+  const handleCreateSubmit = async (formData) => {
+    setIsSubmitting(true);
+    try {
+      const res = await hackathonService.create(formData);
+      if (res && res.data) {
+        setIsCreateModalOpen(false);
+        setAlert({ type: 'success', message: 'Hackathon event created successfully!' });
+        loadMyEvents();
+        navigate(`/hackathons/${res.data._id}/manage`);
+      }
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to create hackathon.' });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const activeEventsCount = events.filter((e) => e.status === 'ongoing' || e.status === 'upcoming').length;
+
   return (
     <div className="space-y-5">
       {/* Header Greeting */}
@@ -14,113 +79,116 @@ export const OrganizerDashboard = ({ user }) => {
             Organizer Console — {user?.name || 'Organizer'} 🚀
           </h1>
           <p className="text-xs text-slate-500">
-            Manage your hosted hackathons, monitor participant registrations, and review submissions.
+            Manage your hosted hackathons, monitor participant registrations, assign judges, and publish results.
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link to="/hackathons/new">
-            <Button size="sm" variant="primary">
-              <Plus className="w-3.5 h-3.5" /> Host New Hackathon
-            </Button>
-          </Link>
+          <Button size="sm" variant="outline" onClick={loadMyEvents}>
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh
+          </Button>
+          <Button size="sm" variant="primary" onClick={() => setIsCreateModalOpen(true)}>
+            <Plus className="w-3.5 h-3.5" /> Host New Hackathon
+          </Button>
         </div>
       </div>
+
+      <Alert type={alert.type} message={alert.message} onClose={() => setAlert({ type: 'info', message: '' })} />
 
       {/* Metrics Row */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Hosted Hackathons"
-          value="4"
-          subtitle="2 active, 2 completed"
+          value={loading ? '...' : events.length}
+          subtitle={`${activeEventsCount} active/upcoming`}
           icon={Trophy}
           color="indigo"
         />
         <StatCard
-          title="Total Hackers"
-          value="892"
-          subtitle="+14% this week"
+          title="Managed Judges"
+          value={loading ? '...' : events.reduce((acc, curr) => acc + (curr.assignedJudges?.length || 0), 0)}
+          subtitle="Assigned across events"
           icon={Users}
-          trend={{ value: '14%', label: 'vs last week', positive: true }}
           color="emerald"
         />
         <StatCard
-          title="Projects Received"
-          value="145"
-          subtitle="48 awaiting review"
+          title="Status Overview"
+          value={loading ? '...' : `${activeEventsCount} Active`}
+          subtitle="In-progress competitions"
           icon={FolderGit2}
           color="amber"
         />
         <StatCard
-          title="Total Prize Pool"
-          value="$50,000"
-          subtitle="Across all events"
+          title="Account Status"
+          value="Organizer"
+          subtitle="Full Event Control"
           icon={Trophy}
           color="purple"
         />
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Hosted Events List */}
-        <div className="md:col-span-2 space-y-4">
-          <Card header={<span className="font-semibold text-xs text-slate-800">My Managed Events</span>}>
-            <div className="space-y-3">
-              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      {/* Managed Events Grid */}
+      <Card header={<span className="font-semibold text-xs text-slate-800">My Managed Events</span>}>
+        {loading ? (
+          <div className="py-8 text-center text-xs text-slate-500">
+            Loading your hosted events...
+          </div>
+        ) : events.length === 0 ? (
+          <div className="py-8 text-center space-y-2">
+            <p className="text-xs text-slate-500">You have not hosted any hackathons yet.</p>
+            <Button size="sm" variant="primary" onClick={() => setIsCreateModalOpen(true)}>
+              <Plus className="w-3.5 h-3.5" /> Host Your First Hackathon
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {events.map((item) => (
+              <div
+                key={item._id}
+                className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+              >
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full">
-                      Live Now
+                    <span
+                      className={`px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full border ${
+                        item.status === 'ongoing'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}
+                    >
+                      {item.status}
                     </span>
-                    <h3 className="text-xs font-bold text-slate-900">AI Global Challenge 2026</h3>
+                    <h3 className="text-xs font-bold text-slate-900">{item.title}</h3>
                   </div>
-                  <p className="text-[11px] text-slate-500">412 Participants • 64 Submissions • Ends Aug 15</p>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <Button size="sm" variant="outline">
-                    <Settings className="w-3 h-3" /> Manage
-                  </Button>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-lg bg-slate-50 border border-slate-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 rounded-full">
-                      Draft
+                  <p className="text-[11px] text-slate-500 flex items-center gap-3">
+                    <span className="flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-slate-400" /> Deadline: {formatDate(item.registrationDeadline)}
                     </span>
-                    <h3 className="text-xs font-bold text-slate-900">CyberSecurity Hackfest '26</h3>
-                  </div>
-                  <p className="text-[11px] text-slate-500">Draft Setup • Target Launch Sep 10</p>
+                    <span>•</span>
+                    <span>Judges: {(item.assignedJudges || []).length}</span>
+                    <span>•</span>
+                    <span>Prize: {item.prizePool}</span>
+                  </p>
                 </div>
-                <Button size="sm" variant="secondary">
-                  Publish Event
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Link to={`/hackathons/${item._id}/manage`}>
+                    <Button size="sm" variant="primary">
+                      <Settings className="w-3.5 h-3.5" /> Manage Workspace
+                    </Button>
+                  </Link>
+                </div>
               </div>
-            </div>
-          </Card>
-        </div>
+            ))}
+          </div>
+        )}
+      </Card>
 
-        {/* Action Feed */}
-        <div className="space-y-4">
-          <Card header={<span className="font-semibold text-xs text-slate-800">Organizer Tasks</span>}>
-            <div className="space-y-2 text-xs">
-              <div className="p-2 rounded bg-amber-50 border border-amber-200 text-amber-900 space-y-0.5">
-                <p className="font-semibold flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-amber-600" /> Assign Judges
-                </p>
-                <p className="text-[11px] text-amber-800">3 judges required for AI Challenge evaluation.</p>
-              </div>
-
-              <div className="p-2 rounded bg-emerald-50 border border-emerald-200 text-emerald-900 space-y-0.5">
-                <p className="font-semibold flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Sponsorship Cleared
-                </p>
-                <p className="text-[11px] text-emerald-800">$25,000 prize escrow verified.</p>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
+      {/* Create Hackathon Modal */}
+      <HackathonForm
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateSubmit}
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 };

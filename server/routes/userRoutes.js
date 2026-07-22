@@ -15,8 +15,8 @@ router.get('/profile', protect, getCurrentProfile);
 router.put('/profile', protect, updateProfile);
 router.post('/profile/avatar', protect, upload.single('avatar'), uploadAvatar);
 
-// Admin user management
-router.get('/', protect, authorize('admin'), getUsers);
+// Admin & Organizer: list users (organizers need this for judge assignment)
+router.get('/', protect, authorize('admin', 'organizer'), getUsers);
 
 // Public profile by ID (Keep last to avoid route conflict)
 router.get('/:id', getUserProfile);

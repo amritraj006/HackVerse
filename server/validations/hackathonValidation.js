@@ -14,6 +14,7 @@ const createHackathonValidationRules = [
   body('description').notEmpty().withMessage('Description is required'),
   body('startDate').isISO8601().withMessage('Valid start date is required'),
   body('endDate').isISO8601().withMessage('Valid end date is required'),
+  body('registrationDeadline').isISO8601().withMessage('Valid registration deadline is required'),
   validate,
 ];
 

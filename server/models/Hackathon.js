@@ -54,6 +54,30 @@ const hackathonSchema = new mongoose.Schema(
         type: String,
       },
     ],
+    isRegistrationOpen: {
+      type: Boolean,
+      default: true,
+    },
+    assignedJudges: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    isResultsPublished: {
+      type: Boolean,
+      default: false,
+    },
+    winners: [
+      {
+        rank: Number,
+        submission: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Submission',
+        },
+        prize: String,
+      },
+    ],
   },
   {
     timestamps: true,

@@ -4,7 +4,6 @@ import {
   FolderGit2,
   Users,
   User,
-  Scale,
   Shield,
   HelpCircle,
 } from 'lucide-react';
@@ -15,8 +14,7 @@ export const ALL_NAV_ITEMS = [
   { name: 'Hackathons', path: '/hackathons', icon: Trophy, roles: ['participant', 'organizer', 'judge', 'admin'] },
   { name: 'Projects', path: '/projects', icon: FolderGit2, roles: ['participant', 'organizer', 'judge', 'admin'] },
   { name: 'Teams', path: '/teams', icon: Users, roles: ['participant'] },
-  { name: 'Host Hackathon', path: '/hackathons/new', icon: Trophy, roles: ['organizer', 'admin'] },
-  { name: 'Evaluations', path: '/evaluations', icon: Scale, roles: ['judge', 'admin'] },
+  { name: 'My Events', path: '/dashboard', icon: Trophy, roles: ['organizer'] },
   { name: 'Admin Console', path: '/admin', icon: Shield, roles: ['admin'] },
 ];
 
