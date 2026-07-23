@@ -21,12 +21,12 @@ export const Home = () => {
           </p>
           <div className="flex items-center gap-2 pt-2">
             <Link to="/hackathons">
-              <Button size="sm" className="bg-white text-indigo-900 hover:bg-slate-100 font-semibold border-0">
+              <Button size="sm" className=" text-indigo-900 font-semibold border-0">
                 Explore Hackathons <ArrowRight className="w-3.5 h-3.5" />
               </Button>
             </Link>
             <Link to="/dashboard">
-              <Button size="sm" variant="ghost" className="text-white hover:bg-white/10">
+              <Button size="sm" variant="ghost" className="text-white hover:bg-white/90">
                 View Dashboard
               </Button>
             </Link>
