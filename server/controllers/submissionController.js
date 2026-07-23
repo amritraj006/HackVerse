@@ -62,6 +62,26 @@ const deleteSubmission = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'Submission deleted successfully', result);
 });
 
+/**
+ * @desc    Get submissions assigned to the logged-in judge
+ * @route   GET /api/v1/submissions/assigned
+ * @access  Private (Judge/Admin)
+ */
+const getAssignedSubmissions = asyncHandler(async (req, res) => {
+  const submissions = await submissionService.getAssignedSubmissions(req.user.id, req.user.role);
+  return successResponse(res, 200, 'Assigned submissions retrieved successfully', submissions);
+});
+
+/**
+ * @desc    Submit one judge evaluation for a project
+ * @route   POST /api/v1/submissions/:id/evaluations
+ * @access  Private (Judge/Admin)
+ */
+const submitEvaluation = asyncHandler(async (req, res) => {
+  const submission = await submissionService.submitEvaluation(req.params.id, req.body, req.user);
+  return successResponse(res, 201, 'Evaluation submitted successfully', submission);
+});
+
 module.exports = {
   submitProject,
   getMySubmissions,
@@ -69,4 +89,6 @@ module.exports = {
   getHackathonSubmissions,
   getSubmissionById,
   deleteSubmission,
+  getAssignedSubmissions,
+  submitEvaluation,
 };

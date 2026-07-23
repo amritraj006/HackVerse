@@ -1,6 +1,14 @@
 const Submission = require('../models/Submission');
 const Hackathon = require('../models/Hackathon');
 const Team = require('../models/Team');
+const mongoose = require('mongoose');
+
+const JUDGING_CRITERIA = [
+  { criterion: 'Innovation', maxScore: 10 },
+  { criterion: 'Technical Implementation', maxScore: 10 },
+  { criterion: 'Impact & Usefulness', maxScore: 10 },
+  { criterion: 'Presentation', maxScore: 10 },
+];
 
 class SubmissionService {
   /**
@@ -148,6 +156,111 @@ class SubmissionService {
       .populate('team', 'name')
       .populate('teamMembers', 'name email avatar')
       .sort({ createdAt: -1 });
+  }
+
+  /**
+   * Get the submitted projects from hackathons to which a judge is assigned.
+   */
+  async getAssignedSubmissions(userId, userRole) {
+    const hackathonQuery = userRole === 'admin' ? {} : { assignedJudges: userId };
+    const hackathonIds = await Hackathon.find(hackathonQuery).distinct('_id');
+
+    const submissions = await Submission.find({
+      hackathon: { $in: hackathonIds },
+      status: 'submitted',
+    })
+      .populate('hackathon', 'title status endDate')
+      .populate('submittedBy', 'name email avatar')
+      .populate('team', 'name')
+      .populate('teamMembers', 'name email avatar')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return {
+      criteria: JUDGING_CRITERIA,
+      submissions: submissions.map((submission) => ({
+        ...submission,
+        myEvaluation: submission.evaluations?.find((evaluation) => evaluation.judge?.toString() === userId.toString()) || null,
+      })),
+    };
+  }
+
+  /**
+   * Save an evaluation once. The conditional update makes duplicate submissions
+   * impossible even when two requests are sent at the same time.
+   */
+  async submitEvaluation(submissionId, data, user) {
+    const submission = await Submission.findById(submissionId).select('hackathon');
+    if (!submission) {
+      const error = new Error('Submission not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const isAdmin = user.role === 'admin';
+    const isAssigned = isAdmin || await Hackathon.exists({ _id: submission.hackathon, assignedJudges: user.id });
+    if (!isAssigned) {
+      const error = new Error('You are not assigned to evaluate this project');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const suppliedScores = data.criteriaScores;
+    if (!Array.isArray(suppliedScores) || suppliedScores.length !== JUDGING_CRITERIA.length) {
+      const error = new Error('A score is required for every judging criterion');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const scoreByCriterion = new Map(suppliedScores.map((item) => [item.criterion, Number(item.score)]));
+    const criteriaScores = JUDGING_CRITERIA.map(({ criterion, maxScore }) => {
+      const score = scoreByCriterion.get(criterion);
+      if (!Number.isFinite(score) || score < 0 || score > maxScore) {
+        const error = new Error(`${criterion} must be a number between 0 and ${maxScore}`);
+        error.statusCode = 400;
+        throw error;
+      }
+      return { criterion, score, maxScore };
+    });
+    const totalScore = criteriaScores.reduce((total, item) => total + item.score, 0);
+    const judgeId = new mongoose.Types.ObjectId(user.id);
+    const feedback = typeof data.feedback === 'string' ? data.feedback.trim() : '';
+    if (!feedback) {
+      const error = new Error('Feedback is required');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // First stage appends only when no review exists; second stage recalculates
+    // the public score as the average of all submitted judge totals.
+    const updated = await Submission.findOneAndUpdate(
+      { _id: submissionId, 'evaluations.judge': { $ne: judgeId } },
+      [
+        {
+          $set: {
+            evaluations: {
+              $concatArrays: [
+                '$evaluations',
+                [{ judge: judgeId, score: totalScore, criteriaScores, feedback, evaluatedAt: new Date() }],
+              ],
+            },
+          },
+        },
+        { $set: { score: { $avg: '$evaluations.score' } } },
+      ],
+      { new: true }
+    )
+      .populate('hackathon', 'title status endDate')
+      .populate('submittedBy', 'name email avatar')
+      .populate('team', 'name');
+
+    if (!updated) {
+      const error = new Error('You have already submitted an evaluation for this project');
+      error.statusCode = 409;
+      throw error;
+    }
+
+    return updated;
   }
 
   /**

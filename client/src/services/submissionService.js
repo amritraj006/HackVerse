@@ -26,6 +26,16 @@ export const submissionService = {
     return await api.get('/submissions/my-submissions');
   },
 
+  /** Get projects from hackathons assigned to the signed-in judge. */
+  getAssigned: async () => {
+    return await api.get('/submissions/assigned');
+  },
+
+  /** Submit a judge's one-time rubric evaluation. */
+  submitEvaluation: async (id, evaluation) => {
+    return await api.post(`/submissions/${id}/evaluations`, evaluation);
+  },
+
   /**
    * Get submissions for a hackathon
    */

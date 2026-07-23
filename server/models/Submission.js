@@ -80,6 +80,22 @@ const submissionSchema = new mongoose.Schema(
           type: Number,
           required: true,
         },
+        criteriaScores: [
+          {
+            criterion: {
+              type: String,
+              required: true,
+            },
+            score: {
+              type: Number,
+              required: true,
+            },
+            maxScore: {
+              type: Number,
+              required: true,
+            },
+          },
+        ],
         feedback: {
           type: String,
           default: '',
@@ -99,5 +115,6 @@ const submissionSchema = new mongoose.Schema(
 // Index for efficient hackathon & participant queries
 submissionSchema.index({ hackathon: 1, submittedBy: 1 });
 submissionSchema.index({ hackathon: 1, team: 1 });
+submissionSchema.index({ 'evaluations.judge': 1 });
 
 module.exports = mongoose.model('Submission', submissionSchema);
