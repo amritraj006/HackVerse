@@ -16,7 +16,8 @@ export const userService = {
       },
     });
   },
-  getAllUsers: async () => {
-    return await api.get('/users');
+  getAllUsers: async (params) => {
+    return await api.get('/users', { params });
   },
 };
+

@@ -266,14 +266,30 @@ class SubmissionService {
   /**
    * Public showcase list of submissions
    */
-  async getAllSubmissions({ search = '', hackathonId = '', page = 1, limit = 12 }) {
-    const query = { status: 'submitted' };
+  async getAllSubmissions(params = {}) {
+    const {
+      search = '',
+      hackathonId = '',
+      status = 'submitted',
+      sortBy = 'createdAt',
+      order = 'desc',
+      minScore,
+      maxScore,
+      page = 1,
+      limit = 12,
+    } = params;
+
+    const query = {};
+    if (status) {
+      query.status = status;
+    }
 
     if (search) {
+      const searchRegex = new RegExp(search.trim(), 'i');
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { tagline: { $regex: search, $options: 'i' } },
-        { description: { $regex: search, $options: 'i' } },
+        { title: searchRegex },
+        { tagline: searchRegex },
+        { description: searchRegex },
       ];
     }
 
@@ -281,30 +297,49 @@ class SubmissionService {
       query.hackathon = hackathonId;
     }
 
-    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    if (minScore !== undefined || maxScore !== undefined) {
+      query.score = {};
+      if (minScore !== undefined && minScore !== '') query.score.$gte = Number(minScore);
+      if (maxScore !== undefined && maxScore !== '') query.score.$lte = Number(maxScore);
+    }
+
+    const sortOrder = order === 'asc' || order === '1' ? 1 : -1;
+    const sortObj = {};
+    const validSortFields = ['createdAt', 'score', 'title'];
+    if (validSortFields.includes(sortBy)) {
+      sortObj[sortBy] = sortOrder;
+    } else {
+      sortObj.createdAt = -1;
+    }
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 12));
+    const skip = (pageNum - 1) * limitNum;
 
     const submissions = await Submission.find(query)
       .populate('hackathon', 'title status prizePool')
       .populate('submittedBy', 'name email avatar')
       .populate('team', 'name')
       .populate('teamMembers', 'name email avatar')
-      .sort({ createdAt: -1 })
+      .sort(sortObj)
       .skip(skip)
-      .limit(parseInt(limit, 10));
+      .limit(limitNum)
+      .lean();
 
     const total = await Submission.countDocuments(query);
-    const pages = Math.ceil(total / parseInt(limit, 10)) || 1;
+    const pages = Math.ceil(total / limitNum) || 1;
 
     return {
       submissions,
       pagination: {
         total,
-        page: parseInt(page, 10),
+        page: pageNum,
         pages,
-        limit: parseInt(limit, 10),
+        limit: limitNum,
       },
     };
   }
+
 
   /**
    * Delete submission

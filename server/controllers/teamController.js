@@ -29,8 +29,8 @@ const joinTeamByCode = asyncHandler(async (req, res) => {
  * @access  Private
  */
 const getMyTeams = asyncHandler(async (req, res) => {
-  const teams = await teamService.getUserTeams(req.user.id);
-  return successResponse(res, 200, 'User teams retrieved successfully', teams);
+  const result = await teamService.getUserTeams(req.user.id, req.query);
+  return successResponse(res, 200, 'User teams retrieved successfully', result);
 });
 
 /**
@@ -39,9 +39,10 @@ const getMyTeams = asyncHandler(async (req, res) => {
  * @access  Private / Public
  */
 const getHackathonTeams = asyncHandler(async (req, res) => {
-  const teams = await teamService.getHackathonTeams(req.params.hackathonId);
-  return successResponse(res, 200, 'Hackathon teams retrieved successfully', teams);
+  const result = await teamService.getHackathonTeams(req.params.hackathonId, req.query);
+  return successResponse(res, 200, 'Hackathon teams retrieved successfully', result);
 });
+
 
 /**
  * @desc    Get team by ID

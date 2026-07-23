@@ -8,38 +8,76 @@ class HackathonService {
    * Get all public hackathons
    */
   async getAllHackathons(params = {}) {
-    const { search = '', status = '', page = 1, limit = 10 } = params;
+    const {
+      search = '',
+      status = '',
+      isRegistrationOpen,
+      tag = '',
+      sortBy = 'createdAt',
+      order = 'desc',
+      page = 1,
+      limit = 10,
+    } = params;
+
     const query = {};
 
     if (search) {
-      query.title = { $regex: search, $options: 'i' };
+      const searchRegex = new RegExp(search.trim(), 'i');
+      query.$or = [
+        { title: searchRegex },
+        { tagline: searchRegex },
+        { description: searchRegex },
+        { tags: { $in: [searchRegex] } },
+      ];
     }
 
     if (status) {
       query.status = status;
     }
 
-    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    if (isRegistrationOpen !== undefined && isRegistrationOpen !== '') {
+      query.isRegistrationOpen = isRegistrationOpen === 'true' || isRegistrationOpen === true;
+    }
+
+    if (tag) {
+      query.tags = tag;
+    }
+
+    const sortOrder = order === 'asc' || order === '1' ? 1 : -1;
+    const sortObj = {};
+    const validSortFields = ['createdAt', 'startDate', 'endDate', 'registrationDeadline', 'title', 'maxTeamSize'];
+    if (validSortFields.includes(sortBy)) {
+      sortObj[sortBy] = sortOrder;
+    } else {
+      sortObj.createdAt = -1;
+    }
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
+    const skip = (pageNum - 1) * limitNum;
+
     const hackathons = await Hackathon.find(query)
       .populate('organizer', 'name email avatar')
       .populate('assignedJudges', 'name email avatar')
-      .sort({ createdAt: -1 })
+      .sort(sortObj)
       .skip(skip)
-      .limit(parseInt(limit, 10));
+      .limit(limitNum)
+      .lean();
 
     const total = await Hackathon.countDocuments(query);
-    const pages = Math.ceil(total / parseInt(limit, 10)) || 1;
+    const pages = Math.ceil(total / limitNum) || 1;
 
     return {
       hackathons,
       pagination: {
         total,
-        page: parseInt(page, 10),
+        page: pageNum,
         pages,
-        limit: parseInt(limit, 10),
+        limit: limitNum,
       },
     };
   }
+
 
   /**
    * Get single hackathon details

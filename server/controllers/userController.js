@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const adminService = require('../services/adminService');
 const asyncHandler = require('../utils/asyncHandler');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 
@@ -8,9 +9,10 @@ const { successResponse, errorResponse } = require('../utils/apiResponse');
  * @access  Private (Admin)
  */
 const getUsers = asyncHandler(async (req, res) => {
-  const users = await User.find().select('-password');
-  return successResponse(res, 200, 'Users retrieved successfully', users);
+  const result = await adminService.getUsers(req.query);
+  return successResponse(res, 200, 'Users retrieved successfully', result);
 });
+
 
 /**
  * @desc    Get user profile by ID

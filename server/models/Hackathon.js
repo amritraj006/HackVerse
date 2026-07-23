@@ -84,4 +84,12 @@ const hackathonSchema = new mongoose.Schema(
   }
 );
 
+// Indexes for optimized search, filtering, and sorting
+hackathonSchema.index({ title: 'text', tagline: 'text', description: 'text' });
+hackathonSchema.index({ status: 1, createdAt: -1 });
+hackathonSchema.index({ organizer: 1 });
+hackathonSchema.index({ tags: 1 });
+hackathonSchema.index({ startDate: 1 });
+
 module.exports = mongoose.model('Hackathon', hackathonSchema);
+

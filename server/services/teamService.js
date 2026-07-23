@@ -97,28 +97,115 @@ class TeamService {
   }
 
   /**
-   * Get all teams for logged-in user
+   * Get all teams for logged-in user with optional search, filter, sort, and pagination
    */
-  async getUserTeams(userId) {
-    return await Team.find({
+  async getUserTeams(userId, params = {}) {
+    const { search = '', status = '', sortBy = 'createdAt', order = 'desc', page, limit } = params;
+    const query = {
       $or: [{ leader: userId }, { members: userId }],
-    })
+    };
+
+    if (search) {
+      query.name = { $regex: search.trim(), $options: 'i' };
+    }
+    if (status) {
+      query.status = status;
+    }
+
+    const sortOrder = order === 'asc' || order === '1' ? 1 : -1;
+    const sortObj = {};
+    if (['createdAt', 'name'].includes(sortBy)) {
+      sortObj[sortBy] = sortOrder;
+    } else {
+      sortObj.createdAt = -1;
+    }
+
+    if (page || limit) {
+      const pageNum = Math.max(1, parseInt(page, 10) || 1);
+      const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
+      const skip = (pageNum - 1) * limitNum;
+
+      const teams = await Team.find(query)
+        .populate('hackathon', 'title maxTeamSize status startDate endDate prizePool')
+        .populate('leader', 'name email avatar')
+        .populate('members', 'name email avatar skills')
+        .sort(sortObj)
+        .skip(skip)
+        .limit(limitNum);
+
+      const total = await Team.countDocuments(query);
+      const pages = Math.ceil(total / limitNum) || 1;
+
+      return {
+        teams,
+        pagination: { total, page: pageNum, pages, limit: limitNum },
+      };
+    }
+
+    const teams = await Team.find(query)
       .populate('hackathon', 'title maxTeamSize status startDate endDate prizePool')
       .populate('leader', 'name email avatar')
       .populate('members', 'name email avatar skills')
-      .sort({ createdAt: -1 });
+      .sort(sortObj);
+
+    return teams;
   }
 
   /**
-   * Get teams for a hackathon
+   * Get teams for a hackathon with optional search, filter, sort, and pagination
    */
-  async getHackathonTeams(hackathonId) {
-    return await Team.find({ hackathon: hackathonId })
+  async getHackathonTeams(hackathonId, params = {}) {
+    const { search = '', status = '', sortBy = 'createdAt', order = 'desc', page, limit } = params;
+    const query = {};
+    if (hackathonId) {
+      query.hackathon = hackathonId;
+    }
+    if (search) {
+      query.name = { $regex: search.trim(), $options: 'i' };
+    }
+    if (status) {
+      query.status = status;
+    }
+
+    const sortOrder = order === 'asc' || order === '1' ? 1 : -1;
+    const sortObj = {};
+    if (['createdAt', 'name'].includes(sortBy)) {
+      sortObj[sortBy] = sortOrder;
+    } else {
+      sortObj.createdAt = -1;
+    }
+
+    if (page || limit) {
+      const pageNum = Math.max(1, parseInt(page, 10) || 1);
+      const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
+      const skip = (pageNum - 1) * limitNum;
+
+      const teams = await Team.find(query)
+        .populate('hackathon', 'title maxTeamSize status')
+        .populate('leader', 'name email avatar')
+        .populate('members', 'name email avatar skills')
+        .sort(sortObj)
+        .skip(skip)
+        .limit(limitNum);
+
+      const total = await Team.countDocuments(query);
+      const pages = Math.ceil(total / limitNum) || 1;
+
+      return {
+        teams,
+        pagination: { total, page: pageNum, pages, limit: limitNum },
+      };
+    }
+
+    const teams = await Team.find(query)
       .populate('hackathon', 'title maxTeamSize status')
       .populate('leader', 'name email avatar')
       .populate('members', 'name email avatar skills')
-      .sort({ createdAt: -1 });
+      .sort(sortObj);
+
+    return teams;
   }
+
 
   /**
    * Get team details by ID

@@ -7,9 +7,13 @@ import { CreateTeamModal } from '../components/CreateTeamModal';
 import { JoinTeamModal } from '../components/JoinTeamModal';
 import { InviteMemberModal } from '../components/InviteMemberModal';
 import { TransferLeadershipModal } from '../components/TransferLeadershipModal';
+import { SearchBar } from '../components/SearchBar';
+import { SortDropdown } from '../components/SortDropdown';
+import { PaginationControls } from '../components/PaginationControls';
 import { teamService } from '../services/teamService';
 import { hackathonService } from '../services/hackathonService';
 import { useAuth } from '../hooks/useAuth';
+import { useQueryParams } from '../hooks/useQueryParams';
 import {
   Users,
   UserPlus,
@@ -18,6 +22,28 @@ import {
   Filter,
 } from 'lucide-react';
 
+const STATUS_OPTIONS = [
+  { value: '', label: 'All Statuses' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'rejected', label: 'Rejected' },
+];
+
+const SORT_OPTIONS = [
+  { value: 'createdAt', label: 'Recently Created' },
+  { value: 'name', label: 'Team Name (A-Z)' },
+];
+
+const DEFAULT_PARAMS = {
+  search: '',
+  status: '',
+  hackathonId: '',
+  sortBy: 'createdAt',
+  order: 'desc',
+  page: '1',
+  limit: '12',
+};
+
 export const Teams = () => {
   const { user } = useAuth();
   const isOrganizer = user?.role === 'organizer';
@@ -25,10 +51,22 @@ export const Teams = () => {
   const isReadOnlyView = isOrganizer || isJudge;
 
   const [activeTab, setActiveTab] = useState(isReadOnlyView ? 'hackathon' : 'my');
+
+  const [queryParams, setQueryParams, resetQueryParams] = useQueryParams(DEFAULT_PARAMS);
+
+  const search = queryParams.search || '';
+  const statusFilter = queryParams.status || '';
+  const selectedHackathonId = queryParams.hackathonId || '';
+  const sortBy = queryParams.sortBy || 'createdAt';
+  const order = queryParams.order || 'desc';
+  const page = parseInt(queryParams.page || '1', 10);
+  const limit = parseInt(queryParams.limit || '12', 10);
+
   const [myTeams, setMyTeams] = useState([]);
   const [hackathonTeams, setHackathonTeams] = useState([]);
   const [hackathons, setHackathons] = useState([]);
-  const [selectedHackathonId, setSelectedHackathonId] = useState('');
+
+  const [pagination, setPagination] = useState({ page, pages: 1, total: 0, limit });
 
   const [loading, setLoading] = useState(true);
   const [alert, setAlert] = useState({ type: 'info', message: '' });
@@ -53,55 +91,91 @@ export const Teams = () => {
     loading: false,
   });
 
-  // Load My Teams
-  const loadMyTeams = useCallback(() => {
-    let isMounted = true;
-    teamService.getMyTeams()
-      .then((res) => {
-        if (isMounted && res?.data) setMyTeams(res.data);
-      })
-      .catch((err) => {
-        if (isMounted) setAlert({ type: 'error', message: err.message || 'Failed to load teams.' });
-      })
-      .finally(() => { if (isMounted) setLoading(false); });
-
-    return () => { isMounted = false; };
-  }, []);
-
-  // Load Hackathons for filtering
+  // Load Hackathons list for selector
   useEffect(() => {
     let isMounted = true;
-    hackathonService.getAll({ limit: 50 })
+    hackathonService
+      .getAll({ limit: 100 })
       .then((res) => {
         if (!isMounted) return;
         const list = res?.data?.hackathons || res?.data || [];
         setHackathons(list);
-        if (list.length > 0 && !selectedHackathonId) setSelectedHackathonId(list[0]._id);
+        if (list.length > 0 && !selectedHackathonId) {
+          setQueryParams({ hackathonId: list[0]._id });
+        }
       })
       .catch(() => {});
 
-    return () => { isMounted = false; };
-  }, [selectedHackathonId]);
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedHackathonId, setQueryParams]);
+
+  // Load My Teams
+  const loadMyTeams = useCallback(() => {
+    setLoading(true);
+    teamService
+      .getMyTeams({
+        search,
+        status: statusFilter,
+        sortBy,
+        order,
+        page,
+        limit,
+      })
+      .then((res) => {
+        if (res?.data) {
+          if (Array.isArray(res.data)) {
+            setMyTeams(res.data);
+          } else {
+            setMyTeams(res.data.teams || []);
+            if (res.data.pagination) setPagination(res.data.pagination);
+          }
+        }
+      })
+      .catch((err) => {
+        setAlert({ type: 'error', message: err.message || 'Failed to load teams.' });
+      })
+      .finally(() => setLoading(false));
+  }, [search, statusFilter, sortBy, order, page, limit]);
 
   // Load Hackathon-specific Teams
   const loadHackathonTeams = useCallback(() => {
-    if (!selectedHackathonId) return () => {};
-    let isMounted = true;
-    teamService.getHackathonTeams(selectedHackathonId)
-      .then((res) => {
-        if (isMounted && res?.data) setHackathonTeams(res.data);
+    if (!selectedHackathonId) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    teamService
+      .getHackathonTeams(selectedHackathonId, {
+        search,
+        status: statusFilter,
+        sortBy,
+        order,
+        page,
+        limit,
       })
-      .catch(() => {})
-      .finally(() => { if (isMounted) setLoading(false); });
-
-    return () => { isMounted = false; };
-  }, [selectedHackathonId]);
+      .then((res) => {
+        if (res?.data) {
+          if (Array.isArray(res.data)) {
+            setHackathonTeams(res.data);
+          } else {
+            setHackathonTeams(res.data.teams || []);
+            if (res.data.pagination) setPagination(res.data.pagination);
+          }
+        }
+      })
+      .catch((err) => {
+        setAlert({ type: 'error', message: err.message || 'Failed to load hackathon teams.' });
+      })
+      .finally(() => setLoading(false));
+  }, [selectedHackathonId, search, statusFilter, sortBy, order, page, limit]);
 
   useEffect(() => {
     if (activeTab === 'my') {
-      return loadMyTeams();
+      loadMyTeams();
     } else {
-      return loadHackathonTeams();
+      loadHackathonTeams();
     }
   }, [activeTab, loadMyTeams, loadHackathonTeams]);
 
@@ -190,6 +264,30 @@ export const Teams = () => {
     }
   };
 
+  const handleSearchChange = (val) => {
+    setQueryParams({ search: val, page: 1 });
+  };
+
+  const handleStatusChange = (val) => {
+    setQueryParams({ status: val, page: 1 });
+  };
+
+  const handleHackathonChange = (hId) => {
+    setQueryParams({ hackathonId: hId, page: 1 });
+  };
+
+  const handleSortChange = ({ sortBy: newSort, order: newOrder }) => {
+    setQueryParams({ sortBy: newSort, order: newOrder, page: 1 });
+  };
+
+  const handlePageChange = (newPage) => {
+    setQueryParams({ page: newPage });
+  };
+
+  const handleLimitChange = (newLimit) => {
+    setQueryParams({ limit: newLimit, page: 1 });
+  };
+
   const currentTeamsList = activeTab === 'my' ? myTeams : hackathonTeams;
 
   return (
@@ -224,23 +322,27 @@ export const Teams = () => {
 
       <Alert type={alert.type} message={alert.message} onClose={() => setAlert({ type: 'info', message: '' })} />
 
-      {/* Tabs Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-1 border-b border-slate-200 w-full sm:w-auto">
+      {/* Tabs Header & Controls */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-1 border-b border-slate-200 w-full md:w-auto">
           {!isReadOnlyView && (
             <button
-              onClick={() => { setActiveTab('my'); setLoading(true); }}
+              onClick={() => {
+                setActiveTab('my');
+              }}
               className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
                 activeTab === 'my'
                   ? 'border-indigo-600 text-indigo-600'
                   : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
-              My Teams ({myTeams.length})
+              My Teams
             </button>
           )}
           <button
-            onClick={() => { setActiveTab('hackathon'); setLoading(true); }}
+            onClick={() => {
+              setActiveTab('hackathon');
+            }}
             className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
               activeTab === 'hackathon'
                 ? 'border-indigo-600 text-indigo-600'
@@ -251,23 +353,61 @@ export const Teams = () => {
           </button>
         </div>
 
-        {/* Hackathon Selector for "All Hackathon Teams" tab */}
-        {activeTab === 'hackathon' && hackathons.length > 0 && (
-          <div className="flex items-center gap-2 text-xs">
-            <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <select
-              value={selectedHackathonId}
-              onChange={(e) => { setSelectedHackathonId(e.target.value); setLoading(true); }}
-              className="text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
-            >
-              {hackathons.map((h) => (
-                <option key={h._id} value={h._id}>
-                  {h.title}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
+        {/* Filters and Search Bar */}
+        <div className="flex flex-wrap items-center gap-2.5 flex-1 md:justify-end">
+          <SearchBar
+            value={search}
+            onChange={handleSearchChange}
+            placeholder="Search teams by name..."
+            loading={loading}
+            className="w-full sm:w-56"
+          />
+
+          {/* Hackathon Selector for "All Hackathon Teams" tab */}
+          {activeTab === 'hackathon' && hackathons.length > 0 && (
+            <div className="flex items-center gap-1">
+              <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <select
+                value={selectedHackathonId}
+                onChange={(e) => handleHackathonChange(e.target.value)}
+                className="text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
+              >
+                {hackathons.map((h) => (
+                  <option key={h._id} value={h._id}>
+                    {h.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Status Dropdown */}
+          <select
+            value={statusFilter}
+            onChange={(e) => handleStatusChange(e.target.value)}
+            className="text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          {/* Sort Dropdown */}
+          <SortDropdown
+            options={SORT_OPTIONS}
+            sortBy={sortBy}
+            order={order}
+            onSortChange={handleSortChange}
+          />
+
+          {(search || statusFilter) && (
+            <Button size="sm" variant="ghost" onClick={resetQueryParams} className="text-xs">
+              Clear
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Grid of Teams */}
@@ -282,7 +422,7 @@ export const Teams = () => {
           <p className="text-xs text-slate-500">
             {activeTab === 'my'
               ? "You aren't a member of any teams yet."
-              : 'No teams created for this hackathon yet.'}
+              : 'No teams created for this hackathon yet matching criteria.'}
           </p>
           {!isReadOnlyView && activeTab === 'my' && (
             <div className="flex items-center justify-center gap-2">
@@ -319,6 +459,16 @@ export const Teams = () => {
             />
           ))}
         </div>
+      )}
+
+      {/* Pagination Controls */}
+      {!loading && (
+        <PaginationControls
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onLimitChange={handleLimitChange}
+          limitOptions={[6, 12, 24, 48]}
+        />
       )}
 
       {/* Modals */}

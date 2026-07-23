@@ -73,6 +73,10 @@ userSchema.methods.toJSON = function () {
   const userObject = this.toObject();
   delete userObject.password;
   return userObject;
-};
+// Indexes for optimized user lookups, search, and filtering
+userSchema.index({ name: 'text', email: 'text' });
+userSchema.index({ role: 1, isBlocked: 1, createdAt: -1 });
+userSchema.index({ skills: 1 });
 
 module.exports = mongoose.model('User', userSchema);
+

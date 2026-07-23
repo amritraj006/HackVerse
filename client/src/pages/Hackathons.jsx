@@ -1,11 +1,15 @@
-import { useState, useEffect } from 'react';
-import { Search, Filter, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Filter, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Alert } from '../components/Alert';
 import { HackathonCard } from '../components/HackathonCard';
+import { SearchBar } from '../components/SearchBar';
+import { SortDropdown } from '../components/SortDropdown';
+import { PaginationControls } from '../components/PaginationControls';
 import { hackathonService } from '../services/hackathonService';
 import { registrationService } from '../services/registrationService';
 import { useAuth } from '../hooks/useAuth';
+import { useQueryParams } from '../hooks/useQueryParams';
 
 const STATUS_FILTER_OPTIONS = [
   { value: '', label: 'All Status' },
@@ -14,13 +18,36 @@ const STATUS_FILTER_OPTIONS = [
   { value: 'ended', label: 'Ended' },
 ];
 
+const SORT_OPTIONS = [
+  { value: 'createdAt', label: 'Recently Added' },
+  { value: 'startDate', label: 'Start Date' },
+  { value: 'title', label: 'Title (A-Z)' },
+  { value: 'registrationDeadline', label: 'Deadline' },
+];
+
+const DEFAULT_PARAMS = {
+  search: '',
+  status: '',
+  sortBy: 'createdAt',
+  order: 'desc',
+  page: '1',
+  limit: '12',
+};
+
 export const Hackathons = () => {
   const { user } = useAuth();
+  const [queryParams, setQueryParams, resetQueryParams] = useQueryParams(DEFAULT_PARAMS);
+
+  const search = queryParams.search || '';
+  const statusFilter = queryParams.status || '';
+  const sortBy = queryParams.sortBy || 'createdAt';
+  const order = queryParams.order || 'desc';
+  const page = parseInt(queryParams.page || '1', 10);
+  const limit = parseInt(queryParams.limit || '12', 10);
+
   const [hackathons, setHackathons] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [pagination, setPagination] = useState({ page, pages: 1, total: 0, limit });
   const [alert, setAlert] = useState({ type: 'info', message: '' });
 
   // Track registration state per hackathon id
@@ -28,33 +55,39 @@ export const Hackathons = () => {
   const [registeringId, setRegisteringId] = useState(null);
 
   // Load hackathons
-  useEffect(() => {
-    let isMounted = true;
-    hackathonService.getAll({
-      search,
-      status: statusFilter,
-      page: pagination.page,
-      limit: 12,
-    })
+  const fetchHackathons = useCallback(() => {
+    setLoading(true);
+    hackathonService
+      .getAll({
+        search,
+        status: statusFilter,
+        sortBy,
+        order,
+        page,
+        limit,
+      })
       .then((res) => {
-        if (isMounted && res?.data) {
+        if (res?.data) {
           setHackathons(res.data.hackathons || res.data);
           if (res.data.pagination) setPagination(res.data.pagination);
         }
       })
       .catch((err) => {
-        if (isMounted) setAlert({ type: 'error', message: err.message || 'Failed to load hackathons.' });
+        setAlert({ type: 'error', message: err.message || 'Failed to load hackathons.' });
       })
-      .finally(() => { if (isMounted) setLoading(false); });
+      .finally(() => setLoading(false));
+  }, [search, statusFilter, sortBy, order, page, limit]);
 
-    return () => { isMounted = false; };
-  }, [search, statusFilter, pagination.page]);
+  useEffect(() => {
+    fetchHackathons();
+  }, [fetchHackathons]);
 
   // Load user's active registrations to display "Registered" badge
   useEffect(() => {
     if (!user) return;
     let isMounted = true;
-    registrationService.getMyRegistrations({ status: 'active', limit: 100 })
+    registrationService
+      .getMyRegistrations({ status: 'active', limit: 100 })
       .then((res) => {
         if (isMounted && res?.data?.registrations) {
           const ids = new Set(
@@ -67,7 +100,9 @@ export const Hackathons = () => {
       })
       .catch(() => {});
 
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   const handleRegister = async (hackathonId) => {
@@ -104,14 +139,24 @@ export const Hackathons = () => {
     }
   };
 
-  const handleSearchChange = (e) => {
-    setSearch(e.target.value);
-    setPagination((prev) => ({ ...prev, page: 1 }));
+  const handleSearchChange = (val) => {
+    setQueryParams({ search: val, page: 1 });
   };
 
   const handleStatusChange = (val) => {
-    setStatusFilter(val);
-    setPagination((prev) => ({ ...prev, page: 1 }));
+    setQueryParams({ status: val, page: 1 });
+  };
+
+  const handleSortChange = ({ sortBy: newSort, order: newOrder }) => {
+    setQueryParams({ sortBy: newSort, order: newOrder, page: 1 });
+  };
+
+  const handlePageChange = (newPage) => {
+    setQueryParams({ page: newPage });
+  };
+
+  const handleLimitChange = (newLimit) => {
+    setQueryParams({ limit: newLimit, page: 1 });
   };
 
   return (
@@ -127,46 +172,50 @@ export const Hackathons = () => {
             )}
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={() => {
-          setSearch('');
-          setStatusFilter('');
-          setPagination({ page: 1, pages: 1, total: 0 });
-        }}>
+        <Button size="sm" variant="outline" onClick={resetQueryParams}>
           <RefreshCw className="w-3.5 h-3.5" /> Reset
         </Button>
       </div>
 
       <Alert type={alert.type} message={alert.message} onClose={() => setAlert({ type: 'info', message: '' })} />
 
-      {/* Search & Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-        <div className="relative flex-1 max-w-md">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            id="hackathon-search"
-            value={search}
-            onChange={handleSearchChange}
-            placeholder="Search hackathons by title..."
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-          />
-        </div>
+      {/* Search, Filter & Sort Controls */}
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+        {/* Debounced Search */}
+        <SearchBar
+          value={search}
+          onChange={handleSearchChange}
+          placeholder="Search hackathons by title, description, tags..."
+          loading={loading}
+          className="flex-1 max-w-md"
+        />
 
-        <div className="flex items-center gap-2">
-          <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-          {STATUS_FILTER_OPTIONS.map((opt) => (
-            <button
-              key={opt.value}
-              onClick={() => handleStatusChange(opt.value)}
-              className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-colors cursor-pointer ${
-                statusFilter === opt.value
-                  ? 'bg-indigo-50 text-indigo-700 border-indigo-300'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              {opt.label}
-            </button>
-          ))}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Status Filters */}
+          <div className="flex items-center gap-1">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-1" />
+            {STATUS_FILTER_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                onClick={() => handleStatusChange(opt.value)}
+                className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-colors cursor-pointer ${
+                  statusFilter === opt.value
+                    ? 'bg-indigo-50 text-indigo-700 border-indigo-300'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                }`}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Sort Dropdown */}
+          <SortDropdown
+            options={SORT_OPTIONS}
+            sortBy={sortBy}
+            order={order}
+            onSortChange={handleSortChange}
+          />
         </div>
       </div>
 
@@ -177,10 +226,10 @@ export const Hackathons = () => {
           <span>Loading hackathons...</span>
         </div>
       ) : hackathons.length === 0 ? (
-        <div className="flex flex-col items-center justify-center min-h-[200px] text-center gap-2">
-          <p className="text-xs text-slate-500">No hackathons found.</p>
+        <div className="flex flex-col items-center justify-center min-h-[200px] text-center gap-2 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 py-10">
+          <p className="text-xs text-slate-500">No hackathons found matching your criteria.</p>
           {(search || statusFilter) && (
-            <Button size="sm" variant="outline" onClick={() => { setSearch(''); setStatusFilter(''); }}>
+            <Button size="sm" variant="outline" onClick={resetQueryParams}>
               <Filter className="w-3.5 h-3.5" /> Clear Filters
             </Button>
           )}
@@ -202,31 +251,13 @@ export const Hackathons = () => {
       )}
 
       {/* Pagination Controls */}
-      {!loading && pagination.pages > 1 && (
-        <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200">
-          <span>
-            Page <span className="font-semibold text-slate-700">{pagination.page}</span> of{' '}
-            <span className="font-semibold text-slate-700">{pagination.pages}</span>
-          </span>
-          <div className="flex items-center gap-1.5">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={pagination.page <= 1}
-              onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
-            >
-              ← Prev
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={pagination.page >= pagination.pages}
-              onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
-            >
-              Next →
-            </Button>
-          </div>
-        </div>
+      {!loading && (
+        <PaginationControls
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onLimitChange={handleLimitChange}
+          limitOptions={[6, 12, 24, 48]}
+        />
       )}
     </div>
   );

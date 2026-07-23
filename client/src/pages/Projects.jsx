@@ -5,29 +5,54 @@ import { SubmissionCard } from '../components/SubmissionCard';
 import { SubmissionModal } from '../components/SubmissionModal';
 import { SubmissionDetailModal } from '../components/SubmissionDetailModal';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { SearchBar } from '../components/SearchBar';
+import { SortDropdown } from '../components/SortDropdown';
+import { PaginationControls } from '../components/PaginationControls';
 import { submissionService } from '../services/submissionService';
 import { hackathonService } from '../services/hackathonService';
 import { useAuth } from '../hooks/useAuth';
+import { useQueryParams } from '../hooks/useQueryParams';
 import {
   FolderGit2,
   Plus,
-  Search,
   Filter,
   RefreshCw,
   Sparkles,
 } from 'lucide-react';
 
+const SORT_OPTIONS = [
+  { value: 'createdAt', label: 'Recently Submitted' },
+  { value: 'score', label: 'Score' },
+  { value: 'title', label: 'Project Name' },
+];
+
+const DEFAULT_PARAMS = {
+  search: '',
+  hackathonId: '',
+  sortBy: 'createdAt',
+  order: 'desc',
+  page: '1',
+  limit: '12',
+};
+
 export const Projects = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('all'); // 'all' or 'my'
 
+  const [queryParams, setQueryParams, resetQueryParams] = useQueryParams(DEFAULT_PARAMS);
+
+  const search = queryParams.search || '';
+  const selectedHackathonId = queryParams.hackathonId || '';
+  const sortBy = queryParams.sortBy || 'createdAt';
+  const order = queryParams.order || 'desc';
+  const page = parseInt(queryParams.page || '1', 10);
+  const limit = parseInt(queryParams.limit || '12', 10);
+
   const [submissions, setSubmissions] = useState([]);
   const [mySubmissions, setMySubmissions] = useState([]);
   const [hackathons, setHackathons] = useState([]);
-  const [selectedHackathonId, setSelectedHackathonId] = useState('');
 
-  const [search, setSearch] = useState('');
-  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
+  const [pagination, setPagination] = useState({ page, pages: 1, total: 0, limit });
 
   const [loading, setLoading] = useState(true);
   const [alert, setAlert] = useState({ type: 'info', message: '' });
@@ -45,84 +70,67 @@ export const Projects = () => {
   // Load Hackathons for filtering
   useEffect(() => {
     let isMounted = true;
-    hackathonService.getAll({ limit: 50 })
+    hackathonService
+      .getAll({ limit: 100 })
       .then((res) => {
         if (!isMounted) return;
         setHackathons(res?.data?.hackathons || res?.data || []);
       })
       .catch(() => {});
 
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  // Load All Showcase Submissions
+  // Fetch showcase submissions
   const loadAllSubmissions = useCallback(() => {
-    let isMounted = true;
-    submissionService.getAll({
-      search,
-      hackathonId: selectedHackathonId,
-      page: pagination.page,
-      limit: 12,
-    })
+    setLoading(true);
+    submissionService
+      .getAll({
+        search,
+        hackathonId: selectedHackathonId,
+        sortBy,
+        order,
+        page,
+        limit,
+      })
       .then((res) => {
-        if (isMounted && res?.data) {
+        if (res?.data) {
           setSubmissions(res.data.submissions || []);
           if (res.data.pagination) setPagination(res.data.pagination);
         }
       })
       .catch((err) => {
-        if (isMounted) setAlert({ type: 'error', message: err.message || 'Failed to load projects.' });
+        setAlert({ type: 'error', message: err.message || 'Failed to load projects.' });
       })
-      .finally(() => { if (isMounted) setLoading(false); });
+      .finally(() => setLoading(false));
+  }, [search, selectedHackathonId, sortBy, order, page, limit]);
 
-    return () => { isMounted = false; };
-  }, [search, selectedHackathonId, pagination.page]);
-
-  // Load My Submissions
+  // Fetch my submissions
   const loadMySubmissions = useCallback(() => {
-    if (!user) return () => {};
-    let isMounted = true;
-    submissionService.getMySubmissions()
+    if (!user) return;
+    setLoading(true);
+    submissionService
+      .getMySubmissions()
       .then((res) => {
-        if (isMounted && res?.data) setMySubmissions(res.data);
+        if (res?.data) setMySubmissions(res.data);
       })
-      .catch(() => {})
-      .finally(() => { if (isMounted) setLoading(false); });
-
-    return () => { isMounted = false; };
+      .catch((err) => {
+        setAlert({ type: 'error', message: err.message || 'Failed to load my submissions.' });
+      })
+      .finally(() => setLoading(false));
   }, [user]);
 
   useEffect(() => {
-    let isMounted = true;
     if (activeTab === 'all') {
-      submissionService.getAll({
-        search,
-        hackathonId: selectedHackathonId,
-        page: pagination.page,
-        limit: 12,
-      })
-        .then((res) => {
-          if (isMounted && res?.data) {
-            setSubmissions(res.data.submissions || []);
-            if (res.data.pagination) setPagination(res.data.pagination);
-          }
-        })
-        .catch((err) => {
-          if (isMounted) setAlert({ type: 'error', message: err.message || 'Failed to load projects.' });
-        })
-        .finally(() => { if (isMounted) setLoading(false); });
+      loadAllSubmissions();
     } else if (user) {
-      submissionService.getMySubmissions()
-        .then((res) => {
-          if (isMounted && res?.data) setMySubmissions(res.data);
-        })
-        .catch(() => {})
-        .finally(() => { if (isMounted) setLoading(false); });
+      loadMySubmissions();
     }
-    return () => { isMounted = false; };
-  }, [activeTab, search, selectedHackathonId, pagination.page, user]);
+  }, [activeTab, loadAllSubmissions, loadMySubmissions, user]);
 
-  // Submit / Edit Action
+  // Handlers
   const handleSubmitSuccess = async (formData) => {
     await submissionService.submit(formData);
     setAlert({ type: 'success', message: 'Project submitted successfully! 🎉' });
@@ -135,7 +143,6 @@ export const Projects = () => {
     setIsSubmitModalOpen(true);
   };
 
-  // Delete Action
   const handleDeleteOpen = (id, title) => {
     setDeleteModal({ open: true, id, title });
   };
@@ -153,6 +160,26 @@ export const Projects = () => {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleSearchChange = (val) => {
+    setQueryParams({ search: val, page: 1 });
+  };
+
+  const handleHackathonFilterChange = (hId) => {
+    setQueryParams({ hackathonId: hId, page: 1 });
+  };
+
+  const handleSortChange = ({ sortBy: newSort, order: newOrder }) => {
+    setQueryParams({ sortBy: newSort, order: newOrder, page: 1 });
+  };
+
+  const handlePageChange = (newPage) => {
+    setQueryParams({ page: newPage });
+  };
+
+  const handleLimitChange = (newLimit) => {
+    setQueryParams({ limit: newLimit, page: 1 });
   };
 
   const displayList = activeTab === 'all' ? submissions : mySubmissions;
@@ -193,11 +220,13 @@ export const Projects = () => {
 
       <Alert type={alert.type} message={alert.message} onClose={() => setAlert({ type: 'info', message: '' })} />
 
-      {/* Tabs & Filter Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-1 border-b border-slate-200 w-full sm:w-auto">
+      {/* Tabs & Search/Filter Controls Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-1 border-b border-slate-200 w-full md:w-auto">
           <button
-            onClick={() => { setActiveTab('all'); setLoading(true); }}
+            onClick={() => {
+              setActiveTab('all');
+            }}
             className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
               activeTab === 'all'
                 ? 'border-indigo-600 text-indigo-600'
@@ -208,7 +237,9 @@ export const Projects = () => {
           </button>
           {user && (
             <button
-              onClick={() => { setActiveTab('my'); setLoading(true); }}
+              onClick={() => {
+                setActiveTab('my');
+              }}
               className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
                 activeTab === 'my'
                   ? 'border-indigo-600 text-indigo-600'
@@ -220,34 +251,46 @@ export const Projects = () => {
           )}
         </div>
 
-        {/* Search & Filter Inputs (Showcase tab) */}
+        {/* Showcase Controls (All Submissions tab) */}
         {activeTab === 'all' && (
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => { setSearch(e.target.value); setPagination((prev) => ({ ...prev, page: 1 })); }}
-                placeholder="Search projects..."
-                className="pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
-              />
-            </div>
+          <div className="flex flex-wrap items-center gap-2.5 flex-1 md:justify-end">
+            <SearchBar
+              value={search}
+              onChange={handleSearchChange}
+              placeholder="Search project titles, taglines..."
+              loading={loading}
+              className="w-full sm:w-60"
+            />
 
             {hackathons.length > 0 && (
               <div className="flex items-center gap-1">
                 <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <select
                   value={selectedHackathonId}
-                  onChange={(e) => { setSelectedHackathonId(e.target.value); setPagination((prev) => ({ ...prev, page: 1 })); }}
+                  onChange={(e) => handleHackathonFilterChange(e.target.value)}
                   className="text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
                 >
                   <option value="">All Hackathons</option>
                   {hackathons.map((h) => (
-                    <option key={h._id} value={h._id}>{h.title}</option>
+                    <option key={h._id} value={h._id}>
+                      {h.title}
+                    </option>
                   ))}
                 </select>
               </div>
+            )}
+
+            <SortDropdown
+              options={SORT_OPTIONS}
+              sortBy={sortBy}
+              order={order}
+              onSortChange={handleSortChange}
+            />
+
+            {(search || selectedHackathonId) && (
+              <Button size="sm" variant="ghost" onClick={resetQueryParams} className="text-xs">
+                Clear
+              </Button>
             )}
           </div>
         )}
@@ -264,14 +307,17 @@ export const Projects = () => {
           <FolderGit2 className="w-8 h-8 text-slate-300 mx-auto" />
           <p className="text-xs text-slate-500">
             {activeTab === 'all'
-              ? 'No projects submitted yet for the selected criteria.'
+              ? 'No projects submitted yet matching your criteria.'
               : "You haven't submitted any projects yet."}
           </p>
           {user && activeTab === 'my' && (
             <Button
               size="sm"
               variant="primary"
-              onClick={() => { setEditingSubmission(null); setIsSubmitModalOpen(true); }}
+              onClick={() => {
+                setEditingSubmission(null);
+                setIsSubmitModalOpen(true);
+              }}
             >
               <Sparkles className="w-3.5 h-3.5" /> Submit Your First Project
             </Button>
@@ -292,39 +338,24 @@ export const Projects = () => {
         </div>
       )}
 
-      {/* Pagination (All tab) */}
-      {!loading && activeTab === 'all' && pagination.pages > 1 && (
-        <div className="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-200">
-          <span>
-            Page <span className="font-semibold text-slate-700">{pagination.page}</span> of{' '}
-            <span className="font-semibold text-slate-700">{pagination.pages}</span>
-          </span>
-          <div className="flex items-center gap-1.5">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={pagination.page <= 1}
-              onClick={() => setPagination((prev) => ({ ...prev, page: prev.page - 1 }))}
-            >
-              ← Prev
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={pagination.page >= pagination.pages}
-              onClick={() => setPagination((prev) => ({ ...prev, page: prev.page + 1 }))}
-            >
-              Next →
-            </Button>
-          </div>
-        </div>
+      {/* Pagination Controls */}
+      {!loading && activeTab === 'all' && (
+        <PaginationControls
+          pagination={pagination}
+          onPageChange={handlePageChange}
+          onLimitChange={handleLimitChange}
+          limitOptions={[6, 12, 24, 48]}
+        />
       )}
 
       {/* Modals */}
       <SubmissionModal
         isOpen={isSubmitModalOpen}
         submission={editingSubmission}
-        onClose={() => { setIsSubmitModalOpen(false); setEditingSubmission(null); }}
+        onClose={() => {
+          setIsSubmitModalOpen(false);
+          setEditingSubmission(null);
+        }}
         onSuccess={handleSubmitSuccess}
       />
 

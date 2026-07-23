@@ -38,4 +38,12 @@ const teamSchema = new mongoose.Schema(
   }
 );
 
+// Indexes for optimized team queries, search, and member lookups
+teamSchema.index({ name: 'text' });
+teamSchema.index({ hackathon: 1, status: 1, createdAt: -1 });
+teamSchema.index({ leader: 1 });
+teamSchema.index({ members: 1 });
+teamSchema.index({ joinCode: 1 });
+
 module.exports = mongoose.model('Team', teamSchema);
+

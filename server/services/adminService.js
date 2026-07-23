@@ -40,15 +40,17 @@ class AdminService {
   }
 
   /**
-   * Get users with pagination, search query, and role filter
+   * Get users with pagination, search query, role/status filter, and sorting
    */
-  async getUsers({ page = 1, limit = 10, search = '', role = '', isBlocked = '' }) {
+  async getUsers({ page = 1, limit = 10, search = '', role = '', isBlocked = '', sortBy = 'createdAt', order = 'desc' }) {
     const query = {};
 
     if (search) {
+      const searchRegex = new RegExp(search.trim(), 'i');
       query.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
+        { name: searchRegex },
+        { email: searchRegex },
+        { skills: { $in: [searchRegex] } },
       ];
     }
 
@@ -56,30 +58,44 @@ class AdminService {
       query.role = role;
     }
 
-    if (isBlocked !== '') {
-      query.isBlocked = isBlocked === 'true';
+    if (isBlocked !== undefined && isBlocked !== '') {
+      query.isBlocked = isBlocked === 'true' || isBlocked === true;
     }
 
-    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const sortOrder = order === 'asc' || order === '1' ? 1 : -1;
+    const sortObj = {};
+    const validSortFields = ['createdAt', 'name', 'email', 'role'];
+    if (validSortFields.includes(sortBy)) {
+      sortObj[sortBy] = sortOrder;
+    } else {
+      sortObj.createdAt = -1;
+    }
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
+    const skip = (pageNum - 1) * limitNum;
+
     const users = await User.find(query)
       .select('-password')
-      .sort({ createdAt: -1 })
+      .sort(sortObj)
       .skip(skip)
-      .limit(parseInt(limit, 10));
+      .limit(limitNum)
+      .lean();
 
     const total = await User.countDocuments(query);
-    const pages = Math.ceil(total / parseInt(limit, 10)) || 1;
+    const pages = Math.ceil(total / limitNum) || 1;
 
     return {
       users,
       pagination: {
         total,
-        page: parseInt(page, 10),
+        page: pageNum,
         pages,
-        limit: parseInt(limit, 10),
+        limit: limitNum,
       },
     };
   }
+
 
   /**
    * Toggle or set user block status
@@ -148,36 +164,53 @@ class AdminService {
   }
 
   /**
-   * Get hackathons with search, status filter, and pagination
+   * Get hackathons with search, status filter, sorting, and pagination
    */
-  async getHackathons({ page = 1, limit = 10, search = '', status = '' }) {
+  async getHackathons({ page = 1, limit = 10, search = '', status = '', sortBy = 'createdAt', order = 'desc' }) {
     const query = {};
 
     if (search) {
-      query.title = { $regex: search, $options: 'i' };
+      const searchRegex = new RegExp(search.trim(), 'i');
+      query.$or = [
+        { title: searchRegex },
+        { tagline: searchRegex },
+        { description: searchRegex },
+      ];
     }
 
     if (status) {
       query.status = status;
     }
 
-    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const sortOrder = order === 'asc' || order === '1' ? 1 : -1;
+    const sortObj = {};
+    if (['createdAt', 'title', 'startDate', 'status'].includes(sortBy)) {
+      sortObj[sortBy] = sortOrder;
+    } else {
+      sortObj.createdAt = -1;
+    }
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
+    const skip = (pageNum - 1) * limitNum;
+
     const hackathons = await Hackathon.find(query)
       .populate('organizer', 'name email avatar')
-      .sort({ createdAt: -1 })
+      .sort(sortObj)
       .skip(skip)
-      .limit(parseInt(limit, 10));
+      .limit(limitNum)
+      .lean();
 
     const total = await Hackathon.countDocuments(query);
-    const pages = Math.ceil(total / parseInt(limit, 10)) || 1;
+    const pages = Math.ceil(total / limitNum) || 1;
 
     return {
       hackathons,
       pagination: {
         total,
-        page: parseInt(page, 10),
+        page: pageNum,
         pages,
-        limit: parseInt(limit, 10),
+        limit: limitNum,
       },
     };
   }
@@ -198,36 +231,58 @@ class AdminService {
   }
 
   /**
-   * Get submissions with pagination and search query
+   * Get submissions with pagination, search query, status filter, and sorting
    */
-  async getSubmissions({ page = 1, limit = 10, search = '' }) {
+  async getSubmissions({ page = 1, limit = 10, search = '', status = '', sortBy = 'createdAt', order = 'desc' }) {
     const query = {};
 
     if (search) {
-      query.title = { $regex: search, $options: 'i' };
+      const searchRegex = new RegExp(search.trim(), 'i');
+      query.$or = [
+        { title: searchRegex },
+        { tagline: searchRegex },
+        { description: searchRegex },
+      ];
     }
 
-    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    if (status) {
+      query.status = status;
+    }
+
+    const sortOrder = order === 'asc' || order === '1' ? 1 : -1;
+    const sortObj = {};
+    if (['createdAt', 'title', 'score'].includes(sortBy)) {
+      sortObj[sortBy] = sortOrder;
+    } else {
+      sortObj.createdAt = -1;
+    }
+
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
+    const skip = (pageNum - 1) * limitNum;
+
     const submissions = await Submission.find(query)
       .populate('hackathon', 'title')
       .populate('submittedBy', 'name email')
-      .sort({ createdAt: -1 })
+      .sort(sortObj)
       .skip(skip)
-      .limit(parseInt(limit, 10));
+      .limit(limitNum)
+      .lean();
 
     const total = await Submission.countDocuments(query);
-    const pages = Math.ceil(total / parseInt(limit, 10)) || 1;
+    const pages = Math.ceil(total / limitNum) || 1;
 
     return {
       submissions,
       pagination: {
         total,
-        page: parseInt(page, 10),
+        page: pageNum,
         pages,
-        limit: parseInt(limit, 10),
+        limit: limitNum,
       },
     };
   }
+
 
   /**
    * Delete submission by ID

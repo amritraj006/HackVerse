@@ -18,16 +18,17 @@ export const teamService = {
   /**
    * Get user's active/joined teams
    */
-  getMyTeams: async () => {
-    return await api.get('/teams/my-teams');
+  getMyTeams: async (params) => {
+    return await api.get('/teams/my-teams', { params });
   },
 
   /**
    * Get teams for a specific hackathon
    */
-  getHackathonTeams: async (hackathonId) => {
-    return await api.get(`/teams/hackathon/${hackathonId}`);
+  getHackathonTeams: async (hackathonId, params) => {
+    return await api.get(`/teams/hackathon/${hackathonId}`, { params });
   },
+
 
   /**
    * Get team details by ID

@@ -7,6 +7,7 @@ import { DataTable } from '../../components/DataTable';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { adminService } from '../../services/adminService';
 import { formatDate } from '../../utils/helpers';
+import { useQueryParams } from '../../hooks/useQueryParams';
 import {
   Users,
   Trophy,
@@ -18,8 +19,49 @@ import {
   ExternalLink,
 } from 'lucide-react';
 
+const USER_SORT_OPTIONS = [
+  { value: 'createdAt', label: 'Joined Date' },
+  { value: 'name', label: 'Name (A-Z)' },
+  { value: 'email', label: 'Email (A-Z)' },
+  { value: 'role', label: 'Role' },
+];
+
+const HACKATHON_SORT_OPTIONS = [
+  { value: 'createdAt', label: 'Recently Created' },
+  { value: 'title', label: 'Title (A-Z)' },
+  { value: 'startDate', label: 'Start Date' },
+];
+
+const SUBMISSION_SORT_OPTIONS = [
+  { value: 'createdAt', label: 'Submission Date' },
+  { value: 'title', label: 'Project Name (A-Z)' },
+  { value: 'score', label: 'Total Score' },
+];
+
+const DEFAULT_PARAMS = {
+  tab: 'users',
+  search: '',
+  role: '',
+  isBlocked: '',
+  status: '',
+  sortBy: 'createdAt',
+  order: 'desc',
+  page: '1',
+  limit: '10',
+};
+
 export const AdminConsole = () => {
-  const [activeTab, setActiveTab] = useState('users');
+  const [queryParams, setQueryParams, resetQueryParams] = useQueryParams(DEFAULT_PARAMS);
+
+  const activeTab = queryParams.tab || 'users';
+  const search = queryParams.search || '';
+  const roleFilter = queryParams.role || '';
+  const isBlockedFilter = queryParams.isBlocked || '';
+  const statusFilter = queryParams.status || '';
+  const sortBy = queryParams.sortBy || 'createdAt';
+  const order = queryParams.order || 'desc';
+  const page = parseInt(queryParams.page || '1', 10);
+  const limit = parseInt(queryParams.limit || '10', 10);
 
   // State: Analytics
   const [analytics, setAnalytics] = useState(null);
@@ -27,23 +69,18 @@ export const AdminConsole = () => {
 
   // State: Users Table
   const [users, setUsers] = useState([]);
-  const [usersLoading, setUsersLoading] = useState(true);
-  const [userSearch, setUserSearch] = useState('');
-  const [userRoleFilter, setUserRoleFilter] = useState('');
-  const [userBlockedFilter, setUserBlockedFilter] = useState('');
-  const [userPagination, setUserPagination] = useState({ page: 1, limit: 10, pages: 1, total: 0 });
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userPagination, setUserPagination] = useState({ page, limit, pages: 1, total: 0 });
 
   // State: Hackathons Table
   const [hackathons, setHackathons] = useState([]);
   const [hackathonsLoading, setHackathonsLoading] = useState(false);
-  const [hackathonSearch, setHackathonSearch] = useState('');
-  const [hackathonPagination, setHackathonPagination] = useState({ page: 1, limit: 10, pages: 1, total: 0 });
+  const [hackathonPagination, setHackathonPagination] = useState({ page, limit, pages: 1, total: 0 });
 
   // State: Submissions Table
   const [submissions, setSubmissions] = useState([]);
   const [submissionsLoading, setSubmissionsLoading] = useState(false);
-  const [submissionSearch, setSubmissionSearch] = useState('');
-  const [submissionPagination, setSubmissionPagination] = useState({ page: 1, limit: 10, pages: 1, total: 0 });
+  const [submissionPagination, setSubmissionPagination] = useState({ page, limit, pages: 1, total: 0 });
 
   // Alert State
   const [alert, setAlert] = useState({ type: 'info', message: '' });
@@ -60,6 +97,7 @@ export const AdminConsole = () => {
 
   // Fetch Analytics
   const loadAnalytics = useCallback(async () => {
+    setAnalyticsLoading(true);
     try {
       const res = await adminService.getAnalytics();
       if (res && res.data) {
@@ -73,14 +111,17 @@ export const AdminConsole = () => {
   }, []);
 
   // Fetch Users
-  const loadUsers = useCallback(async (page = 1) => {
+  const loadUsers = useCallback(async () => {
+    setUsersLoading(true);
     try {
       const res = await adminService.getUsers({
         page,
-        limit: 10,
-        search: userSearch,
-        role: userRoleFilter,
-        isBlocked: userBlockedFilter,
+        limit,
+        search,
+        role: roleFilter,
+        isBlocked: isBlockedFilter,
+        sortBy,
+        order,
       });
       if (res && res.data) {
         setUsers(res.data.users);
@@ -91,15 +132,19 @@ export const AdminConsole = () => {
     } finally {
       setUsersLoading(false);
     }
-  }, [userSearch, userRoleFilter, userBlockedFilter]);
+  }, [page, limit, search, roleFilter, isBlockedFilter, sortBy, order]);
 
   // Fetch Hackathons
-  const loadHackathons = useCallback(async (page = 1) => {
+  const loadHackathons = useCallback(async () => {
+    setHackathonsLoading(true);
     try {
       const res = await adminService.getHackathons({
         page,
-        limit: 10,
-        search: hackathonSearch,
+        limit,
+        search,
+        status: statusFilter,
+        sortBy,
+        order,
       });
       if (res && res.data) {
         setHackathons(res.data.hackathons);
@@ -110,15 +155,19 @@ export const AdminConsole = () => {
     } finally {
       setHackathonsLoading(false);
     }
-  }, [hackathonSearch]);
+  }, [page, limit, search, statusFilter, sortBy, order]);
 
   // Fetch Submissions
-  const loadSubmissions = useCallback(async (page = 1) => {
+  const loadSubmissions = useCallback(async () => {
+    setSubmissionsLoading(true);
     try {
       const res = await adminService.getSubmissions({
         page,
-        limit: 10,
-        search: submissionSearch,
+        limit,
+        search,
+        status: statusFilter,
+        sortBy,
+        order,
       });
       if (res && res.data) {
         setSubmissions(res.data.submissions);
@@ -129,73 +178,34 @@ export const AdminConsole = () => {
     } finally {
       setSubmissionsLoading(false);
     }
-  }, [submissionSearch]);
+  }, [page, limit, search, statusFilter, sortBy, order]);
 
   useEffect(() => {
-    let isMounted = true;
-    adminService.getAnalytics()
-      .then((res) => {
-        if (isMounted && res && res.data) {
-          setAnalytics(res.data);
-        }
-      })
-      .catch((err) => console.error(err))
-      .finally(() => {
-        if (isMounted) setAnalyticsLoading(false);
-      });
-
-    return () => { isMounted = false; };
-  }, []);
+    loadAnalytics();
+  }, [loadAnalytics]);
 
   useEffect(() => {
-    let isMounted = true;
-
     if (activeTab === 'users') {
-      adminService.getUsers({
-        page: userPagination.page || 1,
-        limit: 10,
-        search: userSearch,
-        role: userRoleFilter,
-        isBlocked: userBlockedFilter,
-      }).then((res) => {
-        if (isMounted && res && res.data) {
-          setUsers(res.data.users);
-          setUserPagination(res.data.pagination);
-        }
-      }).catch((err) => setAlert({ type: 'error', message: err.message || 'Failed to load users' }))
-        .finally(() => { if (isMounted) setUsersLoading(false); });
+      loadUsers();
+    } else if (activeTab === 'hackathons') {
+      loadHackathons();
+    } else if (activeTab === 'submissions') {
+      loadSubmissions();
     }
+  }, [activeTab, loadUsers, loadHackathons, loadSubmissions]);
 
-    if (activeTab === 'hackathons') {
-      adminService.getHackathons({
-        page: hackathonPagination.page || 1,
-        limit: 10,
-        search: hackathonSearch,
-      }).then((res) => {
-        if (isMounted && res && res.data) {
-          setHackathons(res.data.hackathons);
-          setHackathonPagination(res.data.pagination);
-        }
-      }).catch((err) => setAlert({ type: 'error', message: err.message || 'Failed to load hackathons' }))
-        .finally(() => { if (isMounted) setHackathonsLoading(false); });
-    }
-
-    if (activeTab === 'submissions') {
-      adminService.getSubmissions({
-        page: submissionPagination.page || 1,
-        limit: 10,
-        search: submissionSearch,
-      }).then((res) => {
-        if (isMounted && res && res.data) {
-          setSubmissions(res.data.submissions);
-          setSubmissionPagination(res.data.pagination);
-        }
-      }).catch((err) => setAlert({ type: 'error', message: err.message || 'Failed to load submissions' }))
-        .finally(() => { if (isMounted) setSubmissionsLoading(false); });
-    }
-
-    return () => { isMounted = false; };
-  }, [activeTab, userSearch, userRoleFilter, userBlockedFilter, hackathonSearch, submissionSearch, userPagination.page, hackathonPagination.page, submissionPagination.page]);
+  const handleTabChange = (newTab) => {
+    setQueryParams({
+      tab: newTab,
+      search: '',
+      role: '',
+      isBlocked: '',
+      status: '',
+      sortBy: 'createdAt',
+      order: 'desc',
+      page: 1,
+    });
+  };
 
   // Handlers for Block/Unblock
   const handleToggleBlock = async (userRecord) => {
@@ -215,7 +225,7 @@ export const AdminConsole = () => {
             type: 'success',
             message: `User ${userRecord.name} has been ${actionText.toLowerCase()}ed successfully.`,
           });
-          loadUsers(userPagination.page);
+          loadUsers();
           loadAnalytics();
         } catch (err) {
           setAlert({ type: 'error', message: err.message || 'Action failed.' });
@@ -231,7 +241,7 @@ export const AdminConsole = () => {
     try {
       await adminService.updateUserRole(userId, newRole);
       setAlert({ type: 'success', message: `User role updated to ${newRole}.` });
-      loadUsers(userPagination.page);
+      loadUsers();
       loadAnalytics();
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to update role.' });
@@ -252,7 +262,7 @@ export const AdminConsole = () => {
         try {
           await adminService.deleteUser(userRecord._id);
           setAlert({ type: 'success', message: `User ${userRecord.name} deleted.` });
-          loadUsers(userPagination.page);
+          loadUsers();
           loadAnalytics();
         } catch (err) {
           setAlert({ type: 'error', message: err.message || 'Failed to delete user.' });
@@ -277,7 +287,7 @@ export const AdminConsole = () => {
         try {
           await adminService.deleteHackathon(hackathon._id);
           setAlert({ type: 'success', message: `Hackathon ${hackathon.title} deleted.` });
-          loadHackathons(hackathonPagination.page);
+          loadHackathons();
           loadAnalytics();
         } catch (err) {
           setAlert({ type: 'error', message: err.message || 'Failed to delete hackathon.' });
@@ -302,7 +312,7 @@ export const AdminConsole = () => {
         try {
           await adminService.deleteSubmission(submission._id);
           setAlert({ type: 'success', message: `Submission ${submission.title} deleted.` });
-          loadSubmissions(submissionPagination.page);
+          loadSubmissions();
           loadAnalytics();
         } catch (err) {
           setAlert({ type: 'error', message: err.message || 'Failed to delete submission.' });
@@ -325,7 +335,9 @@ export const AdminConsole = () => {
                 src={row.avatar.startsWith('http') ? row.avatar : `${import.meta.env.VITE_API_BASE_URL.replace('/api/v1', '')}${row.avatar}`}
                 alt={row.name}
                 className="w-full h-full object-cover rounded-full"
-                onError={(e) => { e.target.style.display = 'none'; }}
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
               />
             ) : (
               row.name?.charAt(0).toUpperCase()
@@ -511,9 +523,14 @@ export const AdminConsole = () => {
             Manage users, organizers, judges, hackathons, and platform-wide configurations.
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={loadAnalytics}>
-          <RefreshCw className="w-3.5 h-3.5" /> Refresh Analytics
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button size="sm" variant="outline" onClick={loadAnalytics}>
+            <RefreshCw className="w-3.5 h-3.5" /> Refresh Analytics
+          </Button>
+          <Button size="sm" variant="ghost" onClick={resetQueryParams} className="text-xs">
+            Reset Filters
+          </Button>
+        </div>
       </div>
 
       <Alert type={alert.type} message={alert.message} onClose={() => setAlert({ type: 'info', message: '' })} />
@@ -553,7 +570,7 @@ export const AdminConsole = () => {
       {/* Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
         <button
-          onClick={() => setActiveTab('users')}
+          onClick={() => handleTabChange('users')}
           className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
             activeTab === 'users'
               ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
@@ -563,7 +580,7 @@ export const AdminConsole = () => {
           Users Management ({analytics?.users?.total || 0})
         </button>
         <button
-          onClick={() => setActiveTab('hackathons')}
+          onClick={() => handleTabChange('hackathons')}
           className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
             activeTab === 'hackathons'
               ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
@@ -573,7 +590,7 @@ export const AdminConsole = () => {
           Hackathons Management ({analytics?.hackathons?.total || 0})
         </button>
         <button
-          onClick={() => setActiveTab('submissions')}
+          onClick={() => handleTabChange('submissions')}
           className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
             activeTab === 'submissions'
               ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
@@ -591,15 +608,21 @@ export const AdminConsole = () => {
             columns={userColumns}
             data={users}
             loading={usersLoading}
-            searchValue={userSearch}
-            onSearchChange={setUserSearch}
-            searchPlaceholder="Search users by name or email..."
+            searchValue={search}
+            onSearchChange={(val) => setQueryParams({ search: val, page: 1 })}
+            searchPlaceholder="Search users by name, email, skills..."
+            sortOptions={USER_SORT_OPTIONS}
+            sortBy={sortBy}
+            order={order}
+            onSortChange={({ sortBy: newSort, order: newOrder }) =>
+              setQueryParams({ sortBy: newSort, order: newOrder, page: 1 })
+            }
             filters={[
               {
                 id: 'roleFilter',
                 label: 'Role',
-                value: userRoleFilter,
-                onChange: (val) => setUserRoleFilter(val),
+                value: roleFilter,
+                onChange: (val) => setQueryParams({ role: val, page: 1 }),
                 options: [
                   { value: '', label: 'All Roles' },
                   { value: 'participant', label: 'Participant' },
@@ -611,8 +634,8 @@ export const AdminConsole = () => {
               {
                 id: 'blockedFilter',
                 label: 'Status',
-                value: userBlockedFilter,
-                onChange: (val) => setUserBlockedFilter(val),
+                value: isBlockedFilter,
+                onChange: (val) => setQueryParams({ isBlocked: val, page: 1 }),
                 options: [
                   { value: '', label: 'All Status' },
                   { value: 'false', label: 'Active Only' },
@@ -622,7 +645,8 @@ export const AdminConsole = () => {
             ]}
             pagination={{
               ...userPagination,
-              onPageChange: (newPage) => loadUsers(newPage),
+              onPageChange: (newPage) => setQueryParams({ page: newPage }),
+              onLimitChange: (newLimit) => setQueryParams({ limit: newLimit, page: 1 }),
             }}
           />
         </Card>
@@ -635,12 +659,35 @@ export const AdminConsole = () => {
             columns={hackathonColumns}
             data={hackathons}
             loading={hackathonsLoading}
-            searchValue={hackathonSearch}
-            onSearchChange={setHackathonSearch}
-            searchPlaceholder="Search hackathons by title..."
+            searchValue={search}
+            onSearchChange={(val) => setQueryParams({ search: val, page: 1 })}
+            searchPlaceholder="Search hackathons by title, description..."
+            sortOptions={HACKATHON_SORT_OPTIONS}
+            sortBy={sortBy}
+            order={order}
+            onSortChange={({ sortBy: newSort, order: newOrder }) =>
+              setQueryParams({ sortBy: newSort, order: newOrder, page: 1 })
+            }
+            filters={[
+              {
+                id: 'statusFilter',
+                label: 'Status',
+                value: statusFilter,
+                onChange: (val) => setQueryParams({ status: val, page: 1 }),
+                options: [
+                  { value: '', label: 'All Statuses' },
+                  { value: 'draft', label: 'Draft' },
+                  { value: 'upcoming', label: 'Upcoming' },
+                  { value: 'ongoing', label: 'Ongoing' },
+                  { value: 'ended', label: 'Ended' },
+                  { value: 'cancelled', label: 'Cancelled' },
+                ],
+              },
+            ]}
             pagination={{
               ...hackathonPagination,
-              onPageChange: (newPage) => loadHackathons(newPage),
+              onPageChange: (newPage) => setQueryParams({ page: newPage }),
+              onLimitChange: (newLimit) => setQueryParams({ limit: newLimit, page: 1 }),
             }}
           />
         </Card>
@@ -653,12 +700,32 @@ export const AdminConsole = () => {
             columns={submissionColumns}
             data={submissions}
             loading={submissionsLoading}
-            searchValue={submissionSearch}
-            onSearchChange={setSubmissionSearch}
-            searchPlaceholder="Search submissions..."
+            searchValue={search}
+            onSearchChange={(val) => setQueryParams({ search: val, page: 1 })}
+            searchPlaceholder="Search submissions by title..."
+            sortOptions={SUBMISSION_SORT_OPTIONS}
+            sortBy={sortBy}
+            order={order}
+            onSortChange={({ sortBy: newSort, order: newOrder }) =>
+              setQueryParams({ sortBy: newSort, order: newOrder, page: 1 })
+            }
+            filters={[
+              {
+                id: 'statusFilter',
+                label: 'Status',
+                value: statusFilter,
+                onChange: (val) => setQueryParams({ status: val, page: 1 }),
+                options: [
+                  { value: '', label: 'All Statuses' },
+                  { value: 'submitted', label: 'Submitted' },
+                  { value: 'draft', label: 'Draft' },
+                ],
+              },
+            ]}
             pagination={{
               ...submissionPagination,
-              onPageChange: (newPage) => loadSubmissions(newPage),
+              onPageChange: (newPage) => setQueryParams({ page: newPage }),
+              onLimitChange: (newLimit) => setQueryParams({ limit: newLimit, page: 1 }),
             }}
           />
         </Card>

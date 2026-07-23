@@ -1,5 +1,7 @@
 import { useState } from 'react';
-import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { SearchBar } from './SearchBar';
+import { SortDropdown } from './SortDropdown';
+import { PaginationControls } from './PaginationControls';
 
 export const DataTable = ({
   columns = [],
@@ -9,13 +11,16 @@ export const DataTable = ({
   onSearchChange,
   searchPlaceholder = 'Search records...',
   filters = [],
+  sortOptions = [],
+  sortBy = '',
+  order = 'desc',
+  onSortChange,
   pagination = null,
   emptyMessage = 'No records found.',
 }) => {
   const [localSearch, setLocalSearch] = useState('');
 
-  const handleSearchInput = (e) => {
-    const val = e.target.value;
+  const handleSearchTerm = (val) => {
     setLocalSearch(val);
     if (onSearchChange) {
       onSearchChange(val);
@@ -38,41 +43,49 @@ export const DataTable = ({
     <div className="space-y-3">
       {/* Search & Filter Header Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-        <div className="relative flex-1 max-w-xs">
-          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            value={onSearchChange ? searchValue : localSearch}
-            onChange={handleSearchInput}
-            placeholder={searchPlaceholder}
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
-          />
-        </div>
+        <SearchBar
+          value={onSearchChange ? searchValue : localSearch}
+          onChange={handleSearchTerm}
+          placeholder={searchPlaceholder}
+          loading={loading}
+          className="flex-1 max-w-xs"
+        />
 
-        {filters && filters.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            {filters.map((f) => (
-              <div key={f.id} className="flex items-center gap-1.5">
-                {f.label && (
-                  <span className="text-[11px] font-semibold text-slate-500">
-                    {f.label}:
-                  </span>
-                )}
-                <select
-                  value={f.value}
-                  onChange={(e) => f.onChange(e.target.value)}
-                  className="py-1 px-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:bg-white focus:border-indigo-500"
-                >
-                  {f.options.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2.5">
+          {filters && filters.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {filters.map((f) => (
+                <div key={f.id} className="flex items-center gap-1.5">
+                  {f.label && (
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      {f.label}:
+                    </span>
+                  )}
+                  <select
+                    value={f.value}
+                    onChange={(e) => f.onChange(e.target.value)}
+                    className="py-1 px-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:bg-white focus:border-indigo-500"
+                  >
+                    {f.options.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {sortOptions && sortOptions.length > 0 && onSortChange && (
+            <SortDropdown
+              options={sortOptions}
+              sortBy={sortBy}
+              order={order}
+              onSortChange={onSortChange}
+            />
+          )}
+        </div>
       </div>
 
       {/* Table Container */}
@@ -130,33 +143,20 @@ export const DataTable = ({
         </div>
 
         {/* Pagination Footer */}
-        {pagination && pagination.pages > 1 && (
-          <div className="px-4 py-2.5 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-            <div>
-              Showing Page <span className="font-semibold text-slate-700">{pagination.page}</span> of{' '}
-              <span className="font-semibold text-slate-700">{pagination.pages}</span> ({pagination.total} total)
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                disabled={pagination.page <= 1}
-                onClick={() => pagination.onPageChange(pagination.page - 1)}
-                className="p-1 rounded border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                aria-label="Previous page"
-              >
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </button>
-              <button
-                disabled={pagination.page >= pagination.pages}
-                onClick={() => pagination.onPageChange(pagination.page + 1)}
-                className="p-1 rounded border border-slate-200 bg-white hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                aria-label="Next page"
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            </div>
+        {pagination && (
+          <div className="px-4 py-2 bg-slate-50/50 border-t border-slate-100">
+            <PaginationControls
+              pagination={pagination}
+              onPageChange={pagination.onPageChange}
+              onLimitChange={pagination.onLimitChange}
+              showLimitSelector={Boolean(pagination.onLimitChange)}
+              className="border-t-0 pt-0"
+            />
           </div>
         )}
       </div>
     </div>
   );
 };
+
+export default DataTable;

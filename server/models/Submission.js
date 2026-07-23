@@ -113,8 +113,12 @@ const submissionSchema = new mongoose.Schema(
 );
 
 // Index for efficient hackathon & participant queries
+submissionSchema.index({ title: 'text', tagline: 'text', description: 'text' });
 submissionSchema.index({ hackathon: 1, submittedBy: 1 });
 submissionSchema.index({ hackathon: 1, team: 1 });
+submissionSchema.index({ hackathon: 1, status: 1, score: -1 });
+submissionSchema.index({ status: 1, createdAt: -1 });
 submissionSchema.index({ 'evaluations.judge': 1 });
 
 module.exports = mongoose.model('Submission', submissionSchema);
+
