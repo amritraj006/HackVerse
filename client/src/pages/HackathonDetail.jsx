@@ -4,6 +4,7 @@ import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Alert } from '../components/Alert';
 import { ConfirmModal } from '../components/ConfirmModal';
+import { DataTable } from '../components/DataTable';
 import { hackathonService } from '../services/hackathonService';
 import { registrationService } from '../services/registrationService';
 import { useAuth } from '../hooks/useAuth';
@@ -36,6 +37,8 @@ export const HackathonDetail = () => {
   const [hackathon, setHackathon] = useState(null);
   const [loading, setLoading] = useState(true);
   const [alert, setAlert] = useState({ type: 'info', message: '' });
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
 
   // Registration state
   const [isRegistered, setIsRegistered] = useState(false);
@@ -57,6 +60,19 @@ export const HackathonDetail = () => {
 
     return () => { isMounted = false; };
   }, [id]);
+
+  // Published rankings are public so participants can see the final standings.
+  useEffect(() => {
+    if (!hackathon?.isResultsPublished) {
+      return;
+    }
+    let isMounted = true;
+    hackathonService.getLeaderboard(id)
+      .then((res) => { if (isMounted) setLeaderboard(res?.data?.rankings || []); })
+      .catch((err) => { if (isMounted) setAlert({ type: 'error', message: err.message || 'Failed to load the leaderboard.' }); })
+      .finally(() => { if (isMounted) setLeaderboardLoading(false); });
+    return () => { isMounted = false; };
+  }, [hackathon?.isResultsPublished, id]);
 
   // Check registration status for logged-in user
   useEffect(() => {
@@ -242,29 +258,22 @@ export const HackathonDetail = () => {
             </div>
           </Card>
 
-          {/* Results (if published) */}
-          {hackathon.isResultsPublished && hackathon.winners?.length > 0 && (
-            <Card header={<span className="font-semibold text-xs text-slate-800">🏆 Competition Results</span>}>
-              <div className="space-y-2 text-xs">
-                {hackathon.winners.map((w) => (
-                  <div key={w.rank} className={`p-2.5 rounded-lg border flex items-center justify-between ${
-                    w.rank === 1 ? 'bg-amber-50 border-amber-200' :
-                    w.rank === 2 ? 'bg-slate-50 border-slate-200' :
-                    'bg-orange-50 border-orange-200'
-                  }`}>
-                    <div>
-                      <span className="font-bold">
-                        {w.rank === 1 ? '🥇' : w.rank === 2 ? '🥈' : '🥉'} {w.prize}
-                      </span>
-                      {w.submission && (
-                        <p className="text-[11px] text-slate-500 mt-0.5">
-                          {w.submission.title || 'Project submission'}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {hackathon.isResultsPublished && (
+            <Card header={<span className="font-semibold text-xs text-slate-800">🏆 Final Leaderboard</span>}>
+              <DataTable
+                columns={[
+                  { header: 'Rank', accessor: (row) => <span className="font-bold text-slate-900">#{row.rank}</span> },
+                  { header: 'Team Name', accessor: 'teamName' },
+                  { header: 'Project Name', accessor: 'projectName' },
+                  { header: 'Total Score', accessor: (row) => <span className="font-semibold text-indigo-700">{row.totalScore} / {row.maxScore}</span> },
+                  { header: 'Position', accessor: (row) => row.position || '—' },
+                  { header: 'Winner', accessor: (row) => row.isWinner ? <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 rounded-full">🏆 Winner</span> : '—' },
+                ]}
+                data={leaderboard}
+                loading={leaderboardLoading}
+                searchPlaceholder="Search standings..."
+                emptyMessage="No evaluated projects were available for the final rankings."
+              />
             </Card>
           )}
         </div>

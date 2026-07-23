@@ -38,7 +38,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
                 const Icon = item.icon;
                 return (
                   <NavLink
-                    key={item.path}
+                    key={item.name}
                     to={item.path}
                     onClick={() => onClose && onClose()}
                     className={({ isActive }) =>

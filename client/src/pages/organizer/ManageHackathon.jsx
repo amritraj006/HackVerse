@@ -32,7 +32,7 @@ export const ManageHackathon = () => {
   // Teams & Submissions
   const [teams, setTeams] = useState([]);
   const [teamsLoading, setTeamsLoading] = useState(false);
-  const [submissions, setSubmissions] = useState([]);
+  const [leaderboard, setLeaderboard] = useState([]);
 
   // Judges Assignment
   const [availableJudges, setAvailableJudges] = useState([]);
@@ -46,13 +46,6 @@ export const ManageHackathon = () => {
   // Delete Modal State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  // Winners publishing state
-  const [winners, setWinners] = useState({
-    first: '',
-    second: '',
-    third: '',
-  });
 
   // Load Hackathon Event Details
   useEffect(() => {
@@ -98,9 +91,9 @@ export const ManageHackathon = () => {
     }
 
     if (activeTab === 'submissions') {
-      hackathonService.getSubmissions(id)
-        .then((res) => { if (isMounted && res?.data) setSubmissions(res.data); })
-        .catch((err) => console.error(err));
+      hackathonService.getLeaderboardPreview(id)
+        .then((res) => { if (isMounted && res?.data) setLeaderboard(res.data.rankings || []); })
+        .catch((err) => { if (isMounted) setAlert({ type: 'error', message: err.message || 'Failed to calculate leaderboard.' }); });
     }
 
     return () => { isMounted = false; };
@@ -194,14 +187,8 @@ export const ManageHackathon = () => {
 
   // Publish Winners
   const handlePublishResults = async () => {
-    const winnersList = [
-      { rank: 1, submission: winners.first, prize: '1st Place Winner' },
-      { rank: 2, submission: winners.second, prize: '2nd Place Runner Up' },
-      { rank: 3, submission: winners.third, prize: '3rd Place Bronze' },
-    ].filter((w) => w.submission);
-
     try {
-      const res = await hackathonService.publishResults(id, winnersList);
+      const res = await hackathonService.publishResults(id);
       if (res && res.data) {
         setHackathon(res.data);
         setAlert({ type: 'success', message: 'Competition results published successfully!' });
@@ -289,6 +276,27 @@ export const ManageHackathon = () => {
           </Button>
         </div>
       ),
+    },
+  ];
+
+  const leaderboardColumns = [
+    {
+      header: 'Rank',
+      accessor: (row) => <span className="font-bold text-slate-900">#{row.rank}</span>,
+    },
+    { header: 'Team Name', accessor: 'teamName' },
+    { header: 'Project Name', accessor: 'projectName' },
+    {
+      header: 'Total Score',
+      accessor: (row) => <span className="font-semibold text-indigo-700">{row.totalScore} / {row.maxScore}</span>,
+    },
+    {
+      header: 'Position',
+      accessor: (row) => row.position || '—',
+    },
+    {
+      header: 'Winner',
+      accessor: (row) => row.isWinner ? <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 rounded-full">🏆 Winner</span> : '—',
     },
   ];
 
@@ -455,63 +463,13 @@ export const ManageHackathon = () => {
       {/* Tab: Submissions & Results */}
       {activeTab === 'submissions' && (
         <div className="space-y-4">
-          <Card header={<span className="font-semibold text-xs text-slate-800">Publish Competition Results</span>}>
+          <Card header={<span className="font-semibold text-xs text-slate-800">Calculated Leaderboard</span>}>
             <div className="space-y-3 text-xs">
               <p className="text-slate-500">
-                Select winning submissions to display on the public hackathon page.
+                Rankings use each project&apos;s average score from all submitted judge evaluations. Publishing awards the top three ranked projects automatically.
               </p>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <label className="font-semibold text-amber-900">🥇 1st Place Winner</label>
-                  <select
-                    value={winners.first}
-                    onChange={(e) => setWinners((prev) => ({ ...prev, first: e.target.value }))}
-                    className="w-full py-1.5 px-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none"
-                  >
-                    <option value="">Select Submission</option>
-                    {submissions.map((sub) => (
-                      <option key={sub._id} value={sub._id}>
-                        {sub.title} ({sub.submittedBy?.name})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-semibold text-slate-800">🥈 2nd Place Runner Up</label>
-                  <select
-                    value={winners.second}
-                    onChange={(e) => setWinners((prev) => ({ ...prev, second: e.target.value }))}
-                    className="w-full py-1.5 px-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none"
-                  >
-                    <option value="">Select Submission</option>
-                    {submissions.map((sub) => (
-                      <option key={sub._id} value={sub._id}>
-                        {sub.title} ({sub.submittedBy?.name})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1">
-                  <label className="font-semibold text-orange-900">🥉 3rd Place Bronze</label>
-                  <select
-                    value={winners.third}
-                    onChange={(e) => setWinners((prev) => ({ ...prev, third: e.target.value }))}
-                    className="w-full py-1.5 px-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none"
-                  >
-                    <option value="">Select Submission</option>
-                    {submissions.map((sub) => (
-                      <option key={sub._id} value={sub._id}>
-                        {sub.title} ({sub.submittedBy?.name})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <Button size="sm" variant="primary" onClick={handlePublishResults}>
+              <DataTable columns={leaderboardColumns} data={leaderboard} searchPlaceholder="Search rankings..." />
+              <Button size="sm" variant="primary" onClick={handlePublishResults} disabled={!leaderboard.length || hackathon.isResultsPublished}>
                 <Award className="w-3.5 h-3.5" /> Publish Official Results
               </Button>
             </div>

@@ -14,9 +14,8 @@ export const ALL_NAV_ITEMS = [
   { name: 'Profile', path: '/profile', icon: User, roles: ['participant', 'organizer', 'judge', 'admin'] },
   { name: 'Hackathons', path: '/hackathons', icon: Trophy, roles: ['participant', 'organizer', 'judge', 'admin'] },
   { name: 'Projects', path: '/projects', icon: FolderGit2, roles: ['participant', 'organizer', 'judge', 'admin'] },
-  { name: 'Teams', path: '/teams', icon: Users, roles: ['participant'] },
+  { name: 'Teams', path: '/teams', icon: Users, roles: ['participant', 'organizer'] },
   { name: 'My Registrations', path: '/registrations', icon: ClipboardList, roles: ['participant'] },
-  { name: 'My Events', path: '/dashboard', icon: Trophy, roles: ['organizer'] },
   { name: 'Admin Console', path: '/admin', icon: Shield, roles: ['admin'] },
 ];
 

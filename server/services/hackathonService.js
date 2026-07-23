@@ -211,27 +211,87 @@ class HackathonService {
    * Publish results & winners
    */
   async publishResults(id, winners, user) {
+    const leaderboard = await this.getLeaderboard(id, true, user);
+    if (!leaderboard.rankings.length) {
+      const error = new Error('At least one judge evaluation is required before publishing results');
+      error.statusCode = 400;
+      throw error;
+    }
+
     const hackathon = await Hackathon.findById(id);
+    const positionLabels = ['1st Place Winner', '2nd Place Runner Up', '3rd Place Bronze'];
+    hackathon.isResultsPublished = true;
+    hackathon.status = 'ended';
+    // Winners are always derived from the calculated ranking, never selected manually.
+    hackathon.winners = leaderboard.rankings.slice(0, 3).map((entry, index) => ({
+      rank: index + 1,
+      submission: entry.submissionId,
+      prize: positionLabels[index],
+    }));
+
+    await hackathon.save();
+    return await this.getHackathonById(id);
+  }
+
+  /**
+   * Build rankings from the average score stored after judge evaluations.
+   * Tied projects share a rank; the following rank reflects the tie position.
+   */
+  async getLeaderboard(id, includeUnpublished = false, user = null) {
+    const hackathon = await Hackathon.findById(id).select('title organizer isResultsPublished winners');
     if (!hackathon) {
       const error = new Error('Hackathon not found');
       error.statusCode = 404;
       throw error;
     }
 
-    if (hackathon.organizer.toString() !== user.id && user.role !== 'admin') {
-      const error = new Error('Not authorized to publish results for this hackathon');
+    if (includeUnpublished) {
+      if (!user || (hackathon.organizer.toString() !== user.id && user.role !== 'admin')) {
+        const error = new Error('Not authorized to preview this leaderboard');
+        error.statusCode = 403;
+        throw error;
+      }
+    } else if (!hackathon.isResultsPublished) {
+      const error = new Error('Rankings will be available once the organizer publishes the results');
       error.statusCode = 403;
       throw error;
     }
 
-    hackathon.isResultsPublished = true;
-    hackathon.status = 'ended';
-    if (winners && Array.isArray(winners)) {
-      hackathon.winners = winners;
-    }
+    const winnerPositions = new Map(
+      (hackathon.winners || [])
+        .filter((winner) => winner.submission)
+        .map((winner) => [winner.submission.toString(), winner])
+    );
+    const submissions = await Submission.find({ hackathon: id, status: 'submitted', 'evaluations.0': { $exists: true } })
+      .populate('team', 'name')
+      .populate('submittedBy', 'name')
+      .sort({ score: -1, _id: 1 })
+      .lean();
 
-    await hackathon.save();
-    return await this.getHackathonById(id);
+    let previousScore = null;
+    let previousRank = 0;
+    const rankings = submissions.map((submission, index) => {
+      const totalScore = Number((submission.score || 0).toFixed(2));
+      const rank = previousScore !== null && totalScore === previousScore ? previousRank : index + 1;
+      previousScore = totalScore;
+      previousRank = rank;
+      const winner = winnerPositions.get(submission._id.toString());
+      return {
+        rank,
+        teamName: submission.team?.name || submission.submittedBy?.name || 'Individual Entry',
+        projectName: submission.title,
+        totalScore,
+        maxScore: 40,
+        position: winner?.prize || null,
+        isWinner: Boolean(winner),
+        submissionId: submission._id,
+      };
+    });
+
+    return {
+      hackathon: { id: hackathon._id, title: hackathon.title, isResultsPublished: hackathon.isResultsPublished },
+      rankings,
+    };
   }
 
   /**

@@ -127,6 +127,26 @@ const getSubmissions = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'Submissions retrieved successfully', submissions);
 });
 
+/**
+ * @desc    Get published competition leaderboard
+ * @route   GET /api/v1/hackathons/:id/leaderboard
+ * @access  Public
+ */
+const getLeaderboard = asyncHandler(async (req, res) => {
+  const leaderboard = await hackathonService.getLeaderboard(req.params.id, false);
+  return successResponse(res, 200, 'Leaderboard retrieved successfully', leaderboard);
+});
+
+/**
+ * @desc    Get leaderboard preview before results are published
+ * @route   GET /api/v1/hackathons/:id/leaderboard/preview
+ * @access  Private (Organizer/Admin)
+ */
+const getLeaderboardPreview = asyncHandler(async (req, res) => {
+  const leaderboard = await hackathonService.getLeaderboard(req.params.id, true, req.user);
+  return successResponse(res, 200, 'Leaderboard preview retrieved successfully', leaderboard);
+});
+
 module.exports = {
   getHackathons,
   getHackathonById,
@@ -140,4 +160,6 @@ module.exports = {
   getTeams,
   updateTeamStatus,
   getSubmissions,
+  getLeaderboard,
+  getLeaderboardPreview,
 };

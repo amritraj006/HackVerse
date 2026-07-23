@@ -28,6 +28,12 @@ export const hackathonService = {
   publishResults: async (id, winners) => {
     return await api.put(`/hackathons/${id}/results`, { winners });
   },
+  getLeaderboard: async (id) => {
+    return await api.get(`/hackathons/${id}/leaderboard`);
+  },
+  getLeaderboardPreview: async (id) => {
+    return await api.get(`/hackathons/${id}/leaderboard/preview`);
+  },
   getTeams: async (id) => {
     return await api.get(`/hackathons/${id}/teams`);
   },
