@@ -1,5 +1,6 @@
 const User = require('../models/User');
 const adminService = require('../services/adminService');
+const uploadService = require('../services/uploadService');
 const asyncHandler = require('../utils/asyncHandler');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 
@@ -46,7 +47,7 @@ const getCurrentProfile = asyncHandler(async (req, res) => {
  * @access  Private
  */
 const updateProfile = asyncHandler(async (req, res) => {
-  const { name, bio, skills } = req.body;
+  const { name, bio, skills, role } = req.body;
 
   const user = await User.findById(req.user.id);
   if (!user) {
@@ -55,6 +56,12 @@ const updateProfile = asyncHandler(async (req, res) => {
 
   if (name !== undefined) user.name = name;
   if (bio !== undefined) user.bio = bio;
+  if (role !== undefined && ['participant', 'organizer', 'judge', 'admin'].includes(role)) {
+    if (role === 'admin' && user.role !== 'admin') {
+      return errorResponse(res, 403, 'Only existing System Admins can assign the Admin role');
+    }
+    user.role = role;
+  }
   if (skills !== undefined) {
     user.skills = Array.isArray(skills)
       ? skills
@@ -81,7 +88,7 @@ const uploadAvatar = asyncHandler(async (req, res) => {
     return errorResponse(res, 404, 'User not found');
   }
 
-  const avatarUrl = `/uploads/${req.file.filename}`;
+  const avatarUrl = await uploadService.uploadImage(req.file, 'avatars');
   user.avatar = avatarUrl;
   await user.save();
 

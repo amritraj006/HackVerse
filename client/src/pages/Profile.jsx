@@ -2,20 +2,32 @@ import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { Card } from '../components/Card';
 import { Input } from '../components/Input';
+import { Select } from '../components/Select';
 import { Button } from '../components/Button';
 import { Alert } from '../components/Alert';
 import { AvatarUpload } from '../components/AvatarUpload';
 import { userService } from '../services/userService';
-import { User, Mail, Sparkles, Save, Check } from 'lucide-react';
+import { User, Mail, Sparkles, Save, Check, UserCheck } from 'lucide-react';
+
+const BASE_ROLE_OPTIONS = [
+  { value: 'participant', label: 'Participant (Build & Compete)' },
+  { value: 'organizer', label: 'Organizer (Host Hackathons)' },
+  { value: 'judge', label: 'Judge (Evaluate Projects)' },
+];
 
 export const Profile = () => {
   const { user, login } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
 
+  const roleOptions = user?.role === 'admin'
+    ? [...BASE_ROLE_OPTIONS, { value: 'admin', label: 'Admin (System Administrator)' }]
+    : BASE_ROLE_OPTIONS;
+
   const [currentProfile, setCurrentProfile] = useState(() => user);
   const [formData, setFormData] = useState(() => ({
     name: user?.name || '',
     bio: user?.bio || '',
+    role: user?.role || 'participant',
     skills: Array.isArray(user?.skills) ? user.skills.join(', ') : user?.skills || '',
   }));
 
@@ -40,6 +52,7 @@ export const Profile = () => {
       const res = await userService.updateProfile({
         name: formData.name,
         bio: formData.bio,
+        role: formData.role,
         skills: formData.skills,
       });
 
@@ -219,6 +232,16 @@ export const Profile = () => {
                   className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
+
+              <Select
+                label="Account Role"
+                id="role"
+                options={roleOptions}
+                value={formData.role}
+                onChange={handleChange}
+                icon={UserCheck}
+                required
+              />
 
               <Input
                 label="Skills (Comma Separated)"

@@ -81,13 +81,20 @@ export const ManageHackathon = () => {
     }
 
     if (activeTab === 'judges') {
-      userService.getAllUsers()
+      userService.getAllUsers({ limit: 100 })
         .then((res) => {
           if (isMounted && res?.data) {
-            setAvailableJudges(res.data.filter((u) => u.role === 'judge' || u.role === 'admin'));
+            const userList = Array.isArray(res.data)
+              ? res.data
+              : res.data.users || [];
+            const judges = userList.filter(
+              (u) => u.role === 'judge' || u.role === 'admin'
+            );
+            // If no designated judge/admin role exists, fallback to all users so organizers can assign any judge
+            setAvailableJudges(judges.length > 0 ? judges : userList);
           }
         })
-        .catch((err) => console.error(err));
+        .catch((err) => console.error('[ManageHackathon] Failed to fetch judges:', err));
     }
 
     if (activeTab === 'submissions') {
@@ -415,36 +422,54 @@ export const ManageHackathon = () => {
               Select judges from the registered platform judge pool to grade project submissions.
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              {availableJudges.map((j) => {
-                const isSelected = selectedJudgeIds.includes(j._id);
-                return (
-                  <div
-                    key={j._id}
-                    onClick={() => {
-                      setSelectedJudgeIds((prev) =>
-                        isSelected ? prev.filter((id) => id !== j._id) : [...prev, j._id]
-                      );
-                    }}
-                    className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
-                      isSelected ? 'bg-indigo-50 border-indigo-300 text-indigo-900' : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">
-                        {j.name?.charAt(0).toUpperCase()}
+            {availableJudges.length === 0 ? (
+              <div className="p-6 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200 space-y-1">
+                <p className="text-xs font-semibold text-slate-700">No Judges Found</p>
+                <p className="text-[11px] text-slate-500">
+                  There are currently no registered users with the 'Judge' or 'Admin' role on the platform. Users can register as a Judge from the Sign Up page.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                {availableJudges.map((j) => {
+                  const isSelected = selectedJudgeIds.includes(j._id);
+                  return (
+                    <div
+                      key={j._id}
+                      onClick={() => {
+                        setSelectedJudgeIds((prev) =>
+                          isSelected ? prev.filter((id) => id !== j._id) : [...prev, j._id]
+                        );
+                      }}
+                      className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
+                        isSelected
+                          ? 'bg-indigo-50 border-indigo-300 text-indigo-900'
+                          : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">
+                          {j.name?.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-semibold">{j.name}</p>
+                          <p className="text-[10px] text-slate-500">
+                            {j.email} <span className="ml-1 text-[9px] uppercase px-1 py-0.2 bg-slate-200 rounded font-semibold">{j.role}</span>
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold">{j.name}</p>
-                        <p className="text-[10px] text-slate-500">{j.email}</p>
-                      </div>
-                    </div>
 
-                    <input type="checkbox" checked={isSelected} readOnly className="rounded text-indigo-600 focus:ring-indigo-500" />
-                  </div>
-                );
-              })}
-            </div>
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        readOnly
+                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
             <Button size="sm" variant="primary" onClick={handleSaveJudges} disabled={isAssigningJudges}>
               {isAssigningJudges ? 'Saving Judges...' : 'Save Assigned Judges'}
