@@ -1,6 +1,8 @@
 const Team = require('../models/Team');
 const Hackathon = require('../models/Hackathon');
 const User = require('../models/User');
+const Notification = require('../models/Notification');
+const Registration = require('../models/Registration');
 const crypto = require('crypto');
 
 class TeamService {
@@ -228,6 +230,9 @@ class TeamService {
   /**
    * Invite member by email (Leader action)
    */
+  /**
+   * Invite member by email (Leader action) - Creates a pending invitation notification
+   */
   async inviteMember(teamId, email, leaderId) {
     const team = await Team.findById(teamId).populate('hackathon');
     if (!team) {
@@ -255,6 +260,23 @@ class TeamService {
       throw error;
     }
 
+    // Check if user is already a member of this team
+    if (team.members.some((m) => m.toString() === invitedUser._id.toString())) {
+      const error = new Error('User is already a member of this team');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Check if user already has a pending invitation for this team
+    const alreadyPending = (team.pendingInvites || []).some(
+      (pi) => pi.user && pi.user.toString() === invitedUser._id.toString()
+    );
+    if (alreadyPending) {
+      const error = new Error('An invitation has already been sent to this user');
+      error.statusCode = 400;
+      throw error;
+    }
+
     // Check if user is already in a team for this hackathon
     const existingTeam = await Team.findOne({
       hackathon: team.hackathon._id,
@@ -267,13 +289,123 @@ class TeamService {
       throw error;
     }
 
-    team.members.push(invitedUser._id);
+    // Add to pendingInvites
+    if (!team.pendingInvites) team.pendingInvites = [];
+    team.pendingInvites.push({
+      user: invitedUser._id,
+      email: invitedUser.email,
+      invitedBy: leaderId,
+      invitedAt: new Date(),
+    });
     await team.save();
+
+    // Create persistent Notification for invited user
+    const leaderUser = await User.findById(leaderId);
+    await Notification.create({
+      user: invitedUser._id,
+      sender: leaderId,
+      type: 'team_invite',
+      title: `Team Invitation: ${team.name}`,
+      message: `${leaderUser ? leaderUser.name : 'Team Leader'} invited you to join team "${team.name}" for "${team.hackathon.title}".`,
+      team: team._id,
+      hackathon: team.hackathon._id,
+      status: 'pending',
+    });
 
     return await Team.findById(team._id)
       .populate('hackathon', 'title maxTeamSize status')
       .populate('leader', 'name email avatar')
       .populate('members', 'name email avatar skills');
+  }
+
+  /**
+   * Accept Team Invitation
+   */
+  async acceptInvitation(notificationId, userId) {
+    const notification = await Notification.findOne({
+      _id: notificationId,
+      user: userId,
+      type: 'team_invite',
+    });
+
+    if (!notification) {
+      const error = new Error('Invitation notification not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (notification.status !== 'pending') {
+      const error = new Error(`Invitation has already been ${notification.status}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const team = await Team.findById(notification.team).populate('hackathon');
+    if (!team) {
+      const error = new Error('Team no longer exists');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (team.members.length >= team.hackathon.maxTeamSize) {
+      const error = new Error(`Team is already full (max ${team.hackathon.maxTeamSize} members)`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Add to team members and remove from pendingInvites
+    if (!team.members.some((m) => m.toString() === userId.toString())) {
+      team.members.push(userId);
+    }
+    if (team.pendingInvites) {
+      team.pendingInvites = team.pendingInvites.filter(
+        (pi) => pi.user && pi.user.toString() !== userId.toString()
+      );
+    }
+    await team.save();
+
+    // Auto-create active registration for accepting member on this hackathon
+    await Registration.findOneAndUpdate(
+      { hackathon: team.hackathon._id, participant: userId },
+      { status: 'active', registeredAt: new Date() },
+      { upsert: true, new: true }
+    );
+
+    // Update notification status
+    notification.status = 'accepted';
+    await notification.save();
+
+    return { message: `Successfully joined team "${team.name}"!`, team };
+  }
+
+  /**
+   * Reject Team Invitation
+   */
+  async rejectInvitation(notificationId, userId) {
+    const notification = await Notification.findOne({
+      _id: notificationId,
+      user: userId,
+      type: 'team_invite',
+    });
+
+    if (!notification) {
+      const error = new Error('Invitation notification not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const team = await Team.findById(notification.team);
+    if (team && team.pendingInvites) {
+      team.pendingInvites = team.pendingInvites.filter(
+        (pi) => pi.user && pi.user.toString() !== userId.toString()
+      );
+      await team.save();
+    }
+
+    notification.status = 'rejected';
+    await notification.save();
+
+    return { message: 'Invitation declined' };
   }
 
   /**

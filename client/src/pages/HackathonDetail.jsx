@@ -139,9 +139,14 @@ export const HackathonDetail = () => {
   }
 
   const statusBadge = STATUS_BADGE[hackathon.status] || STATUS_BADGE.draft;
+  const isParticipant = !user || user.role === 'participant';
   const canRegister =
+    isParticipant &&
     hackathon.isRegistrationOpen &&
     (hackathon.status === 'upcoming' || hackathon.status === 'ongoing');
+  const roleRestrictedMessage = user && user.role !== 'participant'
+    ? `As a${user.role === 'organizer' ? 'n Organizer' : user.role === 'judge' ? ' Judge' : 'n Admin'}, you cannot register as a participant.`
+    : null;
 
   return (
     <div className="space-y-5">
@@ -215,7 +220,12 @@ export const HackathonDetail = () => {
 
         {/* Registration CTA */}
         <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center gap-2">
-          {isRegistered ? (
+          {roleRestrictedMessage ? (
+            <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">
+              <Award className="w-3.5 h-3.5 shrink-0" />
+              {roleRestrictedMessage}
+            </div>
+          ) : isRegistered ? (
             <>
               <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
                 <CheckCircle2 className="w-4 h-4" /> You are registered for this hackathon

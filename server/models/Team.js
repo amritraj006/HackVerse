@@ -32,6 +32,26 @@ const teamSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    pendingInvites: [
+      {
+        user: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        email: {
+          type: String,
+          lowercase: true,
+        },
+        invitedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        invitedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

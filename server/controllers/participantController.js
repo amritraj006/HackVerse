@@ -10,7 +10,8 @@ const participantService = require('../services/participantService');
 const register = asyncHandler(async (req, res) => {
   const registration = await participantService.registerForHackathon(
     req.params.hackathonId,
-    req.user.id
+    req.user.id,
+    req.user.role
   );
   return successResponse(res, 201, 'Successfully registered for the hackathon!', registration);
 });
