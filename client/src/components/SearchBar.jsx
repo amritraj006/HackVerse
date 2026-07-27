@@ -3,7 +3,7 @@ import { Search, X, Loader2 } from 'lucide-react';
 import { useDebounce } from '../hooks/useDebounce';
 
 /**
- * Reusable SearchBar component with debounced callback ;;;;
+ * Reusable SearchBar component with debounced callback
  */
 export const SearchBar = ({
   value = '',
