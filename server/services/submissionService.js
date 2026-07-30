@@ -190,11 +190,18 @@ class SubmissionService {
   }
 
   /**
-   * Get the submitted projects from hackathons to which a judge is assigned.
+   * Get the submitted projects and assigned hackathons for a judge.
    */
   async getAssignedSubmissions(userId, userRole) {
-    const hackathonQuery = userRole === 'admin' ? {} : { assignedJudges: userId };
-    const hackathonIds = await Hackathon.find(hackathonQuery).distinct('_id');
+    const userObjId = mongoose.Types.ObjectId.isValid(userId) ? new mongoose.Types.ObjectId(userId) : userId;
+    const hackathonQuery = userRole === 'admin' ? {} : { assignedJudges: { $in: [userId, userObjId] } };
+
+    const assignedHackathons = await Hackathon.find(hackathonQuery)
+      .populate('organizer', 'name email avatar')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const hackathonIds = assignedHackathons.map((h) => h._id);
 
     const submissions = await Submission.find({
       hackathon: { $in: hackathonIds },
@@ -209,12 +216,14 @@ class SubmissionService {
 
     return {
       criteria: JUDGING_CRITERIA,
+      assignedHackathons,
       submissions: submissions.map((submission) => ({
         ...submission,
         myEvaluation: submission.evaluations?.find((evaluation) => evaluation.judge?.toString() === userId.toString()) || null,
       })),
     };
   }
+
 
   /**
    * Save an evaluation once. The conditional update makes duplicate submissions

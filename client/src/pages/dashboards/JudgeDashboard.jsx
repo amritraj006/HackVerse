@@ -67,28 +67,24 @@ export const JudgeDashboard = ({ user }) => {
     try {
       const res = await submissionService.getAssigned();
       const subs = res?.data?.submissions || [];
+      const hackathons = res?.data?.assignedHackathons || [];
       setSubmissions(subs);
       setCriteria(res?.data?.criteria || []);
+      setJudgeHackathons(hackathons);
 
-      // Extract unique hackathon IDs from assigned submissions
-      const uniqueHackathons = [];
-      const hackathonMap = new Map();
-      subs.forEach((sub) => {
-        if (sub.hackathon && sub.hackathon._id && !hackathonMap.has(sub.hackathon._id)) {
-          hackathonMap.set(sub.hackathon._id, sub.hackathon);
-          uniqueHackathons.push(sub.hackathon);
-        }
-      });
-      setJudgeHackathons(uniqueHackathons);
-      if (uniqueHackathons.length > 0 && !selectedHackathonId) {
-        setSelectedHackathonId(uniqueHackathons[0]._id);
+      if (hackathons.length > 0) {
+        setSelectedHackathonId((prev) => {
+          if (prev && hackathons.some((h) => h._id === prev)) return prev;
+          return hackathons[0]._id;
+        });
       }
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Could not load your assigned projects.' });
     } finally {
       setLoading(false);
     }
-  }, [selectedHackathonId]);
+  }, []);
+
 
   const loadHackathonView = useCallback(async (hackathonId) => {
     if (!hackathonId) return;
