@@ -395,6 +395,13 @@ class HackathonService {
       throw error;
     }
 
+    // ─── RESTRICTION: Only 1 judge may be assigned per hackathon ───────────
+    if (judgeIds.length > 1) {
+      const error = new Error('Only one judge can be assigned per hackathon. Please select exactly one judge.');
+      error.statusCode = 400;
+      throw error;
+    }
+
     // Verify all IDs belong to judge/admin accounts
     const validJudges = await User.find({ _id: { $in: judgeIds }, role: { $in: ['judge', 'admin'] } });
     const validJudgeIds = validJudges.map((j) => j._id.toString());
@@ -407,10 +414,9 @@ class HackathonService {
       (j) => !alreadyAssigned.has(j._id.toString()) && !alreadyPending.has(j._id.toString())
     );
 
-    // Judges removed from the list should also be removed from pending/assigned
+    // Replace pending with the newly selected judge (max 1)
     hackathon.pendingJudges = validJudgeIds
-      .filter((jid) => !alreadyAssigned.has(jid))  // keep only non-accepted in pending
-      .map((jid) => jid);
+      .filter((jid) => !alreadyAssigned.has(jid));
 
     hackathon.assignedJudges = hackathon.assignedJudges
       .filter((jid) => validJudgeIds.includes(jid.toString()));
@@ -753,6 +759,73 @@ class HackathonService {
       .populate('submittedBy', 'name email avatar')
       .populate('teamMembers', 'name email')
       .sort({ score: -1, createdAt: -1 });
+  }
+
+  /**
+   * Get full hackathon context for the assigned judge:
+   * hackathon details, teams, solo participants, and submissions.
+   */
+  async getJudgeView(id, userId, userRole) {
+    const hackathon = await Hackathon.findById(id)
+      .populate('organizer', 'name email avatar')
+      .populate('assignedJudges', 'name email avatar')
+      .populate('pendingJudges', 'name email avatar')
+      .lean();
+
+    if (!hackathon) {
+      const error = new Error('Hackathon not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Only the assigned judge (or admin) may access this view
+    const isAdmin = userRole === 'admin';
+    const isAssigned = hackathon.assignedJudges.some(
+      (j) => (j._id || j).toString() === userId.toString()
+    );
+    if (!isAdmin && !isAssigned) {
+      const error = new Error('You are not the assigned judge for this hackathon');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Teams with members
+    const teams = await Team.find({ hackathon: id })
+      .populate('leader', 'name email avatar')
+      .populate('members', 'name email avatar skills')
+      .lean();
+
+    // Solo participants (registered but not in any team)
+    const teamMemberIds = new Set();
+    teams.forEach((t) => {
+      if (t.leader) teamMemberIds.add((t.leader._id || t.leader).toString());
+      (t.members || []).forEach((m) => teamMemberIds.add((m._id || m).toString()));
+    });
+
+    const registrations = await Registration.find({ hackathon: id, status: 'active' })
+      .populate('participant', 'name email avatar skills bio')
+      .lean();
+
+    const soloParticipants = registrations.filter(
+      (r) => r.participant && !teamMemberIds.has((r.participant._id || r.participant).toString())
+    );
+
+    // Submissions with evaluation state
+    const submissions = await Submission.find({ hackathon: id, status: 'submitted' })
+      .populate('submittedBy', 'name email avatar')
+      .populate('team', 'name')
+      .populate('teamMembers', 'name email avatar')
+      .sort({ score: -1, createdAt: -1 })
+      .lean();
+
+    const stats = await this.getParticipantStats(id);
+
+    return {
+      hackathon: { ...hackathon, ...stats },
+      teams,
+      soloParticipants,
+      submissions,
+    };
   }
 }
 

@@ -42,6 +42,22 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    wins: [
+      {
+        hackathon: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Hackathon',
+        },
+        submission: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Submission',
+        },
+        position: {
+          type: String,
+          default: 'Winner',
+        },
+      },
+    ],
   },
   {
     timestamps: true,

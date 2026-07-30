@@ -157,6 +157,16 @@ const getParticipants = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'Participants retrieved successfully', participants);
 });
 
+/**
+ * @desc    Get complete hackathon context for judge evaluation portal
+ * @route   GET /api/v1/hackathons/:id/judge-view
+ * @access  Private (Judge/Admin)
+ */
+const getJudgeView = asyncHandler(async (req, res) => {
+  const result = await hackathonService.getJudgeView(req.params.id, req.user.id, req.user.role);
+  return successResponse(res, 200, 'Judge view data retrieved successfully', result);
+});
+
 module.exports = {
   getHackathons,
   getHackathonById,
@@ -173,4 +183,6 @@ module.exports = {
   getSubmissions,
   getLeaderboard,
   getLeaderboardPreview,
+  getJudgeView,
 };
+

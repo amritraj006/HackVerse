@@ -498,34 +498,36 @@ export const ManageHackathon = () => {
 
       {/* Tab: Judges Assignment */}
       {activeTab === 'judges' && (
-        <Card header={<span className="font-semibold text-xs text-slate-800">Assign Judges</span>}>
+        <Card header={<span className="font-semibold text-xs text-slate-800">Assign Judge (Limit: 1 Judge per Hackathon)</span>}>
           <div className="space-y-4">
-            <p className="text-xs text-slate-500">
-              Select judges from the registered platform judge pool to grade project submissions.
-            </p>
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900">
+              <span className="font-bold">⚠️ Notice:</span> Each hackathon can only have <strong>1 judge</strong> assigned. When you assign a judge, an invitation will be sent to them. Once they accept, they gain access to view hackathon details, teams, participants, and review submissions.
+            </div>
 
             {availableJudges.length === 0 ? (
               <div className="p-6 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200 space-y-1">
                 <p className="text-xs font-semibold text-slate-700">No Judges Found</p>
                 <p className="text-[11px] text-slate-500">
-                  There are currently no registered users with the 'Judge' or 'Admin' role on the platform. Users can register as a Judge from the Sign Up page.
+                  There are currently no registered users with the &apos;Judge&apos; or &apos;Admin&apos; role on the platform. Users can register as a Judge from the Sign Up page.
                 </p>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                 {availableJudges.map((j) => {
                   const isSelected = selectedJudgeIds.includes(j._id);
+                  const isPending = (hackathon.pendingJudges || []).some((pj) => (pj._id || pj) === j._id);
+                  const isAccepted = (hackathon.assignedJudges || []).some((aj) => (aj._id || aj) === j._id);
+
                   return (
                     <div
                       key={j._id}
                       onClick={() => {
-                        setSelectedJudgeIds((prev) =>
-                          isSelected ? prev.filter((id) => id !== j._id) : [...prev, j._id]
-                        );
+                        // Radio behavior: selecting a new judge replaces any previous selection
+                        setSelectedJudgeIds(isSelected ? [] : [j._id]);
                       }}
                       className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
                         isSelected
-                          ? 'bg-indigo-50 border-indigo-300 text-indigo-900'
+                          ? 'bg-indigo-50 border-indigo-300 text-indigo-900 ring-2 ring-indigo-500/20'
                           : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                       }`}
                     >
@@ -534,7 +536,19 @@ export const ManageHackathon = () => {
                           {j.name?.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-semibold">{j.name}</p>
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-semibold">{j.name}</p>
+                            {isAccepted && (
+                              <span className="px-1.5 py-0.2 text-[9px] font-bold uppercase bg-emerald-100 text-emerald-800 rounded">
+                                Accepted
+                              </span>
+                            )}
+                            {isPending && (
+                              <span className="px-1.5 py-0.2 text-[9px] font-bold uppercase bg-amber-100 text-amber-800 rounded">
+                                Invite Pending
+                              </span>
+                            )}
+                          </div>
                           <p className="text-[10px] text-slate-500">
                             {j.email} <span className="ml-1 text-[9px] uppercase px-1 py-0.2 bg-slate-200 rounded font-semibold">{j.role}</span>
                           </p>
@@ -542,10 +556,11 @@ export const ManageHackathon = () => {
                       </div>
 
                       <input
-                        type="checkbox"
+                        type="radio"
+                        name="hackathonJudge"
                         checked={isSelected}
                         readOnly
-                        className="rounded text-indigo-600 focus:ring-indigo-500"
+                        className="text-indigo-600 focus:ring-indigo-500"
                       />
                     </div>
                   );
@@ -553,12 +568,20 @@ export const ManageHackathon = () => {
               </div>
             )}
 
-            <Button size="sm" variant="primary" onClick={handleSaveJudges} disabled={isAssigningJudges}>
-              {isAssigningJudges ? 'Saving Judges...' : 'Save Assigned Judges'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="primary" onClick={handleSaveJudges} disabled={isAssigningJudges}>
+                {isAssigningJudges ? 'Saving Judge...' : 'Save Assigned Judge'}
+              </Button>
+              {selectedJudgeIds.length > 0 && (
+                <Button size="sm" variant="outline" onClick={() => setSelectedJudgeIds([])}>
+                  Clear Selection
+                </Button>
+              )}
+            </div>
           </div>
         </Card>
       )}
+
 
       {/* Tab: Teams Approval */}
       {activeTab === 'teams' && (

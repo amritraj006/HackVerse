@@ -402,6 +402,84 @@ class SubmissionService {
     await Submission.findByIdAndDelete(id);
     return { message: 'Submission deleted successfully' };
   }
+
+  /**
+   * Declare a submission as the winner of its hackathon.
+   * - Flags the submission with isWinner = true and a position label.
+   * - Adds a win entry to every User involved (team members or solo participant).
+   * - Clears the isWinner flag from any previously declared winner for the same hackathon.
+   */
+  async declareWinner(submissionId, userId, userRole) {
+    const User = require('../models/User');
+
+    const submission = await Submission.findById(submissionId)
+      .populate('team', 'name leader members')
+      .populate('teamMembers', '_id name')
+      .populate('submittedBy', '_id name');
+
+    if (!submission) {
+      const error = new Error('Submission not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Only the assigned judge (or admin) may declare a winner
+    const isAdmin = userRole === 'admin';
+    const isAssigned = isAdmin || await Hackathon.exists({ _id: submission.hackathon, assignedJudges: userId });
+    if (!isAssigned) {
+      const error = new Error('Only the assigned judge can declare a winner');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Clear previous winner flag for this hackathon (one winner per hackathon)
+    await Submission.updateMany(
+      { hackathon: submission.hackathon, isWinner: true },
+      { $set: { isWinner: false, winnerPosition: '' } }
+    );
+
+    // Mark this submission as winner
+    submission.isWinner = true;
+    submission.winnerPosition = '1st Place Winner';
+    await submission.save();
+
+    // Collect all user IDs affected by this win
+    const winnerUserIds = new Set();
+    if (submission.team) {
+      // Team submission — credit leader + all members
+      if (submission.team.leader) winnerUserIds.add(submission.team.leader.toString());
+      (submission.team.members || []).forEach((m) => winnerUserIds.add((m._id || m).toString()));
+    } else {
+      // Solo submission — credit the submitter
+      winnerUserIds.add(submission.submittedBy._id.toString());
+    }
+
+    // Remove any previous win for this hackathon from affected users
+    await User.updateMany(
+      { 'wins.hackathon': submission.hackathon },
+      { $pull: { wins: { hackathon: submission.hackathon } } }
+    );
+
+    // Push the new win entry to all winning users
+    await User.updateMany(
+      { _id: { $in: [...winnerUserIds] } },
+      {
+        $push: {
+          wins: {
+            hackathon: submission.hackathon,
+            submission: submission._id,
+            position: '1st Place Winner',
+          },
+        },
+      }
+    );
+
+    return await Submission.findById(submissionId)
+      .populate('hackathon', 'title status')
+      .populate('submittedBy', 'name email avatar')
+      .populate('team', 'name')
+      .populate('teamMembers', 'name email avatar');
+  }
 }
 
 module.exports = new SubmissionService();

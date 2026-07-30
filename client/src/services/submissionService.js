@@ -56,4 +56,10 @@ export const submissionService = {
   deleteSubmission: async (id) => {
     return await api.delete(`/submissions/${id}`);
   },
+
+  /** Declare a submission as winner of its hackathon. */
+  declareWinner: async (id) => {
+    return await api.put(`/submissions/${id}/winner`);
+  },
 };
+

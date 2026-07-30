@@ -46,4 +46,8 @@ export const hackathonService = {
   getSubmissions: async (id) => {
     return await api.get(`/hackathons/${id}/submissions`);
   },
+  getJudgeView: async (id) => {
+    return await api.get(`/hackathons/${id}/judge-view`);
+  },
 };
+

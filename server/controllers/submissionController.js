@@ -82,6 +82,16 @@ const submitEvaluation = asyncHandler(async (req, res) => {
   return successResponse(res, 201, 'Evaluation submitted successfully', submission);
 });
 
+/**
+ * @desc    Declare a submission as winner
+ * @route   PUT /api/v1/submissions/:id/winner
+ * @access  Private (Judge/Admin)
+ */
+const declareWinner = asyncHandler(async (req, res) => {
+  const winnerSubmission = await submissionService.declareWinner(req.params.id, req.user.id, req.user.role);
+  return successResponse(res, 200, 'Winner declared successfully! Winning status updated for all team members.', winnerSubmission);
+});
+
 module.exports = {
   submitProject,
   getMySubmissions,
@@ -91,4 +101,6 @@ module.exports = {
   deleteSubmission,
   getAssignedSubmissions,
   submitEvaluation,
+  declareWinner,
 };
+

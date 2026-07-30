@@ -16,6 +16,7 @@ const {
   getSubmissions,
   getLeaderboard,
   getLeaderboardPreview,
+  getJudgeView,
 } = require('../controllers/hackathonController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const { createHackathonValidationRules } = require('../validations/hackathonValidation');
@@ -25,7 +26,9 @@ router.get('/', getHackathons);
 router.get('/my-events', protect, authorize('organizer', 'admin'), getMyEvents);
 router.get('/:id/leaderboard', getLeaderboard);
 router.get('/:id/leaderboard/preview', protect, authorize('organizer', 'admin'), getLeaderboardPreview);
+router.get('/:id/judge-view', protect, authorize('judge', 'admin'), getJudgeView);
 router.get('/:id', getHackathonById);
+
 
 // Organizer & Admin Protected Routes
 router.post(

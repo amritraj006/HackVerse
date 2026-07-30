@@ -9,6 +9,7 @@ const {
   deleteSubmission,
   getAssignedSubmissions,
   submitEvaluation,
+  declareWinner,
 } = require('../controllers/submissionController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
@@ -19,8 +20,10 @@ router.get('/', getAllSubmissions);
 // Judge evaluation workspace. These must precede the dynamic /:id route.
 router.get('/assigned', protect, authorize('judge', 'admin'), getAssignedSubmissions);
 router.post('/:id/evaluations', protect, authorize('judge', 'admin'), submitEvaluation);
+router.put('/:id/winner', protect, authorize('judge', 'admin'), declareWinner);
 router.get('/my-submissions', protect, getMySubmissions);
 router.get('/hackathon/:hackathonId', protect, getHackathonSubmissions);
+
 
 // Create / Update project submission with file uploads
 router.post(
