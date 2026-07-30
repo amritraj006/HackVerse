@@ -11,6 +11,7 @@ const {
   assignJudges,
   publishResults,
   getTeams,
+  getParticipants,
   updateTeamStatus,
   getSubmissions,
   getLeaderboard,
@@ -76,6 +77,13 @@ router.get(
   protect,
   authorize('organizer', 'admin'),
   getTeams
+);
+
+router.get(
+  '/:id/participants',
+  protect,
+  authorize('organizer', 'admin'),
+  getParticipants
 );
 
 router.put(

@@ -48,9 +48,24 @@ export const TeamCard = ({
             <Users className="w-4 h-4 text-indigo-600 shrink-0" />
             <h3 className="text-sm font-bold text-slate-900 line-clamp-1">{name}</h3>
           </div>
-          <span className="px-2 py-0.5 text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full shrink-0">
-            {members.length}/{maxTeamSize} Members
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="px-2 py-0.5 text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full">
+              {members.length}/{maxTeamSize} Members
+            </span>
+            {team.status && (
+              <span
+                className={`px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full border ${
+                  team.status === 'approved'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : team.status === 'rejected'
+                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                }`}
+              >
+                {team.status === 'approved' ? '✓ Approved' : team.status === 'rejected' ? '✗ Rejected' : '⏳ Pending Host Approval'}
+              </span>
+            )}
+          </div>
         </div>
 
         {hackathon && (

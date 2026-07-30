@@ -36,11 +36,18 @@ export const SubmissionCard = ({
     teamMembers = [],
   } = submission;
 
-  const isSubmittedByMe =
+  const isCreatorOrOwner =
     currentUserId &&
     (submittedBy?._id === currentUserId ||
       submittedBy === currentUserId ||
-      teamMembers.some((m) => (typeof m === 'object' ? m._id : m) === currentUserId));
+      team?.leader?._id === currentUserId ||
+      team?.leader === currentUserId);
+
+  const isTeamMember =
+    currentUserId &&
+    teamMembers.some((m) => (typeof m === 'object' ? m._id : m) === currentUserId);
+
+  const isReadOnlyMember = isTeamMember && !isCreatorOrOwner;
 
   // Check if hackathon deadline passed
   const isDeadlinePassed = hackathon?.endDate && new Date() > new Date(hackathon.endDate);
@@ -160,7 +167,7 @@ export const SubmissionCard = ({
               View Details
             </Button>
 
-            {isSubmittedByMe && (
+            {isCreatorOrOwner ? (
               <>
                 {!isDeadlinePassed ? (
                   <button
@@ -183,7 +190,9 @@ export const SubmissionCard = ({
                   </button>
                 )}
               </>
-            )}
+            ) : isReadOnlyMember ? (
+              <span className="text-[10px] text-slate-400 font-medium italic">Read-only (Member)</span>
+            ) : null}
           </div>
         </div>
       </div>

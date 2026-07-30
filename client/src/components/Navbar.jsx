@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Search, Bell, Menu, Code2, Plus, CheckCheck, Trash2, X,
-  Sparkles, Trophy, Shield, Info, Check, XCircle, UserCheck,
+  Sparkles, Trophy, Shield, Info, Check, XCircle, UserCheck, Scale,
 } from 'lucide-react';
 import { Button } from './Button';
 import { useAuth } from '../hooks/useAuth';
@@ -105,6 +105,8 @@ export const Navbar = ({ onToggleSidebar }) => {
     switch (type) {
       case 'team_invite':
         return <UserCheck className="w-3.5 h-3.5 text-indigo-600" />;
+      case 'judge_invite':
+        return <Scale className="w-3.5 h-3.5 text-purple-600" />;
       case 'hackathon':
         return <Trophy className="w-3.5 h-3.5 text-indigo-600" />;
       case 'system':
@@ -288,8 +290,34 @@ export const Navbar = ({ onToggleSidebar }) => {
                               </div>
                             )}
 
+                            {/* Accept / Reject buttons for pending judge invites */}
+                            {n.type === 'judge_invite' && n.status === 'pending' && (
+                              <div className="flex items-center gap-1.5 pt-1">
+                                <button
+                                  onClick={() => handleAcceptInvite(n._id)}
+                                  disabled={isActing}
+                                  className="flex items-center gap-1 px-2.5 py-1 bg-purple-600 text-white text-[11px] font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors cursor-pointer"
+                                >
+                                  {isActing ? (
+                                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                                  ) : (
+                                    <Check className="w-3 h-3" />
+                                  )}
+                                  Accept Role
+                                </button>
+                                <button
+                                  onClick={() => handleRejectInvite(n._id)}
+                                  disabled={isActing}
+                                  className="flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 text-slate-600 text-[11px] font-semibold rounded-lg hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 disabled:opacity-50 transition-colors cursor-pointer"
+                                >
+                                  <XCircle className="w-3 h-3" />
+                                  Decline
+                                </button>
+                              </div>
+                            )}
+
                             {/* Status badge for resolved invites */}
-                            {n.type === 'team_invite' && n.status !== 'pending' && (
+                            {(n.type === 'team_invite' || n.type === 'judge_invite') && n.status !== 'pending' && (
                               <span className={`text-[10px] font-semibold ${getStatusColor(n.status)}`}>
                                 {n.status === 'accepted' ? '✓ Accepted' : '✗ Declined'}
                               </span>
@@ -303,11 +331,11 @@ export const Navbar = ({ onToggleSidebar }) => {
 
                 <div className="p-2 bg-slate-50 border-t border-slate-100 text-center">
                   <Link
-                    to="/hackathons"
+                    to={(!user || user.role === 'participant') ? "/hackathons" : "/dashboard"}
                     onClick={() => setShowNotifications(false)}
                     className="text-[11px] font-semibold text-indigo-600 hover:underline"
                   >
-                    View All Platform Events →
+                    {(!user || user.role === 'participant') ? "View All Platform Events →" : "Go to Dashboard →"}
                   </Link>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Filter, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Alert } from '../components/Alert';
@@ -6,6 +7,7 @@ import { HackathonCard } from '../components/HackathonCard';
 import { SearchBar } from '../components/SearchBar';
 import { SortDropdown } from '../components/SortDropdown';
 import { PaginationControls } from '../components/PaginationControls';
+import { RegisterHackathonModal } from '../components/RegisterHackathonModal';
 import { hackathonService } from '../services/hackathonService';
 import { registrationService } from '../services/registrationService';
 import { useAuth } from '../hooks/useAuth';
@@ -36,6 +38,15 @@ const DEFAULT_PARAMS = {
 
 export const Hackathons = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  // Access control: Don't show explore hackathons page /hackathons for judge, admin, and host (organizer)
+  useEffect(() => {
+    if (user && ['organizer', 'judge', 'admin'].includes(user.role)) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
+
   const [queryParams, setQueryParams, resetQueryParams] = useQueryParams(DEFAULT_PARAMS);
 
   const search = queryParams.search || '';
@@ -50,9 +61,10 @@ export const Hackathons = () => {
   const [pagination, setPagination] = useState({ page, pages: 1, total: 0, limit });
   const [alert, setAlert] = useState({ type: 'info', message: '' });
 
-  // Track registration state per hackathon id
+  // Modal & Registration State
   const [registeredIds, setRegisteredIds] = useState(new Set());
   const [registeringId, setRegisteringId] = useState(null);
+  const [selectedHackathonForModal, setSelectedHackathonForModal] = useState(null);
 
   // Load hackathons
   const fetchHackathons = useCallback(() => {
@@ -105,21 +117,23 @@ export const Hackathons = () => {
     };
   }, [user]);
 
-  const handleRegister = async (hackathonId) => {
+  const handleOpenRegisterModal = (hackathonId) => {
     if (!user) {
       setAlert({ type: 'error', message: 'Please log in to register for a hackathon.' });
       return;
     }
-    setRegisteringId(hackathonId);
-    try {
-      await registrationService.register(hackathonId);
-      setRegisteredIds((prev) => new Set([...prev, hackathonId]));
-      setAlert({ type: 'success', message: 'Successfully registered for the hackathon! 🎉' });
-    } catch (err) {
-      setAlert({ type: 'error', message: err.message || 'Failed to register.' });
-    } finally {
-      setRegisteringId(null);
+    const targetHackathon = hackathons.find((h) => h._id === hackathonId);
+    if (targetHackathon) {
+      setSelectedHackathonForModal(targetHackathon);
     }
+  };
+
+  const handleModalSuccess = (msg) => {
+    if (selectedHackathonForModal) {
+      setRegisteredIds((prev) => new Set([...prev, selectedHackathonForModal._id]));
+    }
+    setAlert({ type: 'success', message: msg });
+    setSelectedHackathonForModal(null);
   };
 
   const handleCancel = async (hackathonId) => {
@@ -241,7 +255,7 @@ export const Hackathons = () => {
               key={item._id}
               hackathon={item}
               isRegistered={registeredIds.has(item._id)}
-              onRegister={handleRegister}
+              onRegister={handleOpenRegisterModal}
               onCancel={handleCancel}
               registering={registeringId === item._id}
               showActions
@@ -259,6 +273,14 @@ export const Hackathons = () => {
           limitOptions={[6, 12, 24, 48]}
         />
       )}
+
+      {/* Solo vs Group Registration Modal */}
+      <RegisterHackathonModal
+        isOpen={!!selectedHackathonForModal}
+        onClose={() => setSelectedHackathonForModal(null)}
+        hackathon={selectedHackathonForModal}
+        onSuccess={handleModalSuccess}
+      />
     </div>
   );
 };

@@ -7,11 +7,17 @@ export const teamService = {
   create: async (data) => {
     return await api.post('/teams', data);
   },
+  createTeam: async (data) => {
+    return await api.post('/teams', data);
+  },
 
   /**
    * Join a team via join code
    */
   joinByCode: async (joinCode) => {
+    return await api.post('/teams/join', { joinCode });
+  },
+  joinTeamByCode: async (joinCode) => {
     return await api.post('/teams/join', { joinCode });
   },
 

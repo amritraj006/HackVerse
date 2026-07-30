@@ -12,7 +12,7 @@ import {
 export const ALL_NAV_ITEMS = [
   { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['participant', 'organizer', 'judge', 'admin'] },
   { name: 'Profile', path: '/profile', icon: User, roles: ['participant', 'organizer', 'judge', 'admin'] },
-  { name: 'Hackathons', path: '/hackathons', icon: Trophy, roles: ['participant', 'organizer', 'judge', 'admin'] },
+  { name: 'Hackathons', path: '/hackathons', icon: Trophy, roles: ['participant'] },
   { name: 'Projects', path: '/projects', icon: FolderGit2, roles: ['participant', 'organizer', 'judge', 'admin'] },
   { name: 'Teams', path: '/teams', icon: Users, roles: ['participant', 'organizer'] },
   { name: 'My Registrations', path: '/registrations', icon: ClipboardList, roles: ['participant'] },

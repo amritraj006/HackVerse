@@ -5,6 +5,7 @@ import { Button } from '../components/Button';
 import { Alert } from '../components/Alert';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { DataTable } from '../components/DataTable';
+import { RegisterHackathonModal } from '../components/RegisterHackathonModal';
 import { hackathonService } from '../services/hackathonService';
 import { registrationService } from '../services/registrationService';
 import { useAuth } from '../hooks/useAuth';
@@ -47,6 +48,7 @@ export const HackathonDetail = () => {
   // Registration state
   const [isRegistered, setIsRegistered] = useState(false);
   const [regStatusData, setRegStatusData] = useState(null);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
   const [regLoading, setRegLoading] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -96,22 +98,18 @@ export const HackathonDetail = () => {
     fetchRegStatus();
   }, [id, user]);
 
-  const handleRegister = async () => {
+  const handleRegister = () => {
     if (!user) {
       setAlert({ type: 'error', message: 'Please log in to register for this hackathon.' });
       return;
     }
-    setRegLoading(true);
-    try {
-      await registrationService.register(id);
-      setIsRegistered(true);
-      fetchRegStatus();
-      setAlert({ type: 'success', message: 'You have successfully registered! 🎉 Good luck!' });
-    } catch (err) {
-      setAlert({ type: 'error', message: err.message || 'Failed to register.' });
-    } finally {
-      setRegLoading(false);
-    }
+    setIsRegisterModalOpen(true);
+  };
+
+  const handleRegisterModalSuccess = (msg) => {
+    setIsRegistered(true);
+    fetchRegStatus();
+    setAlert({ type: 'success', message: msg });
   };
 
   const handleCancelConfirm = async () => {
@@ -159,9 +157,10 @@ export const HackathonDetail = () => {
     ? `As a${user.role === 'organizer' ? 'n Organizer' : user.role === 'judge' ? ' Judge' : 'n Admin'}, you cannot register as a participant.`
     : null;
   // Team creator check: user is in a team and is the team leader
+  const leaderId = regStatusData?.team?.leader?._id || regStatusData?.team?.leader;
+  const currentUserId = user?.id || user?._id;
   const isTeamCreator = regStatusData?.team
-    ? regStatusData.team.leader?._id === user?.id ||
-      regStatusData.team.leader === user?.id
+    ? leaderId?.toString() === currentUserId?.toString()
     : false;
   // User can cancel: either solo-registered (no team) or is the team creator
   const canCancelRegistration = isRegistered && (!regStatusData?.team || isTeamCreator);
@@ -534,6 +533,14 @@ export const HackathonDetail = () => {
         loading={isCancelling}
         onClose={() => setIsCancelModalOpen(false)}
         onConfirm={handleCancelConfirm}
+      />
+
+      {/* Solo vs Group Registration Modal */}
+      <RegisterHackathonModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        hackathon={hackathon}
+        onSuccess={handleRegisterModalSuccess}
       />
     </div>
   );

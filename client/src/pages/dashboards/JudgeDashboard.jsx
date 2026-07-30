@@ -4,6 +4,7 @@ import { StatCard } from '../../components/StatCard';
 import { Button } from '../../components/Button';
 import { Alert } from '../../components/Alert';
 import { submissionService } from '../../services/submissionService';
+import { notificationService } from '../../services/notificationService';
 import {
   CheckCircle2,
   Clock,
@@ -12,6 +13,9 @@ import {
   Scale,
   Star,
   X,
+  Check,
+  XCircle,
+  Inbox,
 } from 'lucide-react';
 
 const initialScores = (criteria) => Object.fromEntries(criteria.map(({ criterion }) => [criterion, '']));
@@ -25,6 +29,22 @@ export const JudgeDashboard = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [alert, setAlert] = useState({ type: 'info', message: '' });
+
+  // Pending judge invites
+  const [pendingInvites, setPendingInvites] = useState([]);
+  const [inviteActionId, setInviteActionId] = useState(null);
+
+  const loadPendingInvites = useCallback(async () => {
+    try {
+      const res = await notificationService.getAll();
+      const invites = (res?.data || []).filter(
+        (n) => n.type === 'judge_invite' && n.status === 'pending'
+      );
+      setPendingInvites(invites);
+    } catch {
+      // silently ignore
+    }
+  }, []);
 
   const loadAssignedSubmissions = useCallback(async () => {
     setLoading(true);
@@ -56,25 +76,39 @@ export const JudgeDashboard = ({ user }) => {
     return () => { isMounted = false; };
   }, []);
 
-  const evaluated = submissions.filter((submission) => submission.myEvaluation);
-  const pending = submissions.filter((submission) => !submission.myEvaluation);
-  const averageRating = evaluated.length
-    ? (evaluated.reduce((sum, submission) => sum + (submission.myEvaluation?.score || 0), 0) / evaluated.length).toFixed(1)
-    : '—';
-  const totalScore = useMemo(
-    () => criteria.reduce((sum, { criterion }) => sum + (Number(scores[criterion]) || 0), 0),
-    [criteria, scores]
-  );
-  const maximumScore = criteria.reduce((sum, item) => sum + item.maxScore, 0);
+  useEffect(() => {
+    loadPendingInvites();
+  }, [loadPendingInvites]);
 
-  const openEvaluation = (submission) => {
-    setSelectedSubmission(submission);
-    setScores(initialScores(criteria));
-    setFeedback('');
+  const handleAcceptInvite = async (notifId) => {
+    setInviteActionId(notifId);
+    try {
+      await notificationService.acceptInvitation(notifId);
+      setPendingInvites((prev) => prev.filter((n) => n._id !== notifId));
+      setAlert({ type: 'success', message: 'You have accepted the judge invitation! You can now evaluate projects for that hackathon.' });
+      await loadAssignedSubmissions();
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to accept invitation' });
+    } finally {
+      setInviteActionId(null);
+    }
   };
 
-  const closeEvaluation = () => {
-    if (!submitting) setSelectedSubmission(null);
+  const handleDeclineInvite = async (notifId) => {
+    setInviteActionId(notifId);
+    try {
+      await notificationService.rejectInvitation(notifId);
+      setPendingInvites((prev) => prev.filter((n) => n._id !== notifId));
+      setAlert({ type: 'info', message: 'You have declined the judge invitation.' });
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to decline invitation' });
+    } finally {
+      setInviteActionId(null);
+    }
+  };
+
+  const handleRefresh = async () => {
+    await Promise.all([loadAssignedSubmissions(), loadPendingInvites()]);
   };
 
   const submitEvaluation = async (event) => {
@@ -105,6 +139,27 @@ export const JudgeDashboard = ({ user }) => {
     }
   };
 
+  const evaluated = submissions.filter((sub) => sub.myEvaluation);
+  const pendingQueue = submissions.filter((sub) => !sub.myEvaluation);
+  const averageRating = evaluated.length
+    ? (evaluated.reduce((sum, sub) => sum + (sub.myEvaluation?.score || 0), 0) / evaluated.length).toFixed(1)
+    : '—';
+  const totalScore = useMemo(
+    () => criteria.reduce((sum, { criterion }) => sum + (Number(scores[criterion]) || 0), 0),
+    [criteria, scores]
+  );
+  const maximumScore = criteria.reduce((sum, item) => sum + item.maxScore, 0);
+
+  const openEvaluation = (submission) => {
+    setSelectedSubmission(submission);
+    setScores(initialScores(criteria));
+    setFeedback('');
+  };
+
+  const closeEvaluation = () => {
+    if (!submitting) setSelectedSubmission(null);
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
@@ -112,17 +167,58 @@ export const JudgeDashboard = ({ user }) => {
           <h1 className="text-base font-bold text-slate-900">Judge Evaluation Portal — {user?.name || 'Judge'} ⚖️</h1>
           <p className="text-xs text-slate-500">Review assigned projects using the shared 40-point rubric and submit one evaluation per project.</p>
         </div>
-        <Button size="sm" variant="outline" onClick={loadAssignedSubmissions} disabled={loading}>
+        <Button size="sm" variant="outline" onClick={handleRefresh} disabled={loading}>
           <RefreshCw className="w-3.5 h-3.5" /> Refresh
         </Button>
       </div>
 
       <Alert type={alert.type} message={alert.message} onClose={() => setAlert({ type: 'info', message: '' })} />
 
+      {/* Pending Judge Invitations */}
+      {pendingInvites.length > 0 && (
+        <Card header={
+          <div className="flex items-center gap-2">
+            <Inbox className="w-4 h-4 text-purple-600" />
+            <span className="font-semibold text-xs text-slate-800">Pending Judge Invitations ({pendingInvites.length})</span>
+          </div>
+        }>
+          <div className="space-y-3">
+            {pendingInvites.map((invite) => {
+              const isActing = inviteActionId === invite._id;
+              return (
+                <div key={invite._id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-purple-50 border border-purple-200">
+                  <div className="space-y-0.5 min-w-0">
+                    <p className="text-xs font-bold text-slate-900 truncate">{invite.hackathon?.title || invite.title}</p>
+                    <p className="text-[11px] text-slate-500">{invite.message}</p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => handleAcceptInvite(invite._id)}
+                      disabled={isActing}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 text-white text-[11px] font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                    >
+                      {isActing ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" /> : <Check className="w-3 h-3" />}
+                      Accept Role
+                    </button>
+                    <button
+                      onClick={() => handleDeclineInvite(invite._id)}
+                      disabled={isActing}
+                      className="flex items-center gap-1 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-[11px] font-semibold rounded-lg hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 disabled:opacity-50 transition-colors"
+                    >
+                      <XCircle className="w-3 h-3" /> Decline
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard title="Assigned Projects" value={loading ? '...' : submissions.length} subtitle="Across assigned hackathons" icon={Scale} color="indigo" />
         <StatCard title="Evaluated" value={loading ? '...' : evaluated.length} subtitle={submissions.length ? `${Math.round((evaluated.length / submissions.length) * 100)}% complete` : 'No projects assigned'} icon={CheckCircle2} color="emerald" />
-        <StatCard title="Pending Grading" value={loading ? '...' : pending.length} subtitle="Awaiting your review" icon={Clock} color="amber" />
+        <StatCard title="Pending Grading" value={loading ? '...' : pendingQueue.length} subtitle="Awaiting your review" icon={Clock} color="amber" />
         <StatCard title="Average Rating Given" value={loading || averageRating === '—' ? averageRating : `${averageRating} / ${maximumScore}`} subtitle="Your completed reviews" icon={Star} color="purple" />
       </div>
 

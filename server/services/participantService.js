@@ -195,11 +195,43 @@ class ParticipantService {
     }
 
     const allRegistrations = [...registrations, ...teamBasedRegs];
+
+    // Fetch user's teams for all registrations to include team info & canCancel flag
+    const hackathonIds = allRegistrations.map((r) => r.hackathon?._id || r.hackathon).filter(Boolean);
+    const userTeams = await Team.find({
+      hackathon: { $in: hackathonIds },
+      $or: [{ leader: participantId }, { members: participantId }],
+    }).select('name leader members hackathon');
+
+    const teamMap = {};
+    userTeams.forEach((t) => {
+      if (t.hackathon) {
+        const hid = t.hackathon.toString();
+        const isLeader = t.leader?.toString() === participantId.toString();
+        teamMap[hid] = {
+          _id: t._id,
+          name: t.name,
+          leader: t.leader,
+          isLeader,
+        };
+      }
+    });
+
+    const enrichedRegistrations = allRegistrations.map((reg) => {
+      const regObj = reg.toObject ? reg.toObject() : { ...reg };
+      const hackId = (reg.hackathon?._id || reg.hackathon)?.toString();
+      const teamInfo = teamMap[hackId] || null;
+      regObj.team = teamInfo;
+      // User can cancel if they are solo registered (no team) OR if they are the team leader
+      regObj.canCancel = !teamInfo || teamInfo.isLeader;
+      return regObj;
+    });
+
     const total = await Registration.countDocuments(query) + teamBasedRegs.length;
     const pages = Math.ceil(total / parseInt(limit, 10)) || 1;
 
     return {
-      registrations: allRegistrations,
+      registrations: enrichedRegistrations,
       pagination: {
         total,
         page: parseInt(page, 10),

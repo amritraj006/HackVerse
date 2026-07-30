@@ -64,6 +64,13 @@ const hackathonSchema = new mongoose.Schema(
         ref: 'User',
       },
     ],
+    // Judges who have been invited but not yet accepted
+    pendingJudges: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
     isResultsPublished: {
       type: Boolean,
       default: false,

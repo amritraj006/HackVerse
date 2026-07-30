@@ -44,6 +44,16 @@ class SubmissionService {
       $or: [{ leader: userId }, { members: userId }],
     });
 
+    if (userTeam) {
+      // User is in a team: only the team creator (leader) can submit or edit the project
+      const isLeader = userTeam.leader.toString() === userId.toString();
+      if (!isLeader) {
+        const error = new Error('Only team creators or solo participants can submit or edit projects. Team members cannot modify project submissions.');
+        error.statusCode = 403;
+        throw error;
+      }
+    }
+
     let teamId = userTeam ? userTeam._id : null;
     let membersList = userTeam ? userTeam.members : [userId];
 
@@ -345,7 +355,7 @@ class SubmissionService {
    * Delete submission
    */
   async deleteSubmission(id, userId, userRole) {
-    const submission = await Submission.findById(id).populate('hackathon');
+    const submission = await Submission.findById(id).populate('hackathon').populate('team');
     if (!submission) {
       const error = new Error('Submission not found');
       error.statusCode = 404;
@@ -353,10 +363,10 @@ class SubmissionService {
     }
 
     const isOwner = submission.submittedBy.toString() === userId.toString();
-    const isTeamMember = submission.teamMembers.some((m) => m.toString() === userId.toString());
+    const isTeamLeader = submission.team ? submission.team.leader?.toString() === userId.toString() : false;
 
-    if (!isOwner && !isTeamMember && userRole !== 'admin') {
-      const error = new Error('Not authorized to delete this submission');
+    if (!isOwner && !isTeamLeader && userRole !== 'admin') {
+      const error = new Error('Only team creators or solo participants can delete this project submission');
       error.statusCode = 403;
       throw error;
     }

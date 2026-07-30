@@ -37,6 +37,9 @@ export const hackathonService = {
   getTeams: async (id) => {
     return await api.get(`/hackathons/${id}/teams`);
   },
+  getParticipants: async (id) => {
+    return await api.get(`/hackathons/${id}/participants`);
+  },
   updateTeamStatus: async (hackathonId, teamId, status) => {
     return await api.put(`/hackathons/${hackathonId}/teams/${teamId}/status`, { status });
   },

@@ -147,6 +147,16 @@ const getLeaderboardPreview = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'Leaderboard preview retrieved successfully', leaderboard);
 });
 
+/**
+ * @desc    Get solo-registered participants for a hackathon
+ * @route   GET /api/v1/hackathons/:id/participants
+ * @access  Private (Organizer/Admin)
+ */
+const getParticipants = asyncHandler(async (req, res) => {
+  const participants = await hackathonService.getHackathonParticipants(req.params.id);
+  return successResponse(res, 200, 'Participants retrieved successfully', participants);
+});
+
 module.exports = {
   getHackathons,
   getHackathonById,
@@ -158,6 +168,7 @@ module.exports = {
   assignJudges,
   publishResults,
   getTeams,
+  getParticipants,
   updateTeamStatus,
   getSubmissions,
   getLeaderboard,

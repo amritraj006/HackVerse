@@ -1,6 +1,8 @@
 const Hackathon = require('../models/Hackathon');
 const Team = require('../models/Team');
 const Submission = require('../models/Submission');
+const Registration = require('../models/Registration');
+const Notification = require('../models/Notification');
 const User = require('../models/User');
 
 class HackathonService {
@@ -178,10 +180,13 @@ class HackathonService {
   }
 
   /**
-   * Delete hackathon (Organizer ownership check)
+   * Delete hackathon with full cascade:
+   * - Deletes all teams, submissions, and participant registrations
+   * - Removes judge assignments (embedded in hackathon doc)
+   * - Sends notifications to all participants, team creators, and assigned judges
    */
   async deleteHackathon(id, user) {
-    const hackathon = await Hackathon.findById(id);
+    const hackathon = await Hackathon.findById(id).populate('assignedJudges', '_id name');
     if (!hackathon) {
       const error = new Error('Hackathon not found');
       error.statusCode = 404;
@@ -194,8 +199,72 @@ class HackathonService {
       throw error;
     }
 
+    const notificationMessage = `We regret to inform you that the hackathon "${hackathon.title}" has been cancelled by the organiser. All associated teams, registrations, and submissions have been removed.`;
+    const notifiedUserIds = new Set();
+
+    // 1. Collect all unique participants from registrations
+    const registrations = await Registration.find({ hackathon: id }).select('participant');
+    for (const reg of registrations) {
+      notifiedUserIds.add(reg.participant.toString());
+    }
+
+    // 2. Collect all unique team creators and members
+    const teams = await Team.find({ hackathon: id }).select('leader members');
+    for (const team of teams) {
+      if (team.leader) notifiedUserIds.add(team.leader.toString());
+      for (const memberId of team.members) {
+        notifiedUserIds.add(memberId.toString());
+      }
+    }
+
+    // 3. Send notifications to all unique affected users (except the organiser themselves)
+    const notificationDocs = [...notifiedUserIds]
+      .filter((uid) => uid !== user.id)
+      .map((uid) => ({
+        user: uid,
+        sender: user.id,
+        type: 'hackathon',
+        title: `Hackathon Cancelled: ${hackathon.title}`,
+        message: notificationMessage,
+        hackathon: hackathon._id,
+        status: 'read',
+      }));
+
+    // 4. Also notify all assigned judges (if not already included)
+    for (const judge of hackathon.assignedJudges || []) {
+      const judgeId = (judge._id || judge).toString();
+      if (judgeId !== user.id && !notifiedUserIds.has(judgeId)) {
+        notificationDocs.push({
+          user: judgeId,
+          sender: user.id,
+          type: 'hackathon',
+          title: `Hackathon Cancelled: ${hackathon.title}`,
+          message: notificationMessage,
+          hackathon: hackathon._id,
+          status: 'read',
+        });
+      }
+    }
+
+    if (notificationDocs.length > 0) {
+      await Notification.insertMany(notificationDocs);
+    }
+
+    // 5. Cascade delete in order: teams → submissions → registrations → hackathon
+    await Team.deleteMany({ hackathon: id });
+    await Submission.deleteMany({ hackathon: id });
+    await Registration.deleteMany({ hackathon: id });
     await Hackathon.findByIdAndDelete(id);
-    return { id, message: 'Hackathon deleted successfully' };
+
+    return {
+      id,
+      message: `Hackathon "${hackathon.title}" and all associated data deleted successfully`,
+      deleted: {
+        teams: teams.length,
+        registrations: registrations.length,
+        notified: notificationDocs.length,
+      },
+    };
   }
 
   /**
@@ -221,7 +290,9 @@ class HackathonService {
   }
 
   /**
-   * Assign judges to hackathon
+   * Assign judges to hackathon — sends a judge_invite notification to each judge.
+   * Judges appear in pendingJudges until they accept; only then are they moved
+   * into assignedJudges and gain access to the evaluation portal.
    */
   async assignJudges(id, judgeIds, user) {
     const hackathon = await Hackathon.findById(id);
@@ -237,12 +308,157 @@ class HackathonService {
       throw error;
     }
 
-    // Verify all IDs belong to judges
+    // Verify all IDs belong to judge/admin accounts
     const validJudges = await User.find({ _id: { $in: judgeIds }, role: { $in: ['judge', 'admin'] } });
-    hackathon.assignedJudges = validJudges.map((j) => j._id);
+    const validJudgeIds = validJudges.map((j) => j._id.toString());
+
+    // Determine which judges are newly invited (not already pending or accepted)
+    const alreadyAssigned = new Set(hackathon.assignedJudges.map((j) => j.toString()));
+    const alreadyPending = new Set(hackathon.pendingJudges.map((j) => j.toString()));
+
+    const newInvites = validJudges.filter(
+      (j) => !alreadyAssigned.has(j._id.toString()) && !alreadyPending.has(j._id.toString())
+    );
+
+    // Judges removed from the list should also be removed from pending/assigned
+    hackathon.pendingJudges = validJudgeIds
+      .filter((jid) => !alreadyAssigned.has(jid))  // keep only non-accepted in pending
+      .map((jid) => jid);
+
+    hackathon.assignedJudges = hackathon.assignedJudges
+      .filter((jid) => validJudgeIds.includes(jid.toString()));
+
     await hackathon.save();
 
-    return await Hackathon.findById(id).populate('assignedJudges', 'name email avatar skills');
+    // Send judge_invite notifications to newly added judges
+    if (newInvites.length > 0) {
+      const notificationDocs = newInvites.map((judge) => ({
+        user: judge._id,
+        sender: user.id,
+        type: 'judge_invite',
+        title: `Judge Invitation: ${hackathon.title}`,
+        message: `You have been invited to judge the hackathon "${hackathon.title}". Please accept or decline this invitation.`,
+        hackathon: hackathon._id,
+        status: 'pending',
+      }));
+      await Notification.insertMany(notificationDocs);
+    }
+
+    return await Hackathon.findById(id)
+      .populate('assignedJudges', 'name email avatar skills')
+      .populate('pendingJudges', 'name email avatar skills');
+  }
+
+  /**
+   * Accept a judge_invite notification — moves judge from pendingJudges → assignedJudges
+   * and notifies the organiser.
+   */
+  async acceptJudgeInvite(notificationId, userId) {
+    const notification = await Notification.findOne({
+      _id: notificationId,
+      user: userId,
+      type: 'judge_invite',
+    });
+
+    if (!notification) {
+      const error = new Error('Judge invitation not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (notification.status !== 'pending') {
+      const error = new Error(`This invitation has already been ${notification.status}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const hackathon = await Hackathon.findById(notification.hackathon).populate('organizer', '_id name');
+    if (!hackathon) {
+      const error = new Error('Hackathon no longer exists');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const judge = await User.findById(userId).select('name email');
+
+    // Move from pendingJudges → assignedJudges
+    hackathon.pendingJudges = hackathon.pendingJudges.filter((j) => j.toString() !== userId.toString());
+    if (!hackathon.assignedJudges.some((j) => j.toString() === userId.toString())) {
+      hackathon.assignedJudges.push(userId);
+    }
+    await hackathon.save();
+
+    // Mark notification as accepted
+    notification.status = 'accepted';
+    await notification.save();
+
+    // Notify the organiser that the judge accepted
+    await Notification.create({
+      user: hackathon.organizer._id,
+      sender: userId,
+      type: 'hackathon',
+      title: `Judge Accepted: ${hackathon.title}`,
+      message: `${judge?.name || 'A judge'} has accepted your invitation to judge "${hackathon.title}" and now has access to the evaluation portal.`,
+      hackathon: hackathon._id,
+      status: 'read',
+    });
+
+    return { message: `You have accepted the judge invitation for "${hackathon.title}". You now have access to the evaluation portal.` };
+  }
+
+  /**
+   * Reject a judge_invite notification — removes judge from pendingJudges
+   * and notifies the organiser.
+   */
+  async rejectJudgeInvite(notificationId, userId) {
+    const notification = await Notification.findOne({
+      _id: notificationId,
+      user: userId,
+      type: 'judge_invite',
+    });
+
+    if (!notification) {
+      const error = new Error('Judge invitation not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (notification.status !== 'pending') {
+      const error = new Error(`This invitation has already been ${notification.status}`);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const hackathon = await Hackathon.findById(notification.hackathon).populate('organizer', '_id name');
+    if (!hackathon) {
+      notification.status = 'rejected';
+      await notification.save();
+      return { message: 'Invitation declined.' };
+    }
+
+    const judge = await User.findById(userId).select('name email');
+
+    // Remove from both pending and assigned (in case they were previously assigned)
+    hackathon.pendingJudges = hackathon.pendingJudges.filter((j) => j.toString() !== userId.toString());
+    hackathon.assignedJudges = hackathon.assignedJudges.filter((j) => j.toString() !== userId.toString());
+    await hackathon.save();
+
+    // Mark notification as rejected
+    notification.status = 'rejected';
+    await notification.save();
+
+    // Notify the organiser that the judge declined
+    await Notification.create({
+      user: hackathon.organizer._id,
+      sender: userId,
+      type: 'hackathon',
+      title: `Judge Declined: ${hackathon.title}`,
+      message: `${judge?.name || 'A judge'} has declined your invitation to judge "${hackathon.title}" and has been automatically removed from the judge list.`,
+      hackathon: hackathon._id,
+      status: 'read',
+    });
+
+    return { message: `You have declined the judge invitation for "${hackathon.title}".` };
   }
 
   /**
@@ -343,10 +559,40 @@ class HackathonService {
   }
 
   /**
+   * Get individually registered (solo) participants for a hackathon.
+   * Excludes users who are part of a team (team-registered participants).
+   */
+  async getHackathonParticipants(id) {
+    // Find all users who are in a team for this hackathon
+    const teams = await Team.find({ hackathon: id }).select('members leader');
+    const teamMemberIds = new Set();
+    teams.forEach((t) => {
+      if (t.leader) teamMemberIds.add(t.leader.toString());
+      (t.members || []).forEach((m) => teamMemberIds.add(m.toString()));
+    });
+
+    // Fetch all active registrations for this hackathon
+    const registrations = await Registration.find({ hackathon: id, status: 'active' })
+      .populate('participant', 'name email avatar skills bio')
+      .sort({ registeredAt: -1 });
+
+    // Filter to only solo participants (not in any team)
+    const soloRegistrations = registrations.filter(
+      (r) => r.participant && !teamMemberIds.has(r.participant._id.toString())
+    );
+
+    return soloRegistrations;
+  }
+
+  /**
    * Update team status (approve / reject)
    */
   async updateTeamStatus(teamId, status, user) {
-    const team = await Team.findById(teamId).populate('hackathon');
+    const team = await Team.findById(teamId)
+      .populate('hackathon')
+      .populate('leader', 'name email')
+      .populate('members', 'name email');
+
     if (!team) {
       const error = new Error('Team not found');
       error.statusCode = 404;
@@ -359,8 +605,56 @@ class HackathonService {
       throw error;
     }
 
+    // Rule: Once approved, host CANNOT disapprove or reject again
+    if (team.status === 'approved' && status !== 'approved') {
+      const error = new Error('Team has already been approved and cannot be disapproved or rejected.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const prevStatus = team.status;
     team.status = status;
     await team.save();
+
+    // Send notifications to all team members when status changes
+    if (status === 'approved' && prevStatus !== 'approved') {
+      const Notification = require('../models/Notification');
+      const leaderIdStr = team.leader?._id ? team.leader._id.toString() : team.leader.toString();
+      const memberIdsStr = (team.members || []).map((m) => (m._id ? m._id.toString() : m.toString()));
+      const allMemberIds = Array.from(new Set([leaderIdStr, ...memberIdsStr]));
+
+      for (const memberId of allMemberIds) {
+        await Notification.create({
+          user: memberId,
+          sender: user.id,
+          type: 'hackathon',
+          title: `Team Approved: ${team.name}`,
+          message: `Your team "${team.name}" has been approved by the host for "${team.hackathon?.title || 'the hackathon'}"! 🎉 You are officially ready to participate.`,
+          team: team._id,
+          hackathon: team.hackathon?._id || team.hackathon,
+          status: 'read',
+        });
+      }
+    } else if (status === 'rejected' && prevStatus !== 'rejected') {
+      const Notification = require('../models/Notification');
+      const leaderIdStr = team.leader?._id ? team.leader._id.toString() : team.leader.toString();
+      const memberIdsStr = (team.members || []).map((m) => (m._id ? m._id.toString() : m.toString()));
+      const allMemberIds = Array.from(new Set([leaderIdStr, ...memberIdsStr]));
+
+      for (const memberId of allMemberIds) {
+        await Notification.create({
+          user: memberId,
+          sender: user.id,
+          type: 'hackathon',
+          title: `Team Request Status: ${team.name}`,
+          message: `Your team "${team.name}" request for "${team.hackathon?.title || 'the hackathon'}" was rejected by the host.`,
+          team: team._id,
+          hackathon: team.hackathon?._id || team.hackathon,
+          status: 'read',
+        });
+      }
+    }
+
     return team;
   }
 

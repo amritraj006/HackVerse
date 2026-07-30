@@ -194,6 +194,13 @@ export const RegistrationHistory = () => {
                         >
                           {isActive ? 'Active' : 'Cancelled'}
                         </span>
+                        {reg.team && (
+                          <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full border ${
+                            reg.canCancel ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'bg-slate-100 text-slate-600 border-slate-200'
+                          }`}>
+                            {reg.canCancel ? `Team Leader (${reg.team.name})` : `Team Member (${reg.team.name})`}
+                          </span>
+                        )}
                       </div>
 
                       <div className="flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-slate-500">
@@ -216,7 +223,7 @@ export const RegistrationHistory = () => {
                     <Link to={`/hackathons/${h._id}`}>
                       <Button size="sm" variant="outline">View Details</Button>
                     </Link>
-                    {isActive && (
+                    {isActive && (reg.canCancel !== false ? (
                       <Button
                         size="sm"
                         variant="ghost"
@@ -225,7 +232,11 @@ export const RegistrationHistory = () => {
                       >
                         Cancel
                       </Button>
-                    )}
+                    ) : (
+                      <span className="text-[11px] text-slate-400 font-medium italic px-2 py-1" title="Only the team leader can cancel registration">
+                        Leader Only
+                      </span>
+                    ))}
                   </div>
                 </div>
               );
