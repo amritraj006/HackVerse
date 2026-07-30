@@ -82,42 +82,61 @@ export const ManageHackathon = () => {
     let isMounted = true;
 
     if (activeTab === 'teams') {
-      setTeamsLoading(true);
-      hackathonService.getTeams(id)
-        .then((res) => { if (isMounted && res?.data) setTeams(res.data); })
-        .catch((err) => console.error(err))
-        .finally(() => { if (isMounted) setTeamsLoading(false); });
+      const loadTeams = async () => {
+        setTeamsLoading(true);
+        try {
+          const res = await hackathonService.getTeams(id);
+          if (isMounted && res?.data) setTeams(res.data);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          if (isMounted) setTeamsLoading(false);
+        }
+      };
+      loadTeams();
     }
 
     if (activeTab === 'participants') {
-      setParticipantsLoading(true);
-      hackathonService.getParticipants(id)
-        .then((res) => { if (isMounted && res?.data) setParticipants(res.data); })
-        .catch((err) => console.error('[Participants]', err))
-        .finally(() => { if (isMounted) setParticipantsLoading(false); });
+      const loadParticipants = async () => {
+        setParticipantsLoading(true);
+        try {
+          const res = await hackathonService.getParticipants(id);
+          if (isMounted && res?.data) setParticipants(res.data);
+        } catch (err) {
+          console.error('[Participants]', err);
+        } finally {
+          if (isMounted) setParticipantsLoading(false);
+        }
+      };
+      loadParticipants();
     }
 
     if (activeTab === 'judges') {
-      userService.getAllUsers({ limit: 100 })
-        .then((res) => {
+      const loadJudges = async () => {
+        try {
+          const res = await userService.getAllUsers({ limit: 100 });
           if (isMounted && res?.data) {
-            const userList = Array.isArray(res.data)
-              ? res.data
-              : res.data.users || [];
-            const judges = userList.filter(
-              (u) => u.role === 'judge' || u.role === 'admin'
-            );
-            // If no designated judge/admin role exists, fallback to all users so organizers can assign any judge
+            const userList = Array.isArray(res.data) ? res.data : res.data.users || [];
+            const judges = userList.filter((u) => u.role === 'judge' || u.role === 'admin');
             setAvailableJudges(judges.length > 0 ? judges : userList);
           }
-        })
-        .catch((err) => console.error('[ManageHackathon] Failed to fetch judges:', err));
+        } catch (err) {
+          console.error('[ManageHackathon] Failed to fetch judges:', err);
+        }
+      };
+      loadJudges();
     }
 
     if (activeTab === 'submissions') {
-      hackathonService.getLeaderboardPreview(id)
-        .then((res) => { if (isMounted && res?.data) setLeaderboard(res.data.rankings || []); })
-        .catch((err) => { if (isMounted) setAlert({ type: 'error', message: err.message || 'Failed to calculate leaderboard.' }); });
+      const loadSubmissions = async () => {
+        try {
+          const res = await hackathonService.getLeaderboardPreview(id);
+          if (isMounted && res?.data) setLeaderboard(res.data.rankings || []);
+        } catch (err) {
+          if (isMounted) setAlert({ type: 'error', message: err.message || 'Failed to calculate leaderboard.' });
+        }
+      };
+      loadSubmissions();
     }
 
     return () => { isMounted = false; };
@@ -421,7 +440,7 @@ export const ManageHackathon = () => {
 
       {/* Tab: Overview */}
       {activeTab === 'overview' && (
-        <Card header={<span className="font-semibold text-xs text-slate-800">Event Overview</span>}>
+        <Card header={<span className="font-semibold text-xs text-slate-800">Event Overview & Participant Statistics</span>}>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
               <span className="text-[11px] font-semibold text-slate-400 uppercase">Prize Pool</span>
@@ -431,6 +450,37 @@ export const ManageHackathon = () => {
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
               <span className="text-[11px] font-semibold text-slate-400 uppercase">Max Team Size</span>
               <p className="font-bold text-slate-900 text-sm mt-0.5">{hackathon.maxTeamSize} Members</p>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase">Participant Limit</span>
+              <p className="font-bold text-slate-900 text-sm mt-0.5">
+                {hackathon.maxParticipants > 0 ? `${hackathon.maxParticipants} Users Max` : 'Unlimited Users'}
+              </p>
+            </div>
+
+            <div className="p-3 bg-indigo-50/50 rounded-lg border border-indigo-200/60">
+              <span className="text-[11px] font-semibold text-indigo-600 uppercase">Registered Users</span>
+              <p className="font-bold text-slate-900 text-sm mt-0.5">
+                {hackathon.totalRegisteredUsers || 0} Total
+                {hackathon.maxParticipants > 0 && (
+                  <span className="text-xs text-slate-500 font-normal ml-1">
+                    ({hackathon.availableSlots ?? 0} slots left)
+                  </span>
+                )}
+              </p>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase">Solo Participants</span>
+              <p className="font-bold text-slate-900 text-sm mt-0.5">{hackathon.soloUsersCount || 0} Solo Users</p>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase">Team Participants</span>
+              <p className="font-bold text-slate-900 text-sm mt-0.5">
+                {hackathon.teamUsersCount || 0} Users ({hackathon.teamCount || 0} Teams)
+              </p>
             </div>
 
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">

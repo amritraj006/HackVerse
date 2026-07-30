@@ -104,12 +104,25 @@ export const RegisterHackathonModal = ({
               <p className="text-[11px] text-slate-300 truncate max-w-[260px]">{hackathon.title}</p>
             </div>
           </div>
-          <button
-            onClick={handleClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {hackathon.maxParticipants > 0 && (
+              <span
+                className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                  (hackathon.availableSlots ?? 0) > 0
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                    : 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                }`}
+              >
+                {(hackathon.availableSlots ?? 0) > 0 ? `${hackathon.availableSlots} slots left` : 'Full'}
+              </span>
+            )}
+            <button
+              onClick={handleClose}
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Content Body */}
@@ -118,6 +131,15 @@ export const RegisterHackathonModal = ({
             <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 font-medium text-[11px]">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{error}</span>
+            </div>
+          )}
+
+          {hackathon.maxParticipants > 0 && hackathon.availableSlots === 0 && (
+            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 font-medium text-[11px]">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <span>
+                This hackathon has reached its maximum limit of <strong>{hackathon.maxParticipants}</strong> participants. Registrations are currently full.
+              </span>
             </div>
           )}
 
@@ -133,8 +155,8 @@ export const RegisterHackathonModal = ({
                 <button
                   type="button"
                   onClick={handleSoloRegister}
-                  disabled={loading}
-                  className="flex items-center gap-3.5 p-3.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/40 text-left transition-all group cursor-pointer"
+                  disabled={loading || (hackathon.maxParticipants > 0 && hackathon.availableSlots === 0)}
+                  className="flex items-center gap-3.5 p-3.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/40 disabled:opacity-50 disabled:cursor-not-allowed text-left transition-all group cursor-pointer"
                 >
                   <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                     <User className="w-5 h-5" />

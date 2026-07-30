@@ -66,11 +66,21 @@ class HackathonService {
       .limit(limitNum)
       .lean();
 
+    const hackathonsWithStats = await Promise.all(
+      hackathons.map(async (h) => {
+        const stats = await this.getParticipantStats(h._id);
+        return {
+          ...h,
+          ...stats,
+        };
+      })
+    );
+
     const total = await Hackathon.countDocuments(query);
     const pages = Math.ceil(total / limitNum) || 1;
 
     return {
-      hackathons,
+      hackathons: hackathonsWithStats,
       pagination: {
         total,
         page: pageNum,
@@ -80,6 +90,49 @@ class HackathonService {
     };
   }
 
+  /**
+   * Helper to calculate participant breakdown and slot availability for a hackathon.
+   * e.g. 3 teams with 3 members each = 9 team users, 11 solo users = 20 total users.
+   */
+  async getParticipantStats(hackathonId) {
+    const hackathon = await Hackathon.findById(hackathonId).select('maxParticipants');
+    const teams = await Team.find({ hackathon: hackathonId }).select('leader members');
+
+    const teamMemberIds = new Set();
+    teams.forEach((t) => {
+      if (t.leader) teamMemberIds.add(t.leader.toString());
+      (t.members || []).forEach((m) => teamMemberIds.add(m.toString()));
+    });
+
+    const registrations = await Registration.find({ hackathon: hackathonId, status: 'active' }).select('participant');
+    const soloUserIds = new Set();
+
+    registrations.forEach((r) => {
+      if (r.participant) {
+        const pid = (r.participant._id || r.participant).toString();
+        if (!teamMemberIds.has(pid)) {
+          soloUserIds.add(pid);
+        }
+      }
+    });
+
+    const teamUsersCount = teamMemberIds.size;
+    const soloUsersCount = soloUserIds.size;
+    const totalRegisteredUsers = teamUsersCount + soloUsersCount;
+    const teamCount = teams.length;
+
+    const maxParticipants = hackathon?.maxParticipants || 0;
+    const availableSlots = maxParticipants > 0 ? Math.max(0, maxParticipants - totalRegisteredUsers) : null;
+
+    return {
+      totalRegisteredUsers,
+      teamCount,
+      teamUsersCount,
+      soloUsersCount,
+      maxParticipants,
+      availableSlots,
+    };
+  }
 
   /**
    * Get single hackathon details
@@ -98,16 +151,28 @@ class HackathonService {
       error.statusCode = 404;
       throw error;
     }
-    return hackathon;
+
+    const stats = await this.getParticipantStats(id);
+    const result = hackathon.toObject();
+    Object.assign(result, stats);
+    return result;
   }
 
   /**
    * Get events created by logged-in organizer
    */
   async getMyEvents(organizerId) {
-    return await Hackathon.find({ organizer: organizerId })
+    const events = await Hackathon.find({ organizer: organizerId })
       .populate('assignedJudges', 'name email')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    return await Promise.all(
+      events.map(async (e) => {
+        const stats = await this.getParticipantStats(e._id);
+        return { ...e, ...stats };
+      })
+    );
   }
 
   /**
@@ -122,6 +187,7 @@ class HackathonService {
       endDate,
       registrationDeadline,
       maxTeamSize,
+      maxParticipants,
       prizePool,
       bannerImage,
       tags,
@@ -134,6 +200,11 @@ class HackathonService {
       ? tags.split(',').map((t) => t.trim()).filter(Boolean)
       : [];
 
+    const parsedMaxParticipants =
+      maxParticipants !== undefined && maxParticipants !== ''
+        ? Math.max(0, parseInt(maxParticipants, 10) || 0)
+        : 0;
+
     const hackathon = await Hackathon.create({
       title,
       description,
@@ -143,6 +214,7 @@ class HackathonService {
       endDate,
       registrationDeadline,
       maxTeamSize: maxTeamSize || 4,
+      maxParticipants: parsedMaxParticipants,
       prizePool: prizePool || '$0',
       bannerImage: bannerImage || '',
       tags: tagsArray,
@@ -174,9 +246,24 @@ class HackathonService {
       data.tags = data.tags.split(',').map((t) => t.trim()).filter(Boolean);
     }
 
+    if (data.maxParticipants !== undefined && data.maxParticipants !== '') {
+      const parsedLimit = Math.max(0, parseInt(data.maxParticipants, 10) || 0);
+      if (parsedLimit > 0) {
+        const stats = await this.getParticipantStats(id);
+        if (parsedLimit < stats.totalRegisteredUsers) {
+          const error = new Error(
+            `Cannot set participant limit to ${parsedLimit} because ${stats.totalRegisteredUsers} participants are already registered.`
+          );
+          error.statusCode = 400;
+          throw error;
+        }
+      }
+      data.maxParticipants = parsedLimit;
+    }
+
     Object.assign(hackathon, data);
     await hackathon.save();
-    return hackathon;
+    return await this.getHackathonById(id);
   }
 
   /**

@@ -24,6 +24,15 @@ class TeamService {
       throw error;
     }
 
+    // Check participant limit slots availability for hackathon
+    const hackathonService = require('./hackathonService');
+    const stats = await hackathonService.getParticipantStats(hackathonId);
+    if (hackathon.maxParticipants > 0 && stats.totalRegisteredUsers + 1 > hackathon.maxParticipants) {
+      const error = new Error(`Registration full: This hackathon has reached its maximum capacity of ${hackathon.maxParticipants} participants.`);
+      error.statusCode = 400;
+      throw error;
+    }
+
     // Check if user is already in a team for this hackathon
     const existingTeam = await Team.findOne({
       hackathon: hackathonId,
@@ -95,6 +104,16 @@ class TeamService {
       const error = new Error(`Team has reached the maximum allowed limit of ${hackathon.maxTeamSize} members`);
       error.statusCode = 400;
       throw error;
+    }
+
+    if (hackathon && hackathon.maxParticipants > 0) {
+      const hackathonService = require('./hackathonService');
+      const stats = await hackathonService.getParticipantStats(hackathon._id);
+      if (stats.totalRegisteredUsers + 1 > hackathon.maxParticipants) {
+        const error = new Error(`Registration full: Cannot join team because hackathon participant limit of ${hackathon.maxParticipants} users has been reached.`);
+        error.statusCode = 400;
+        throw error;
+      }
     }
 
     // Check if user is already in a team for this hackathon
@@ -280,6 +299,16 @@ class TeamService {
       throw error;
     }
 
+    if (team.hackathon && team.hackathon.maxParticipants > 0) {
+      const hackathonService = require('./hackathonService');
+      const stats = await hackathonService.getParticipantStats(team.hackathon._id);
+      if (stats.totalRegisteredUsers + 1 > team.hackathon.maxParticipants) {
+        const error = new Error(`Cannot send invitation: Hackathon participant limit of ${team.hackathon.maxParticipants} users has been reached.`);
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
     const invitedUser = await User.findOne({ email: email.toLowerCase().trim() });
     if (!invitedUser) {
       const error = new Error(`No user found with email "${email}"`);
@@ -378,6 +407,16 @@ class TeamService {
       const error = new Error(`Team is already full (max ${team.hackathon.maxTeamSize} members)`);
       error.statusCode = 400;
       throw error;
+    }
+
+    if (team.hackathon && team.hackathon.maxParticipants > 0) {
+      const hackathonService = require('./hackathonService');
+      const stats = await hackathonService.getParticipantStats(team.hackathon._id);
+      if (stats.totalRegisteredUsers + 1 > team.hackathon.maxParticipants) {
+        const error = new Error(`Registration full: Cannot accept invitation because hackathon participant limit of ${team.hackathon.maxParticipants} users has been reached.`);
+        error.statusCode = 400;
+        throw error;
+      }
     }
 
     // Check if user is already in a team for this hackathon

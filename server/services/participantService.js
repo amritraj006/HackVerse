@@ -33,6 +33,15 @@ class ParticipantService {
       throw error;
     }
 
+    // Check participant limit slots availability
+    const hackathonService = require('./hackathonService');
+    const stats = await hackathonService.getParticipantStats(hackathonId);
+    if (hackathon.maxParticipants > 0 && stats.totalRegisteredUsers >= hackathon.maxParticipants) {
+      const error = new Error(`Registration full: This hackathon has reached its maximum capacity of ${hackathon.maxParticipants} participants.`);
+      error.statusCode = 400;
+      throw error;
+    }
+
     // Check if user is already in a team for this hackathon
     const existingTeam = await Team.findOne({
       hackathon: hackathonId,

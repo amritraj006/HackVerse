@@ -89,6 +89,26 @@ export const HackathonCard = ({
             <Users className="w-3 h-3 text-slate-400" />
             Max {maxTeamSize} per team
           </span>
+          {hackathon.maxParticipants > 0 ? (
+            <span className="flex items-center gap-1 font-medium text-slate-700">
+              <Users className="w-3 h-3 text-indigo-600" />
+              {hackathon.totalRegisteredUsers || 0}/{hackathon.maxParticipants} Users
+              <span
+                className={`px-1.5 py-0.2 text-[9px] font-bold rounded border ${
+                  (hackathon.availableSlots ?? 0) > 0
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-rose-50 text-rose-700 border-rose-200'
+                }`}
+              >
+                {(hackathon.availableSlots ?? 0) > 0 ? `${hackathon.availableSlots} left` : 'Full'}
+              </span>
+            </span>
+          ) : (hackathon.totalRegisteredUsers || 0) > 0 ? (
+            <span className="flex items-center gap-1 text-slate-600">
+              <Users className="w-3 h-3 text-indigo-500" />
+              {hackathon.totalRegisteredUsers} Users
+            </span>
+          ) : null}
           {assignedJudges.length > 0 && (
             <span className="flex items-center gap-1">
               {assignedJudges.length} Judge{assignedJudges.length > 1 ? 's' : ''}

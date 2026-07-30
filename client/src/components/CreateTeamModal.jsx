@@ -92,7 +92,7 @@ export const CreateTeamModal = ({ isOpen, onClose, onSuccess }) => {
               >
                 {hackathons.map((h) => (
                   <option key={h._id} value={h._id}>
-                    {h.title} (Max {h.maxTeamSize || 4} members)
+                    {h.title} (Max {h.maxTeamSize || 4} per team{h.maxParticipants > 0 ? ` • ${h.availableSlots ?? 0} slots left` : ''})
                   </option>
                 ))}
               </select>

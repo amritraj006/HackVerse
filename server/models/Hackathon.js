@@ -41,6 +41,11 @@ const hackathonSchema = new mongoose.Schema(
       type: Number,
       default: 4,
     },
+    maxParticipants: {
+      type: Number,
+      default: 0,
+      min: [0, 'Max participants cannot be negative'],
+    },
     prizePool: {
       type: String,
       default: '$0',

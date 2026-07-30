@@ -26,6 +26,7 @@ export const HackathonForm = ({
         description: initialData.description || '',
         prizePool: initialData.prizePool || '$10,000',
         maxTeamSize: initialData.maxTeamSize || 4,
+        maxParticipants: initialData.maxParticipants !== undefined ? initialData.maxParticipants : 0,
         startDate: initialData.startDate ? new Date(initialData.startDate).toISOString().split('T')[0] : '',
         endDate: initialData.endDate ? new Date(initialData.endDate).toISOString().split('T')[0] : '',
         registrationDeadline: initialData.registrationDeadline ? new Date(initialData.registrationDeadline).toISOString().split('T')[0] : '',
@@ -39,6 +40,7 @@ export const HackathonForm = ({
       description: '',
       prizePool: '$10,000',
       maxTeamSize: 4,
+      maxParticipants: 0,
       startDate: '',
       endDate: '',
       registrationDeadline: '',
@@ -148,7 +150,7 @@ export const HackathonForm = ({
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Input
                 label="Prize Pool"
                 id="prizePool"
@@ -165,6 +167,17 @@ export const HackathonForm = ({
                 min={1}
                 max={10}
                 value={formData.maxTeamSize}
+                onChange={handleChange}
+                icon={Users}
+              />
+
+              <Input
+                label="Total User Limit (0 = No limit)"
+                id="maxParticipants"
+                type="number"
+                min={0}
+                placeholder="e.g. 50 (0 for no limit)"
+                value={formData.maxParticipants}
                 onChange={handleChange}
                 icon={Users}
               />

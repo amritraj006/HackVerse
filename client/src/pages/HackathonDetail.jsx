@@ -22,7 +22,6 @@ import {
   Sparkles,
   Award,
   UserCheck,
-  FileText,
   Crown,
   Clock,
 } from 'lucide-react';
@@ -49,7 +48,6 @@ export const HackathonDetail = () => {
   const [isRegistered, setIsRegistered] = useState(false);
   const [regStatusData, setRegStatusData] = useState(null);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
-  const [regLoading, setRegLoading] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -222,7 +220,43 @@ export const HackathonDetail = () => {
             <Users className="w-4 h-4 text-slate-400" />
             Max {hackathon.maxTeamSize} per team
           </div>
+          <div className="flex items-center gap-1.5 font-medium text-slate-700">
+            <UserCheck className="w-4 h-4 text-indigo-600" />
+            <span>
+              Users: <strong className="text-slate-900">{hackathon.totalRegisteredUsers || 0}</strong>
+              {hackathon.maxParticipants > 0 ? (
+                <>
+                  {' '} / <strong>{hackathon.maxParticipants}</strong> limit{' '}
+                  <span
+                    className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                      (hackathon.availableSlots ?? 0) > 0
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : 'bg-rose-50 text-rose-700 border-rose-200'
+                    }`}
+                  >
+                    {(hackathon.availableSlots ?? 0) > 0
+                      ? `${hackathon.availableSlots} slot${hackathon.availableSlots === 1 ? '' : 's'} available`
+                      : 'Full'}
+                  </span>
+                </>
+              ) : (
+                <span className="ml-1 text-[10px] text-slate-500 font-normal">(No user limit)</span>
+              )}
+            </span>
+          </div>
         </div>
+
+        {/* User Breakdown details if any participants */}
+        {(hackathon.totalRegisteredUsers > 0) && (
+          <div className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200/60 rounded-lg px-3 py-1.5 flex items-center gap-2">
+            <Users className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
+            <span>
+              Participant breakdown: <strong className="text-slate-700">{hackathon.soloUsersCount || 0}</strong> solo participants,{' '}
+              <strong className="text-slate-700">{hackathon.teamUsersCount || 0}</strong> team members across{' '}
+              <strong className="text-slate-700">{hackathon.teamCount || 0}</strong> registered teams (Total <strong className="text-slate-800">{hackathon.totalRegisteredUsers}</strong> users).
+            </span>
+          </div>
+        )}
 
         {/* Tags */}
         {hackathon.tags?.length > 0 && (
@@ -264,18 +298,18 @@ export const HackathonDetail = () => {
               )}
             </>
           ) : canRegister ? (
-            <Button size="sm" variant="primary" onClick={handleRegister} disabled={regLoading}>
-              {regLoading ? (
-                <span className="inline-flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  Registering...
-                </span>
-              ) : (
+            hackathon.maxParticipants > 0 && hackathon.availableSlots === 0 ? (
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-rose-700 bg-rose-50 border border-rose-200 px-3 py-1.5 rounded-lg">
+                <Lock className="w-3.5 h-3.5" />
+                Registration Full — Maximum limit of {hackathon.maxParticipants} participants reached.
+              </div>
+            ) : (
+              <Button size="sm" variant="primary" onClick={handleRegister}>
                 <span className="inline-flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5" /> Register Now — It's Free
                 </span>
-              )}
-            </Button>
+              </Button>
+            )
           ) : (
             <p className="text-xs text-slate-400 font-medium">Registrations are not currently open for this hackathon.</p>
           )}
