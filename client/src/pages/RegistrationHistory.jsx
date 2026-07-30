@@ -223,7 +223,7 @@ export const RegistrationHistory = () => {
                     <Link to={`/hackathons/${h._id}`}>
                       <Button size="sm" variant="outline">View Details</Button>
                     </Link>
-                    {isActive && (reg.canCancel !== false ? (
+                    {isActive && !(['ongoing', 'ended'].includes(h.status) || (h.startDate && new Date() >= new Date(h.startDate))) && (reg.canCancel !== false ? (
                       <Button
                         size="sm"
                         variant="ghost"

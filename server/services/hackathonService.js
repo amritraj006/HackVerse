@@ -242,6 +242,45 @@ class HackathonService {
       throw error;
     }
 
+    // ─── RESTRICTION: Hackathon has started ────────────────────────────────────
+    const hasStarted = ['ongoing', 'ended'].includes(hackathon.status) ||
+      (hackathon.startDate && new Date() >= new Date(hackathon.startDate));
+
+    if (hasStarted) {
+      // Only maxParticipants may be changed, and only increased
+      const allowedKeys = ['maxParticipants'];
+      const attemptedKeys = Object.keys(data).filter((k) => k !== 'maxParticipants' && data[k] !== undefined);
+
+      if (attemptedKeys.length > 0) {
+        const error = new Error(
+          'Once a hackathon has started, only the participant limit can be modified (and only increased).'
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+
+      if (data.maxParticipants !== undefined) {
+        const newLimit = parseInt(data.maxParticipants, 10) || 0;
+        const currentLimit = hackathon.maxParticipants || 0;
+        if (newLimit < currentLimit) {
+          const error = new Error(
+            `You can only increase the participant limit once the hackathon has started. Current limit is ${currentLimit}.`
+          );
+          error.statusCode = 400;
+          throw error;
+        }
+        hackathon.maxParticipants = newLimit;
+        await hackathon.save();
+        return await this.getHackathonById(id);
+      }
+
+      // Nothing valid to update
+      const error = new Error('No valid field provided. Only maxParticipants can be increased once a hackathon has started.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // ─── Normal pre-start editing ──────────────────────────────────────────────
     if (data.tags && typeof data.tags === 'string') {
       data.tags = data.tags.split(',').map((t) => t.trim()).filter(Boolean);
     }
@@ -265,6 +304,7 @@ class HackathonService {
     await hackathon.save();
     return await this.getHackathonById(id);
   }
+
 
   /**
    * Delete hackathon with full cascade:
@@ -371,10 +411,23 @@ class HackathonService {
       throw error;
     }
 
-    hackathon.isRegistrationOpen = isOpen !== undefined ? isOpen : !hackathon.isRegistrationOpen;
+    // ─── RESTRICTION: Cannot re-open registration once hackathon has started ──
+    const hasStarted = ['ongoing', 'ended'].includes(hackathon.status) ||
+      (hackathon.startDate && new Date() >= new Date(hackathon.startDate));
+
+    const wantsToOpen = isOpen !== undefined ? isOpen : !hackathon.isRegistrationOpen;
+
+    if (hasStarted && wantsToOpen) {
+      const error = new Error('Registration cannot be re-opened after the hackathon has started.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    hackathon.isRegistrationOpen = wantsToOpen;
     await hackathon.save();
     return hackathon;
   }
+
 
   /**
    * Assign judges to hackathon — sends a judge_invite notification to each judge.

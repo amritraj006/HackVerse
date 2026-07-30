@@ -271,36 +271,41 @@ class SubmissionService {
       throw error;
     }
 
-    // First stage appends only when no review exists; second stage recalculates
-    // the public score as the average of all submitted judge totals.
-    const updated = await Submission.findOneAndUpdate(
-      { _id: submissionId, 'evaluations.judge': { $ne: judgeId } },
-      [
-        {
-          $set: {
-            evaluations: {
-              $concatArrays: [
-                '$evaluations',
-                [{ judge: judgeId, score: totalScore, criteriaScores, feedback, evaluatedAt: new Date() }],
-              ],
-            },
-          },
-        },
-        { $set: { score: { $avg: '$evaluations.score' } } },
-      ],
-      { new: true }
-    )
-      .populate('hackathon', 'title status endDate')
-      .populate('submittedBy', 'name email avatar')
-      .populate('team', 'name');
+    // Save evaluation document directly to avoid Mongoose array pipeline syntax error
+    const fullSubmission = await Submission.findById(submissionId);
+    if (!fullSubmission) {
+      const error = new Error('Submission not found');
+      error.statusCode = 404;
+      throw error;
+    }
 
-    if (!updated) {
+    const alreadyEvaluated = (fullSubmission.evaluations || []).some(
+      (ev) => (ev.judge?._id || ev.judge || '').toString() === user.id.toString()
+    );
+
+    if (alreadyEvaluated) {
       const error = new Error('You have already submitted an evaluation for this project');
       error.statusCode = 409;
       throw error;
     }
 
-    return updated;
+    fullSubmission.evaluations.push({
+      judge: user.id,
+      score: totalScore,
+      criteriaScores,
+      feedback,
+      evaluatedAt: new Date(),
+    });
+
+    const totalEvScore = fullSubmission.evaluations.reduce((sum, ev) => sum + (ev.score || 0), 0);
+    fullSubmission.score = totalEvScore / fullSubmission.evaluations.length;
+
+    await fullSubmission.save();
+
+    return await Submission.findById(submissionId)
+      .populate('hackathon', 'title status endDate')
+      .populate('submittedBy', 'name email avatar')
+      .populate('team', 'name');
   }
 
   /**

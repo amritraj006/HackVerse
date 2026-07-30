@@ -150,7 +150,7 @@ export const HackathonDetail = () => {
   const canRegister =
     isParticipant &&
     hackathon.isRegistrationOpen &&
-    (hackathon.status === 'upcoming' || hackathon.status === 'ongoing');
+    hackathon.status === 'upcoming';
   const roleRestrictedMessage = user && user.role !== 'participant'
     ? `As a${user.role === 'organizer' ? 'n Organizer' : user.role === 'judge' ? ' Judge' : 'n Admin'}, you cannot register as a participant.`
     : null;
@@ -160,8 +160,12 @@ export const HackathonDetail = () => {
   const isTeamCreator = regStatusData?.team
     ? leaderId?.toString() === currentUserId?.toString()
     : false;
-  // User can cancel: either solo-registered (no team) or is the team creator
-  const canCancelRegistration = isRegistered && (!regStatusData?.team || isTeamCreator);
+  // User can cancel: either solo-registered (no team) or is the team creator,
+  // AND only while the hackathon hasn't started yet
+  const hackathonHasStarted = ['ongoing', 'ended'].includes(hackathon.status) ||
+    (hackathon.startDate && new Date() >= new Date(hackathon.startDate));
+  const canCancelRegistration = isRegistered && (!regStatusData?.team || isTeamCreator) && !hackathonHasStarted;
+
 
   return (
     <div className="space-y-5">

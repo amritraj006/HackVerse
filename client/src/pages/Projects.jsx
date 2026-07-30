@@ -37,7 +37,9 @@ const DEFAULT_PARAMS = {
 
 export const Projects = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('all'); // 'all' or 'my'
+  const isParticipantOnly = user && user.role === 'participant';
+  const [activeTab, setActiveTab] = useState(isParticipantOnly ? 'my' : 'all'); // 'all' or 'my'
+
 
   const [queryParams, setQueryParams, resetQueryParams] = useQueryParams(DEFAULT_PARAMS);
 
@@ -223,18 +225,20 @@ export const Projects = () => {
       {/* Tabs & Search/Filter Controls Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div className="flex items-center gap-1 border-b border-slate-200 w-full md:w-auto">
-          <button
-            onClick={() => {
-              setActiveTab('all');
-            }}
-            className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
-              activeTab === 'all'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
-            }`}
-          >
-            All Submissions
-          </button>
+          {!isParticipantOnly && (
+            <button
+              onClick={() => {
+                setActiveTab('all');
+              }}
+              className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
+                activeTab === 'all'
+                  ? 'border-indigo-600 text-indigo-600'
+                  : 'border-transparent text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              All Submissions
+            </button>
+          )}
           {user && (
             <button
               onClick={() => {

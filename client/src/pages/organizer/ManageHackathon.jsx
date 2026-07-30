@@ -55,6 +55,11 @@ export const ManageHackathon = () => {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Increase Limit Modal (post-start editing)
+  const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
+  const [newLimitValue, setNewLimitValue] = useState('');
+  const [isSubmittingLimit, setIsSubmittingLimit] = useState(false);
+
   // Load Hackathon Event Details
   useEffect(() => {
     let isMounted = true;
@@ -201,6 +206,30 @@ export const ManageHackathon = () => {
     }
   };
 
+  // Increase participant limit (post-start only edit)
+  const handleIncreaseLimitSubmit = async (e) => {
+    e.preventDefault();
+    const val = parseInt(newLimitValue, 10);
+    if (!val || val <= 0) {
+      setAlert({ type: 'error', message: 'Please enter a valid number greater than 0.' });
+      return;
+    }
+    setIsSubmittingLimit(true);
+    try {
+      const res = await hackathonService.update(id, { maxParticipants: val });
+      if (res && res.data) {
+        setHackathon(res.data);
+        setIsLimitModalOpen(false);
+        setNewLimitValue('');
+        setAlert({ type: 'success', message: `Participant limit updated to ${val}.` });
+      }
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to update participant limit.' });
+    } finally {
+      setIsSubmittingLimit(false);
+    }
+  };
+
   // Assign Judges submit
   const handleSaveJudges = async () => {
     setIsAssigningJudges(true);
@@ -261,6 +290,10 @@ export const ManageHackathon = () => {
       </div>
     );
   }
+
+  // Has the hackathon started? (status or actual time)
+  const hasStarted = ['ongoing', 'ended'].includes(hackathon.status) ||
+    (hackathon.startDate && new Date() >= new Date(hackathon.startDate));
 
   // Columns for Teams table
   const teamColumns = [
@@ -372,23 +405,60 @@ export const ManageHackathon = () => {
             >
               {hackathon.isRegistrationOpen ? 'Registrations Open' : 'Registrations Closed'}
             </span>
+            {hasStarted && (
+              <span className="px-2 py-0.5 text-[10px] font-semibold uppercase bg-amber-50 text-amber-800 border border-amber-200 rounded-full">
+                🔒 Limited Editing
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={handleToggleRegistration}>
-              {hackathon.isRegistrationOpen ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
-              <span>{hackathon.isRegistrationOpen ? 'Close Registrations' : 'Open Registrations'}</span>
-            </Button>
-            <Button size="sm" variant="secondary" onClick={() => setIsEditModalOpen(true)}>
-              <Edit className="w-3.5 h-3.5" /> Edit Event
-            </Button>
-            <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50" onClick={() => setIsDeleteModalOpen(true)}>
-              <Trash2 className="w-3.5 h-3.5" />
-            </Button>
+            {hasStarted ? (
+              <>
+                {/* Registration can only be closed once started, not re-opened */}
+                {hackathon.isRegistrationOpen && (
+                  <Button size="sm" variant="outline" onClick={handleToggleRegistration}>
+                    <Lock className="w-3.5 h-3.5" />
+                    <span>Close Registrations</span>
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => {
+                    setNewLimitValue(hackathon.maxParticipants > 0 ? String(hackathon.maxParticipants) : '');
+                    setIsLimitModalOpen(true);
+                  }}
+                >
+                  <Users className="w-3.5 h-3.5" /> Increase Limit
+                </Button>
+                <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50" onClick={() => setIsDeleteModalOpen(true)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button size="sm" variant="outline" onClick={handleToggleRegistration}>
+                  {hackathon.isRegistrationOpen ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+                  <span>{hackathon.isRegistrationOpen ? 'Close Registrations' : 'Open Registrations'}</span>
+                </Button>
+                <Button size="sm" variant="secondary" onClick={() => setIsEditModalOpen(true)}>
+                  <Edit className="w-3.5 h-3.5" /> Edit Event
+                </Button>
+                <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50" onClick={() => setIsDeleteModalOpen(true)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
         <h1 className="text-lg font-bold text-slate-900">{hackathon.title}</h1>
+        {hasStarted && (
+          <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 font-medium">
+            ⚠️ This hackathon has started. You can only increase the participant limit. All other settings are locked. Registration cannot be re-opened.
+          </p>
+        )}
         <p className="text-xs text-slate-600 leading-relaxed max-w-2xl">{hackathon.tagline || hackathon.description}</p>
       </div>
 
@@ -714,6 +784,63 @@ export const ManageHackathon = () => {
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={handleDeleteConfirm}
       />
+
+      {/* Increase Participant Limit Modal (post-start only) */}
+      {isLimitModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl border border-slate-200">
+            <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-indigo-600" />
+                  Increase Participant Limit
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  You can only increase the limit while the hackathon is running. Current limit:{' '}
+                  <strong>{hackathon.maxParticipants > 0 ? hackathon.maxParticipants : 'Unlimited'}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => { setIsLimitModalOpen(false); setNewLimitValue(''); }}
+                className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleIncreaseLimitSubmit} className="px-6 py-5 space-y-4">
+              <div className="space-y-1.5">
+                <label htmlFor="newLimit" className="text-xs font-semibold text-slate-700 block">
+                  New Maximum Participants
+                </label>
+                <input
+                  id="newLimit"
+                  type="number"
+                  min={hackathon.maxParticipants > 0 ? hackathon.maxParticipants + 1 : 1}
+                  value={newLimitValue}
+                  onChange={(e) => setNewLimitValue(e.target.value)}
+                  placeholder={`Must be greater than ${hackathon.maxParticipants || 0}`}
+                  required
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                />
+                {hackathon.maxParticipants > 0 && (
+                  <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                    ⚠️ New limit must be greater than the current limit of <strong>{hackathon.maxParticipants}</strong>. You cannot decrease it.
+                  </p>
+                )}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => { setIsLimitModalOpen(false); setNewLimitValue(''); }}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" variant="primary" disabled={isSubmittingLimit}>
+                  {isSubmittingLimit ? 'Saving...' : 'Increase Limit'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+

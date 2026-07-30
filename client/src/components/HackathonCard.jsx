@@ -35,7 +35,8 @@ export const HackathonCard = ({
   } = hackathon;
 
   const statusBadge = STATUS_BADGE[status] || STATUS_BADGE.draft;
-  const canRegister = isRegistrationOpen && (status === 'upcoming' || status === 'ongoing');
+  const canRegister = isRegistrationOpen && status === 'upcoming';
+
 
   return (
     <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between gap-4">
@@ -137,27 +138,39 @@ export const HackathonCard = ({
               </Button>
             </Link>
 
-            {isRegistered ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-rose-600 hover:bg-rose-50 flex-1"
-                onClick={() => onCancel && onCancel(_id)}
-                disabled={registering}
-              >
-                {registering ? 'Cancelling...' : 'Cancel'}
-              </Button>
-            ) : canRegister ? (
-              <Button
-                size="sm"
-                variant="primary"
-                className="flex-1"
-                onClick={() => onRegister && onRegister(_id)}
-                disabled={registering}
-              >
-                {registering ? 'Registering...' : 'Register'}
-              </Button>
-            ) : null}
+            {(() => {
+              const hasStarted = ['ongoing', 'ended'].includes(status) || (startDate && new Date() >= new Date(startDate));
+              if (isRegistered) {
+                if (!hasStarted) {
+                  return (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-rose-600 hover:bg-rose-50 flex-1"
+                      onClick={() => onCancel && onCancel(_id)}
+                      disabled={registering}
+                    >
+                      {registering ? 'Cancelling...' : 'Cancel'}
+                    </Button>
+                  );
+                }
+                return null;
+              }
+              if (canRegister) {
+                return (
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    className="flex-1"
+                    onClick={() => onRegister && onRegister(_id)}
+                    disabled={registering}
+                  >
+                    {registering ? 'Registering...' : 'Register'}
+                  </Button>
+                );
+              }
+              return null;
+            })()}
           </div>
         )}
       </div>

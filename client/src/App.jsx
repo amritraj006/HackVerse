@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { MainLayout } from './layouts/MainLayout';
@@ -24,6 +25,14 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <Toaster
+          position="top-right"
+          gutter={8}
+          containerStyle={{ top: 24, right: 24 }}
+          toastOptions={{
+            duration: 4500,
+          }}
+        />
         <BrowserRouter>
           <Routes>
             {/* Main Application Routes inside MainLayout */}
@@ -69,5 +78,5 @@ function App() {
     </ThemeProvider>
   );
 }
-
 export default App;
+

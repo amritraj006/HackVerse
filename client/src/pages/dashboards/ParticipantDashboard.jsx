@@ -234,14 +234,19 @@ export const ParticipantDashboard = ({ user }) => {
                         <Link to={`/hackathons/${h._id}`}>
                           <Button size="sm" variant="outline">View</Button>
                         </Link>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="text-rose-500 hover:bg-rose-50"
-                          onClick={() => handleCancelOpen(h)}
-                        >
-                          Cancel
-                        </Button>
+                        {(() => {
+                          const hasStarted = ['ongoing', 'ended'].includes(h.status) || (h.startDate && new Date() >= new Date(h.startDate));
+                          return !hasStarted ? (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="text-rose-500 hover:bg-rose-50"
+                              onClick={() => handleCancelOpen(h)}
+                            >
+                              Cancel
+                            </Button>
+                          ) : null;
+                        })()}
                       </div>
                     </div>
                   );

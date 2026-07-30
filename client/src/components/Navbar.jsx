@@ -7,6 +7,8 @@ import {
 import { Button } from './Button';
 import { useAuth } from '../hooks/useAuth';
 import { notificationService } from '../services/notificationService';
+import { notify } from '../utils/toast';
+
 
 export const Navbar = ({ onToggleSidebar }) => {
   const { user, isAuthenticated, logout } = useAuth();
@@ -84,8 +86,9 @@ export const Navbar = ({ onToggleSidebar }) => {
       setNotifications((prev) =>
         prev.map((n) => (n._id === notifId ? { ...n, status: 'accepted' } : n))
       );
+      notify.success('Invitation accepted successfully!');
     } catch (err) {
-      alert(err.message || 'Failed to accept invitation');
+      notify.error(err.message || 'Failed to accept invitation');
     } finally {
       setActionLoadingId(null);
     }
@@ -98,12 +101,14 @@ export const Navbar = ({ onToggleSidebar }) => {
       setNotifications((prev) =>
         prev.map((n) => (n._id === notifId ? { ...n, status: 'rejected' } : n))
       );
+      notify.info('Invitation declined.');
     } catch (err) {
-      alert(err.message || 'Failed to reject invitation');
+      notify.error(err.message || 'Failed to reject invitation');
     } finally {
       setActionLoadingId(null);
     }
   };
+
 
   const getNotificationIcon = (type) => {
     switch (type) {

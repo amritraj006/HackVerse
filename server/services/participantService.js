@@ -27,8 +27,17 @@ class ParticipantService {
       throw error;
     }
 
-    if (hackathon.status === 'ended' || hackathon.status === 'cancelled') {
-      const error = new Error('Cannot register for a hackathon that has ended or been cancelled');
+    // Only upcoming hackathons accept new registrations
+    if (hackathon.status !== 'upcoming') {
+      const statusMsg = {
+        draft: 'This hackathon is still in draft and not yet open for registration.',
+        ongoing: 'This hackathon has already started. Registration is now closed.',
+        ended: 'This hackathon has ended. Registration is no longer available.',
+        cancelled: 'This hackathon has been cancelled.',
+      };
+      const error = new Error(
+        statusMsg[hackathon.status] || 'Registration is not available for this hackathon.'
+      );
       error.statusCode = 400;
       throw error;
     }
@@ -91,6 +100,23 @@ class ParticipantService {
   async cancelRegistration(hackathonId, participantId) {
     const Team = require('../models/Team');
     const Notification = require('../models/Notification');
+
+    // Fetch hackathon to check if it has started
+    const hackathon = await Hackathon.findById(hackathonId);
+    if (!hackathon) {
+      const error = new Error('Hackathon not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const hasStarted = ['ongoing', 'ended'].includes(hackathon.status) ||
+      (hackathon.startDate && new Date() >= new Date(hackathon.startDate));
+
+    if (hasStarted) {
+      const error = new Error('You cannot cancel your registration after the hackathon has started.');
+      error.statusCode = 400;
+      throw error;
+    }
 
     // Check if user is in a team for this hackathon
     const team = await Team.findOne({
