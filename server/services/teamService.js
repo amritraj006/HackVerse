@@ -36,6 +36,19 @@ class TeamService {
       throw error;
     }
 
+    // Check if user is registered solo for this hackathon
+    const existingRegistration = await Registration.findOne({
+      hackathon: hackathonId,
+      participant: userId,
+      status: 'active',
+    });
+
+    if (existingRegistration) {
+      const error = new Error('You are registered solo for this hackathon. You must leave your solo registration before creating a team.');
+      error.statusCode = 400;
+      throw error;
+    }
+
     const joinCode = this.generateJoinCode();
 
     const team = await Team.create({
@@ -46,6 +59,13 @@ class TeamService {
       joinCode,
       status: 'pending',
     });
+
+    // Auto-create active registration for team leader on this hackathon
+    await Registration.findOneAndUpdate(
+      { hackathon: hackathonId, participant: userId },
+      { status: 'active', registeredAt: new Date() },
+      { upsert: true, new: true }
+    );
 
     return await Team.findById(team._id)
       .populate('hackathon', 'title maxTeamSize status startDate endDate')
@@ -91,6 +111,13 @@ class TeamService {
 
     team.members.push(userId);
     await team.save();
+
+    // Auto-create active registration for joining member on this hackathon
+    await Registration.findOneAndUpdate(
+      { hackathon: team.hackathon._id, participant: userId },
+      { status: 'active', registeredAt: new Date() },
+      { upsert: true, new: true }
+    );
 
     return await Team.findById(team._id)
       .populate('hackathon', 'title maxTeamSize status startDate endDate')
@@ -353,6 +380,18 @@ class TeamService {
       throw error;
     }
 
+    // Check if user is already in a team for this hackathon
+    const existingTeam = await Team.findOne({
+      hackathon: team.hackathon._id,
+      $or: [{ leader: userId }, { members: userId }],
+    });
+
+    if (existingTeam) {
+      const error = new Error('You are already a member or leader of a team in this hackathon');
+      error.statusCode = 400;
+      throw error;
+    }
+
     // Add to team members and remove from pendingInvites
     if (!team.members.some((m) => m.toString() === userId.toString())) {
       team.members.push(userId);
@@ -412,7 +451,7 @@ class TeamService {
    * Remove member (Leader action)
    */
   async removeMember(teamId, memberId, leaderId) {
-    const team = await Team.findById(teamId);
+    const team = await Team.findById(teamId).populate('hackathon');
     if (!team) {
       const error = new Error('Team not found');
       error.statusCode = 404;
@@ -433,6 +472,28 @@ class TeamService {
 
     team.members = team.members.filter((m) => m.toString() !== memberId.toString());
     await team.save();
+
+    const hackathonId = team.hackathon?._id || team.hackathon;
+
+    // Automatically remove member from hackathon registration
+    await Registration.findOneAndUpdate(
+      { hackathon: hackathonId, participant: memberId },
+      { status: 'cancelled' }
+    );
+
+    // Create notification entry for the removed member
+    const leaderUser = await User.findById(leaderId);
+    const hackathonTitle = team.hackathon?.title || 'the hackathon';
+    await Notification.create({
+      user: memberId,
+      sender: leaderId,
+      type: 'team_removed',
+      title: `Removed from Team: ${team.name}`,
+      message: `${leaderUser ? leaderUser.name : 'Team Leader'} removed you from team "${team.name}" for "${hackathonTitle}". You are now eligible to register solo or join/create another team.`,
+      team: team._id,
+      hackathon: hackathonId,
+      status: 'read',
+    });
 
     return await Team.findById(team._id)
       .populate('hackathon', 'title maxTeamSize status')
@@ -497,13 +558,23 @@ class TeamService {
         error.statusCode = 400;
         throw error;
       }
-      // Only member left is leader -> delete team
+      // Sole leader leaving -> disestablish team and cancel registration for leader
+      await Registration.findOneAndUpdate(
+        { hackathon: team.hackathon, participant: userId },
+        { status: 'cancelled' }
+      );
       await Team.findByIdAndDelete(teamId);
       return { message: 'Team deleted as sole leader left' };
     }
 
     team.members = team.members.filter((m) => m.toString() !== userId.toString());
     await team.save();
+
+    // Cancel registration for the leaving member
+    await Registration.findOneAndUpdate(
+      { hackathon: team.hackathon, participant: userId },
+      { status: 'cancelled' }
+    );
 
     return await Team.findById(team._id)
       .populate('hackathon', 'title maxTeamSize status')
@@ -515,7 +586,7 @@ class TeamService {
    * Delete team (Leader or Admin action)
    */
   async deleteTeam(teamId, userId, userRole) {
-    const team = await Team.findById(teamId);
+    const team = await Team.findById(teamId).populate('hackathon');
     if (!team) {
       const error = new Error('Team not found');
       error.statusCode = 404;
@@ -526,6 +597,29 @@ class TeamService {
       const error = new Error('Only team leader or admin can delete the team');
       error.statusCode = 403;
       throw error;
+    }
+
+    const hackathonId = team.hackathon?._id || team.hackathon;
+
+    // Cancel registrations and notify all team members
+    for (const memberId of team.members) {
+      await Registration.findOneAndUpdate(
+        { hackathon: hackathonId, participant: memberId },
+        { status: 'cancelled' }
+      );
+
+      if (memberId.toString() !== userId.toString()) {
+        const leaderUser = await User.findById(userId);
+        await Notification.create({
+          user: memberId,
+          sender: userId,
+          type: 'system',
+          title: `Team Disestablished: ${team.name}`,
+          message: `${leaderUser ? leaderUser.name : 'Team Leader'} deleted team "${team.name}". Your registration for "${team.hackathon?.title || 'the hackathon'}" has been cancelled.`,
+          hackathon: hackathonId,
+          status: 'read',
+        });
+      }
     }
 
     await Team.findByIdAndDelete(teamId);

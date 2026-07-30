@@ -6,11 +6,30 @@ const { notFoundHandler, globalErrorHandler } = require('./middleware/errorMiddl
 
 const app = express();
 
+// Allowed origins (environment variable + fallback localhost ports)
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
+  'http://localhost:5174',
+].filter(Boolean);
+
 // Middlewares
-app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173' || 'https://localhost:5174',
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (Postman, mobile apps, curl, etc.)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -28,7 +47,7 @@ app.get('/', (req, res) => {
 // API v1 master routes
 app.use('/api/v1', apiRoutes);
 
-// Error Handling Middlewares
+// Error handling middlewares
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
 

@@ -13,7 +13,7 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['team_invite', 'system', 'hackathon'],
+      enum: ['team_invite', 'team_removed', 'system', 'hackathon'],
       default: 'system',
     },
     title: {

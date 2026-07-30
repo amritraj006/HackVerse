@@ -20,6 +20,10 @@ import {
   Tag,
   Sparkles,
   Award,
+  UserCheck,
+  FileText,
+  Crown,
+  Clock,
 } from 'lucide-react';
 
 const STATUS_BADGE = {
@@ -42,6 +46,7 @@ export const HackathonDetail = () => {
 
   // Registration state
   const [isRegistered, setIsRegistered] = useState(false);
+  const [regStatusData, setRegStatusData] = useState(null);
   const [regLoading, setRegLoading] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -74,17 +79,21 @@ export const HackathonDetail = () => {
     return () => { isMounted = false; };
   }, [hackathon?.isResultsPublished, id]);
 
-  // Check registration status for logged-in user
-  useEffect(() => {
+  // Check registration status & team details for logged-in user
+  const fetchRegStatus = () => {
     if (!user || !id) return;
-    let isMounted = true;
     registrationService.getStatus(id)
       .then((res) => {
-        if (isMounted && res?.data) setIsRegistered(res.data.isRegistered);
+        if (res?.data) {
+          setIsRegistered(res.data.isRegistered);
+          setRegStatusData(res.data);
+        }
       })
       .catch(() => {});
+  };
 
-    return () => { isMounted = false; };
+  useEffect(() => {
+    fetchRegStatus();
   }, [id, user]);
 
   const handleRegister = async () => {
@@ -96,6 +105,7 @@ export const HackathonDetail = () => {
     try {
       await registrationService.register(id);
       setIsRegistered(true);
+      fetchRegStatus();
       setAlert({ type: 'success', message: 'You have successfully registered! 🎉 Good luck!' });
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to register.' });
@@ -109,6 +119,7 @@ export const HackathonDetail = () => {
     try {
       await registrationService.cancel(id);
       setIsRegistered(false);
+      setRegStatusData(null);
       setIsCancelModalOpen(false);
       setAlert({ type: 'success', message: 'Registration cancelled successfully.' });
     } catch (err) {
@@ -147,6 +158,13 @@ export const HackathonDetail = () => {
   const roleRestrictedMessage = user && user.role !== 'participant'
     ? `As a${user.role === 'organizer' ? 'n Organizer' : user.role === 'judge' ? ' Judge' : 'n Admin'}, you cannot register as a participant.`
     : null;
+  // Team creator check: user is in a team and is the team leader
+  const isTeamCreator = regStatusData?.team
+    ? regStatusData.team.leader?._id === user?.id ||
+      regStatusData.team.leader === user?.id
+    : false;
+  // User can cancel: either solo-registered (no team) or is the team creator
+  const canCancelRegistration = isRegistered && (!regStatusData?.team || isTeamCreator);
 
   return (
     <div className="space-y-5">
@@ -228,16 +246,23 @@ export const HackathonDetail = () => {
           ) : isRegistered ? (
             <>
               <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
-                <CheckCircle2 className="w-4 h-4" /> You are registered for this hackathon
+                <CheckCircle2 className="w-4 h-4" />
+                {regStatusData?.team ? 'You are registered as part of a team' : 'You are registered for this hackathon'}
               </div>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-rose-600 hover:bg-rose-50"
-                onClick={() => setIsCancelModalOpen(true)}
-              >
-                Cancel Registration
-              </Button>
+              {canCancelRegistration ? (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-rose-600 hover:bg-rose-50"
+                  onClick={() => setIsCancelModalOpen(true)}
+                >
+                  {regStatusData?.team ? 'Cancel Team Registration' : 'Cancel Registration'}
+                </Button>
+              ) : (
+                <span className="text-[11px] text-slate-400 font-medium italic">
+                  Only the team creator can cancel the team registration
+                </span>
+              )}
             </>
           ) : canRegister ? (
             <Button size="sm" variant="primary" onClick={handleRegister} disabled={regLoading}>
@@ -257,6 +282,158 @@ export const HackathonDetail = () => {
           )}
         </div>
       </div>
+
+      {/* Participant Team / Solo Registration Details Card */}
+      {user && user.role === 'participant' && isRegistered && regStatusData && (
+        <Card
+          header={
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-xs text-slate-800 flex items-center gap-1.5">
+                {regStatusData.team ? (
+                  <>
+                    <Users className="w-4 h-4 text-indigo-600" />
+                    Your Team Details
+                  </>
+                ) : (
+                  <>
+                    <UserCheck className="w-4 h-4 text-emerald-600" />
+                    Your Solo Registration Details
+                  </>
+                )}
+              </span>
+              {regStatusData.team ? (
+                <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full flex items-center gap-1">
+                  <Users className="w-3 h-3" /> Team Registration
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full flex items-center gap-1">
+                  <UserCheck className="w-3 h-3" /> Solo Registration
+                </span>
+              )}
+            </div>
+          }
+        >
+          {regStatusData.team ? (
+            /* TEAM REGISTRATION DETAILS */
+            <div className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 bg-slate-50/80 p-3 rounded-lg border border-slate-200/80">
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Team Name</span>
+                  <span className="font-bold text-slate-900 text-sm mt-0.5 block">{regStatusData.team.name}</span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Team Creator</span>
+                  <span className="font-semibold text-slate-800 flex items-center gap-1 mt-0.5">
+                    <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    {regStatusData.team.leader?.name || 'Unknown'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Team Status</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider mt-1 ${
+                    regStatusData.team.status === 'approved'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : regStatusData.team.status === 'rejected'
+                      ? 'bg-rose-50 text-rose-700 border-rose-200'
+                      : 'bg-amber-50 text-amber-700 border-amber-200'
+                  }`}>
+                    {regStatusData.team.status || 'Pending'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Project Submission</span>
+                  {regStatusData.submission ? (
+                    <div className="mt-0.5">
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border capitalize ${
+                        regStatusData.submission.status === 'submitted'
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                      }`}>
+                        <CheckCircle2 className="w-3 h-3" />
+                        {regStatusData.submission.status === 'submitted' ? 'Submitted' : 'Draft'}
+                      </span>
+                      {regStatusData.submission.title && (
+                        <p className="text-[11px] font-medium text-slate-700 truncate max-w-[160px] mt-0.5">
+                          "{regStatusData.submission.title}"
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-slate-500 text-[11px] font-medium mt-1">
+                      <Clock className="w-3.5 h-3.5 text-slate-400" /> Not Submitted Yet
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Team Members List */}
+              <div>
+                <span className="text-slate-500 font-semibold block mb-2 text-[11px] uppercase tracking-wider">
+                  Team Members ({regStatusData.team.members?.length || 0})
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                  {regStatusData.team.members?.map((member) => {
+                    const isLeader =
+                      (typeof member === 'object' && member._id === (regStatusData.team.leader?._id || regStatusData.team.leader)) ||
+                      member === regStatusData.team.leader;
+
+                    const name = typeof member === 'object' ? member.name : 'Member';
+                    const email = typeof member === 'object' ? member.email : '';
+
+                    return (
+                      <div key={typeof member === 'object' ? member._id : member} className="flex items-center justify-between p-2.5 rounded-lg bg-white border border-slate-200/80 shadow-2xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs shrink-0">
+                            {name?.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="truncate">
+                            <p className="font-semibold text-slate-800 truncate">{name}</p>
+                            {email && <p className="text-[10px] text-slate-400 truncate">{email}</p>}
+                          </div>
+                        </div>
+                        {isLeader && (
+                          <span className="px-2 py-0.5 text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 rounded shrink-0 flex items-center gap-0.5">
+                            <Crown className="w-2.5 h-2.5" /> Creator
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* SOLO REGISTRATION DETAILS */
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50/80 p-3 rounded-lg border border-slate-200/80">
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Registration Mode</span>
+                  <span className="font-bold text-slate-900 text-sm mt-0.5 flex items-center gap-1">
+                    <UserCheck className="w-4 h-4 text-emerald-600" />
+                    Solo Registration
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Participant Name</span>
+                  <span className="font-semibold text-slate-800 mt-0.5 block">
+                    {regStatusData.registration?.participant?.name || user.name}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block">
+                    {regStatusData.registration?.participant?.email || user.email}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold tracking-wider">Registration Status</span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 uppercase tracking-wider mt-1">
+                    <CheckCircle2 className="w-3 h-3" />
+                    {regStatusData.registration?.status || 'Active'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
 
       {/* Details Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -346,9 +523,13 @@ export const HackathonDetail = () => {
       {/* Cancel Registration Confirmation */}
       <ConfirmModal
         isOpen={isCancelModalOpen}
-        title="Cancel Registration"
-        message={`Are you sure you want to cancel your registration for "${hackathon.title}"? You can re-register later if registrations are still open.`}
-        confirmText="Cancel Registration"
+        title={regStatusData?.team ? 'Cancel Team Registration' : 'Cancel Registration'}
+        message={
+          regStatusData?.team
+            ? `Are you sure you want to cancel the team registration for "${hackathon.title}"? This will disestablish your team "${regStatusData.team.name}" and cancel all team members' registrations. They will be notified and can register individually.`
+            : `Are you sure you want to cancel your registration for "${hackathon.title}"? You can re-register later if registrations are still open.`
+        }
+        confirmText={regStatusData?.team ? 'Cancel Team Registration' : 'Cancel Registration'}
         confirmVariant="danger"
         loading={isCancelling}
         onClose={() => setIsCancelModalOpen(false)}

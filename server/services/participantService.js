@@ -33,6 +33,18 @@ class ParticipantService {
       throw error;
     }
 
+    // Check if user is already in a team for this hackathon
+    const existingTeam = await Team.findOne({
+      hackathon: hackathonId,
+      $or: [{ leader: participantId }, { members: participantId }],
+    });
+
+    if (existingTeam) {
+      const error = new Error('You are already registered via a team in this hackathon');
+      error.statusCode = 400;
+      throw error;
+    }
+
     // Check for duplicate registration
     const existing = await Registration.findOne({
       hackathon: hackathonId,
@@ -68,6 +80,50 @@ class ParticipantService {
    * Cancel participant registration for a hackathon
    */
   async cancelRegistration(hackathonId, participantId) {
+    const Team = require('../models/Team');
+    const Notification = require('../models/Notification');
+
+    // Check if user is in a team for this hackathon
+    const team = await Team.findOne({
+      hackathon: hackathonId,
+      $or: [{ leader: participantId }, { members: participantId }],
+    }).populate('hackathon');
+
+    if (team) {
+      // Check if participant is the team creator (leader)
+      if (team.leader.toString() !== participantId.toString()) {
+        const error = new Error('Only the team creator can cancel the team registration from the hackathon');
+        error.statusCode = 403;
+        throw error;
+      }
+
+      // Creator is cancelling team registration: update all members' registrations & disestablish team
+      for (const memberId of team.members) {
+        await Registration.findOneAndUpdate(
+          { hackathon: hackathonId, participant: memberId },
+          { status: 'cancelled' }
+        );
+
+        if (memberId.toString() !== participantId.toString()) {
+          const leaderUser = await User.findById(participantId);
+          await Notification.create({
+            user: memberId,
+            sender: participantId,
+            type: 'system',
+            title: `Team Registration Cancelled: ${team.name}`,
+            message: `${leaderUser ? leaderUser.name : 'Team Creator'} cancelled team "${team.name}" registration for "${team.hackathon?.title || 'the hackathon'}". You are now free to register solo or join another team.`,
+            team: team._id,
+            hackathon: hackathonId,
+            status: 'read',
+          });
+        }
+      }
+
+      await Team.findByIdAndDelete(team._id);
+      return { message: 'Team registration cancelled successfully' };
+    }
+
+    // User is solo registered
     const registration = await Registration.findOne({
       hackathon: hackathonId,
       participant: participantId,
@@ -160,12 +216,29 @@ class ParticipantService {
     const registration = await Registration.findOne({
       hackathon: hackathonId,
       participant: participantId,
-    });
+    }).populate('participant', 'name email avatar role');
 
     const userTeam = await Team.findOne({
       hackathon: hackathonId,
       $or: [{ leader: participantId }, { members: participantId }],
-    });
+    })
+      .populate('leader', 'name email avatar')
+      .populate('members', 'name email avatar skills');
+
+    const Submission = require('../models/Submission');
+    let submission = null;
+
+    if (userTeam) {
+      submission = await Submission.findOne({
+        hackathon: hackathonId,
+        team: userTeam._id,
+      }).select('title tagline status score createdAt');
+    } else if (registration) {
+      submission = await Submission.findOne({
+        hackathon: hackathonId,
+        submittedBy: participantId,
+      }).select('title tagline status score createdAt');
+    }
 
     const isRegistered = (!!registration && registration.status === 'active') || !!userTeam;
 
@@ -174,6 +247,7 @@ class ParticipantService {
       status: isRegistered ? 'active' : (registration ? registration.status : null),
       registration: registration || null,
       team: userTeam || null,
+      submission: submission || null,
     };
   }
 

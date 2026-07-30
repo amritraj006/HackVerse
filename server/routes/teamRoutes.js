@@ -13,11 +13,15 @@ const {
   deleteTeam,
 } = require('../controllers/teamController');
 const { protect } = require('../middleware/authMiddleware');
+const {
+  createTeamValidationRules,
+  joinTeamValidationRules,
+} = require('../validations/teamValidation');
 
 router.use(protect);
 
-router.post('/', createTeam);
-router.post('/join', joinTeamByCode);
+router.post('/', createTeamValidationRules, createTeam);
+router.post('/join', joinTeamValidationRules, joinTeamByCode);
 router.get('/my-teams', getMyTeams);
 router.get('/hackathon/:hackathonId', getHackathonTeams);
 router.get('/:id', getTeamById);
