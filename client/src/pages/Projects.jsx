@@ -196,7 +196,7 @@ export const Projects = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          {user && (
+          {user && user.role === 'participant' && (
             <Button
               size="sm"
               variant="primary"

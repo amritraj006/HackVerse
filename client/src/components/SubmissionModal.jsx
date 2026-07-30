@@ -3,6 +3,7 @@ import { Button } from './Button';
 import { Input } from './Input';
 import { Alert } from './Alert';
 import { hackathonService } from '../services/hackathonService';
+import { registrationService } from '../services/registrationService';
 import { X, FolderGit2, Upload, FileText, Image as ImageIcon, Lock } from 'lucide-react';
 
 export const SubmissionModal = ({ isOpen, submission = null, onClose, onSuccess }) => {
@@ -26,14 +27,27 @@ export const SubmissionModal = ({ isOpen, submission = null, onClose, onSuccess 
     if (!isOpen) return;
 
     let isMounted = true;
-    hackathonService.getAll({ status: 'ongoing', limit: 50 })
+    registrationService.getMyRegistrations({ status: 'active', limit: 100 })
       .then((res) => {
         if (!isMounted) return;
-        const list = res?.data?.hackathons || res?.data || [];
-        setHackathons(list);
-        if (list.length > 0 && !submission) setHackathonId(list[0]._id);
+        const regList = res?.data || [];
+        const registeredHackathons = regList
+          .map((reg) => reg.hackathon)
+          .filter((h) => h && h._id);
+        setHackathons(registeredHackathons);
+        if (registeredHackathons.length > 0 && !submission) setHackathonId(registeredHackathons[0]._id);
       })
-      .catch(() => {});
+      .catch(() => {
+        // Fallback to public ongoing hackathons if registration fetch fails
+        hackathonService.getAll({ status: 'ongoing', limit: 50 })
+          .then((res) => {
+            if (!isMounted) return;
+            const list = res?.data?.hackathons || res?.data || [];
+            setHackathons(list);
+            if (list.length > 0 && !submission) setHackathonId(list[0]._id);
+          })
+          .catch(() => {});
+      });
 
     return () => { isMounted = false; };
   }, [isOpen, submission]);
@@ -151,7 +165,9 @@ export const SubmissionModal = ({ isOpen, submission = null, onClose, onSuccess 
             <div className="space-y-1">
               <label className="block font-semibold text-slate-700">Hackathon Event</label>
               {hackathons.length === 0 ? (
-                <p className="text-rose-500">No active/ongoing hackathons available for submission.</p>
+                <p className="text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                  You are not registered for any active hackathons. Only registered participants (or team leaders) can submit a project.
+                </p>
               ) : (
                 <select
                   value={hackathonId}

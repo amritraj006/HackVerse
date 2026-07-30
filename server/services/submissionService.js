@@ -1,6 +1,7 @@
 const Submission = require('../models/Submission');
 const Hackathon = require('../models/Hackathon');
 const Team = require('../models/Team');
+const Registration = require('../models/Registration');
 const mongoose = require('mongoose');
 
 const JUDGING_CRITERIA = [
@@ -14,7 +15,14 @@ class SubmissionService {
   /**
    * Create or update project submission
    */
-  async submitProject(data, files, userId) {
+  async submitProject(data, files, userId, userRole) {
+    // 1. Role restriction: Hosts (organizers), Judges, and Admins cannot submit projects
+    if (userRole && ['organizer', 'judge', 'admin'].includes(userRole)) {
+      const error = new Error('Organizers, judges, and admins cannot submit projects.');
+      error.statusCode = 403;
+      throw error;
+    }
+
     const { hackathonId, title, tagline, description, repositoryUrl, demoUrl, videoUrl, status } = data;
 
     if (!hackathonId) {
@@ -30,6 +38,19 @@ class SubmissionService {
       throw error;
     }
 
+    // 2. Must be registered for the hackathon
+    const registration = await Registration.findOne({
+      hackathon: hackathonId,
+      participant: userId,
+      status: 'active',
+    });
+
+    if (!registration) {
+      const error = new Error('Only registered participants can submit a project for this hackathon.');
+      error.statusCode = 403;
+      throw error;
+    }
+
     // Deadline check: editing/submitting is allowed before deadline only
     const now = new Date();
     if (hackathon.endDate && now > new Date(hackathon.endDate)) {
@@ -38,7 +59,7 @@ class SubmissionService {
       throw error;
     }
 
-    // Check if user is in a team for this hackathon
+    // 3. Check if user is in a team for this hackathon
     const userTeam = await Team.findOne({
       hackathon: hackathonId,
       $or: [{ leader: userId }, { members: userId }],
@@ -48,7 +69,7 @@ class SubmissionService {
       // User is in a team: only the team creator (leader) can submit or edit the project
       const isLeader = userTeam.leader.toString() === userId.toString();
       if (!isLeader) {
-        const error = new Error('Only team creators or solo participants can submit or edit projects. Team members cannot modify project submissions.');
+        const error = new Error('Only the team creator (leader) can submit or edit project submissions for a team. Team members cannot submit projects.');
         error.statusCode = 403;
         throw error;
       }

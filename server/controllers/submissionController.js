@@ -8,7 +8,7 @@ const submissionService = require('../services/submissionService');
  * @access  Private (Participant/Admin)
  */
 const submitProject = asyncHandler(async (req, res) => {
-  const submission = await submissionService.submitProject(req.body, req.files, req.user.id);
+  const submission = await submissionService.submitProject(req.body, req.files, req.user.id, req.user.role);
   return successResponse(res, 201, 'Project submitted successfully!', submission);
 });
 
