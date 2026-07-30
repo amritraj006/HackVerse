@@ -52,7 +52,6 @@ export const Profile = () => {
       const res = await userService.updateProfile({
         name: formData.name,
         bio: formData.bio,
-        role: formData.role,
         skills: formData.skills,
       });
 
@@ -233,15 +232,17 @@ export const Profile = () => {
                 />
               </div>
 
-              <Select
-                label="Account Role"
-                id="role"
-                options={roleOptions}
-                value={formData.role}
-                onChange={handleChange}
-                icon={UserCheck}
-                required
-              />
+              {/* Account Role — read-only display */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-700">
+                  Account Role
+                </label>
+                <div className="flex items-center gap-2 px-3 py-2 text-xs bg-slate-100 border border-slate-200 rounded-lg text-slate-500 cursor-not-allowed select-none">
+                  <UserCheck className="w-4 h-4 text-slate-400 shrink-0" />
+                  <span className="font-semibold text-indigo-600 uppercase">{currentProfile?.role || formData.role}</span>
+                  <span className="ml-auto text-[10px] text-slate-400 italic">Cannot be changed here</span>
+                </div>
+              </div>
 
               <Input
                 label="Skills (Comma Separated)"
