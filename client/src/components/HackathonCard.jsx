@@ -117,10 +117,15 @@ export const HackathonCard = ({
           )}
         </div>
 
-        {/* Registration Status Badge */}
+        {/* Registration & Result Status Badges */}
         {!isRegistrationOpen && (
           <div className="flex items-center gap-1 text-[11px] text-rose-600 font-semibold">
             <Lock className="w-3 h-3" /> Registrations Closed
+          </div>
+        )}
+        {status === 'ended' && (hackathon.resultStatus === 'pending' || !hackathon.isResultsPublished) && (
+          <div className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-0.5 inline-flex items-center gap-1">
+            Result Pending
           </div>
         )}
         {isRegistered && (

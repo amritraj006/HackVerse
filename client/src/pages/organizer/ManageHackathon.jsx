@@ -456,7 +456,7 @@ export const ManageHackathon = () => {
         <h1 className="text-lg font-bold text-slate-900">{hackathon.title}</h1>
         {hasStarted && (
           <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 font-medium">
-            ⚠️ This hackathon has started. You can only increase the participant limit. All other settings are locked. Registration cannot be re-opened.
+            ⚠️ This hackathon is {hackathon.status}. Editing and deleting are disabled once a hackathon becomes ongoing or ended.
           </p>
         )}
         <p className="text-xs text-slate-600 leading-relaxed max-w-2xl">{hackathon.tagline || hackathon.description}</p>

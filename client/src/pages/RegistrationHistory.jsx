@@ -185,6 +185,11 @@ export const RegistrationHistory = () => {
                         >
                           {h.status}
                         </span>
+                        {h.status === 'ended' && (!h.isResultsPublished && h.resultStatus !== 'published') && (
+                          <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full border bg-amber-50 text-amber-700 border-amber-200">
+                            Result Pending
+                          </span>
+                        )}
                         <span
                           className={`px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full border ${
                             isActive

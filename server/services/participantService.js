@@ -27,6 +27,12 @@ class ParticipantService {
       throw error;
     }
 
+    if (hackathon.registrationDeadline && new Date() > new Date(hackathon.registrationDeadline)) {
+      const error = new Error('Registration has closed.');
+      error.statusCode = 400;
+      throw error;
+    }
+
     // Only upcoming hackathons accept new registrations
     if (hackathon.status !== 'upcoming') {
       const statusMsg = {

@@ -83,10 +83,17 @@ export const SubmissionModal = ({ isOpen, submission = null, onClose, onSuccess 
   if (!isOpen) return null;
 
   const selectedHackathon = hackathons.find((h) => h._id === hackathonId);
-  const isDeadlinePassed = selectedHackathon?.endDate && new Date() > new Date(selectedHackathon.endDate);
+  const now = new Date();
+  const isNotStarted = selectedHackathon && (selectedHackathon.status === 'upcoming' || (selectedHackathon.startDate && now < new Date(selectedHackathon.startDate)));
+  const isDeadlinePassed = selectedHackathon && (selectedHackathon.status === 'ended' || (selectedHackathon.endDate && now > new Date(selectedHackathon.endDate)));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (isNotStarted) {
+      setAlert({ type: 'error', message: 'Submissions are not open yet. The hackathon has not started.' });
+      return;
+    }
 
     if (isDeadlinePassed) {
       setAlert({ type: 'error', message: 'Submissions are closed as the hackathon deadline has passed.' });

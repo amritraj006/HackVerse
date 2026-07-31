@@ -14,10 +14,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useQueryParams } from '../hooks/useQueryParams';
 
 const STATUS_FILTER_OPTIONS = [
-  { value: '', label: 'All Status' },
   { value: 'upcoming', label: 'Upcoming' },
-  { value: 'ongoing', label: 'Ongoing' },
-  { value: 'ended', label: 'Ended' },
 ];
 
 const SORT_OPTIONS = [
@@ -29,7 +26,7 @@ const SORT_OPTIONS = [
 
 const DEFAULT_PARAMS = {
   search: '',
-  status: '',
+  status: 'upcoming',
   sortBy: 'createdAt',
   order: 'desc',
   page: '1',
@@ -180,7 +177,7 @@ export const Hackathons = () => {
         <div>
           <h1 className="text-base font-bold text-slate-900">Explore Hackathons</h1>
           <p className="text-xs text-slate-500">
-            Discover active, upcoming, and past hackathons worldwide.
+            Discover upcoming hackathons worldwide.
             {pagination.total > 0 && (
               <span className="ml-1 font-semibold text-slate-700">{pagination.total} total events.</span>
             )}

@@ -193,12 +193,23 @@ export const HackathonDetail = () => {
             )}
           </div>
 
-          {hackathon.isResultsPublished && (
-            <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+          {hackathon.isResultsPublished || hackathon.resultStatus === 'published' ? (
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
               <Award className="w-3 h-3" /> Results Published
             </span>
-          )}
+          ) : hackathon.status === 'ended' ? (
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+              <Clock className="w-3 h-3" /> Result Pending
+            </span>
+          ) : null}
         </div>
+
+        {hackathon.status === 'ended' && (!hackathon.isResultsPublished && hackathon.resultStatus !== 'published') && (
+          <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-xs font-semibold">
+            <Clock className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>Result Pending — This hackathon has ended. Winner results will be displayed once published by the organizers.</span>
+          </div>
+        )}
 
         <div>
           <h1 className="text-lg font-bold text-slate-900">{hackathon.title}</h1>

@@ -2,6 +2,7 @@ require('dotenv').config();
 const app = require('./app');
 const connectDB = require('./config/db');
 const seedAdmin = require('./utils/seedAdmin');
+const { startHackathonScheduler } = require('./utils/hackathonScheduler');
 
 const PORT = process.env.PORT || 8341;
 
@@ -9,6 +10,7 @@ const PORT = process.env.PORT || 8341;
 const startServer = async () => {
   await connectDB();
   await seedAdmin();
+  startHackathonScheduler();
 
   app.listen(PORT, () => {
     console.log(`[Server] HackVerse API running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);

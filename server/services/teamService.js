@@ -24,6 +24,12 @@ class TeamService {
       throw error;
     }
 
+    if (hackathon.registrationDeadline && new Date() > new Date(hackathon.registrationDeadline)) {
+      const error = new Error('Registration has closed.');
+      error.statusCode = 400;
+      throw error;
+    }
+
     // Check participant limit slots availability for hackathon
     const hackathonService = require('./hackathonService');
     const stats = await hackathonService.getParticipantStats(hackathonId);
@@ -100,6 +106,12 @@ class TeamService {
     }
 
     const hackathon = team.hackathon;
+    if (hackathon && hackathon.registrationDeadline && new Date() > new Date(hackathon.registrationDeadline)) {
+      const error = new Error('Registration has closed.');
+      error.statusCode = 400;
+      throw error;
+    }
+
     if (hackathon && team.members.length >= hackathon.maxTeamSize) {
       const error = new Error(`Team has reached the maximum allowed limit of ${hackathon.maxTeamSize} members`);
       error.statusCode = 400;

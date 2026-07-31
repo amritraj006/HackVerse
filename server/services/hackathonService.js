@@ -4,12 +4,14 @@ const Submission = require('../models/Submission');
 const Registration = require('../models/Registration');
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const { updateHackathonStatuses } = require('../utils/hackathonScheduler');
 
 class HackathonService {
   /**
    * Get all public hackathons
    */
   async getAllHackathons(params = {}) {
+    await updateHackathonStatuses();
     const {
       search = '',
       status = '',
@@ -21,7 +23,7 @@ class HackathonService {
       limit = 10,
     } = params;
 
-    const query = {};
+    const query = { status: 'upcoming' };
 
     if (search) {
       const searchRegex = new RegExp(search.trim(), 'i');
@@ -31,10 +33,6 @@ class HackathonService {
         { description: searchRegex },
         { tags: { $in: [searchRegex] } },
       ];
-    }
-
-    if (status) {
-      query.status = status;
     }
 
     if (isRegistrationOpen !== undefined && isRegistrationOpen !== '') {
@@ -138,6 +136,7 @@ class HackathonService {
    * Get single hackathon details
    */
   async getHackathonById(id) {
+    await updateHackathonStatuses();
     const hackathon = await Hackathon.findById(id)
       .populate('organizer', 'name email avatar')
       .populate('assignedJudges', 'name email avatar skills')
@@ -162,6 +161,7 @@ class HackathonService {
    * Get events created by logged-in organizer
    */
   async getMyEvents(organizerId) {
+    await updateHackathonStatuses();
     const events = await Hackathon.find({ organizer: organizerId })
       .populate('assignedJudges', 'name email')
       .sort({ createdAt: -1 })
@@ -242,45 +242,14 @@ class HackathonService {
       throw error;
     }
 
-    // ─── RESTRICTION: Hackathon has started ────────────────────────────────────
-    const hasStarted = ['ongoing', 'ended'].includes(hackathon.status) ||
-      (hackathon.startDate && new Date() >= new Date(hackathon.startDate));
-
-    if (hasStarted) {
-      // Only maxParticipants may be changed, and only increased
-      const allowedKeys = ['maxParticipants'];
-      const attemptedKeys = Object.keys(data).filter((k) => k !== 'maxParticipants' && data[k] !== undefined);
-
-      if (attemptedKeys.length > 0) {
-        const error = new Error(
-          'Once a hackathon has started, only the participant limit can be modified (and only increased).'
-        );
-        error.statusCode = 400;
-        throw error;
-      }
-
-      if (data.maxParticipants !== undefined) {
-        const newLimit = parseInt(data.maxParticipants, 10) || 0;
-        const currentLimit = hackathon.maxParticipants || 0;
-        if (newLimit < currentLimit) {
-          const error = new Error(
-            `You can only increase the participant limit once the hackathon has started. Current limit is ${currentLimit}.`
-          );
-          error.statusCode = 400;
-          throw error;
-        }
-        hackathon.maxParticipants = newLimit;
-        await hackathon.save();
-        return await this.getHackathonById(id);
-      }
-
-      // Nothing valid to update
-      const error = new Error('No valid field provided. Only maxParticipants can be increased once a hackathon has started.');
+    if (hackathon.status !== 'upcoming') {
+      const error = new Error(
+        `Editing is blocked. Hackathons can only be edited while their status is upcoming (current status: ${hackathon.status}).`
+      );
       error.statusCode = 400;
       throw error;
     }
 
-    // ─── Normal pre-start editing ──────────────────────────────────────────────
     if (data.tags && typeof data.tags === 'string') {
       data.tags = data.tags.split(',').map((t) => t.trim()).filter(Boolean);
     }
@@ -323,6 +292,14 @@ class HackathonService {
     if (hackathon.organizer.toString() !== user.id && user.role !== 'admin') {
       const error = new Error('Not authorized to delete this hackathon');
       error.statusCode = 403;
+      throw error;
+    }
+
+    if (hackathon.status !== 'upcoming') {
+      const error = new Error(
+        `Deletion is blocked. Hackathons can only be deleted while their status is upcoming (current status: ${hackathon.status}).`
+      );
+      error.statusCode = 400;
       throw error;
     }
 
@@ -621,6 +598,7 @@ class HackathonService {
     const hackathon = await Hackathon.findById(id);
     const positionLabels = ['1st Place Winner', '2nd Place Runner Up', '3rd Place Bronze'];
     hackathon.isResultsPublished = true;
+    hackathon.resultStatus = 'published';
     hackathon.status = 'ended';
     // Winners are always derived from the calculated ranking, never selected manually.
     hackathon.winners = leaderboard.rankings.slice(0, 3).map((entry, index) => ({

@@ -51,10 +51,27 @@ class SubmissionService {
       throw error;
     }
 
-    // Deadline check: editing/submitting is allowed before deadline only
+    // 3. Status and date window check:
+    // Submissions and updates are allowed ONLY when hackathon status is ongoing and current time is between startDate and endDate.
     const now = new Date();
+
+    if (hackathon.status !== 'ongoing') {
+      const statusMessage = hackathon.status === 'upcoming'
+        ? 'Submissions are not open yet. The hackathon has not started.'
+        : 'Submissions are closed for this hackathon.';
+      const error = new Error(statusMessage);
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (hackathon.startDate && now < new Date(hackathon.startDate)) {
+      const error = new Error('Submissions are not open yet. The hackathon start date has not been reached.');
+      error.statusCode = 400;
+      throw error;
+    }
+
     if (hackathon.endDate && now > new Date(hackathon.endDate)) {
-      const error = new Error('Submissions are closed. The hackathon deadline has passed.');
+      const error = new Error('Submissions are closed. The hackathon submission deadline has passed.');
       error.statusCode = 400;
       throw error;
     }
@@ -406,11 +423,14 @@ class SubmissionService {
       throw error;
     }
 
-    // Check deadline
-    if (userRole !== 'admin' && submission.hackathon?.endDate && new Date() > new Date(submission.hackathon.endDate)) {
-      const error = new Error('Cannot delete submission after the hackathon deadline');
-      error.statusCode = 400;
-      throw error;
+    // Check status and deadline window
+    const now = new Date();
+    if (userRole !== 'admin') {
+      if (submission.hackathon?.status !== 'ongoing' || (submission.hackathon?.endDate && now > new Date(submission.hackathon.endDate))) {
+        const error = new Error('Cannot delete submission after the hackathon deadline or once the hackathon has ended.');
+        error.statusCode = 400;
+        throw error;
+      }
     }
 
     await Submission.findByIdAndDelete(id);
