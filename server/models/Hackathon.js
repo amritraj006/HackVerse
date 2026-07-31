@@ -34,8 +34,13 @@ const hackathonSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['draft', 'upcoming', 'ongoing', 'ended', 'cancelled'],
-      default: 'draft',
+      enum: ['upcoming', 'ongoing', 'ended'],
+      default: 'upcoming',
+    },
+    resultStatus: {
+      type: String,
+      enum: ['pending', 'published'],
+      default: 'pending',
     },
     maxTeamSize: {
       type: Number,
