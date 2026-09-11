@@ -16,27 +16,43 @@ export const PaginationControls = ({
 
   if (total <= 0 && pages <= 1) return null;
 
+  const selectStyle = {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid var(--border-normal)',
+    color: 'var(--text-secondary)',
+    fontSize: '11px',
+    padding: '3px 6px',
+    borderRadius: '6px',
+    outline: 'none',
+  };
+
   return (
-    <div className={`flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 pt-3 border-t border-slate-200 ${className}`}>
+    <div
+      className={`flex flex-col sm:flex-row items-center justify-between gap-3 text-xs pt-3 ${className}`}
+      style={{ borderTop: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}
+    >
       <div className="flex items-center gap-3">
         <span>
-          Showing page <span className="font-semibold text-slate-700">{page}</span> of{' '}
-          <span className="font-semibold text-slate-700">{pages}</span>
-          {total > 0 && <span className="ml-1 text-slate-400">({total} items total)</span>}
+          Page{' '}
+          <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{page}</span>
+          {' '}of{' '}
+          <span className="font-semibold" style={{ color: 'var(--text-primary)' }}>{pages}</span>
+          {total > 0 && <span className="ml-1" style={{ color: 'var(--text-muted)' }}>({total} items)</span>}
         </span>
 
         {showLimitSelector && onLimitChange && (
-          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-3">
-            <span className="text-[11px] text-slate-400">Per page:</span>
+          <div
+            className="flex items-center gap-1.5 pl-3"
+            style={{ borderLeft: '1px solid var(--border-subtle)' }}
+          >
+            <span className="text-[11px]" style={{ color: 'var(--text-muted)' }}>Per page:</span>
             <select
               value={limit}
               onChange={(e) => onLimitChange(Number(e.target.value))}
-              className="py-1 px-1.5 text-xs bg-slate-50 border border-slate-200 rounded text-slate-700 focus:outline-none focus:bg-white"
+              style={selectStyle}
             >
               {limitOptions.map((opt) => (
-                <option key={opt} value={opt}>
-                  {opt}
-                </option>
+                <option key={opt} value={opt} style={{ background: '#0d1220' }}>{opt}</option>
               ))}
             </select>
           </div>
@@ -44,39 +60,35 @@ export const PaginationControls = ({
       </div>
 
       <div className="flex items-center gap-1.5">
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={page <= 1}
-          onClick={() => onPageChange(page - 1)}
-          className="flex items-center gap-1"
-        >
+        <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => onPageChange(page - 1)} className="flex items-center gap-1">
           <ChevronLeft className="w-3.5 h-3.5" /> Prev
         </Button>
 
-        {/* Dynamic page numbers if pages <= 7 */}
-        {pages <= 7 &&
-          Array.from({ length: pages }, (_, idx) => idx + 1).map((pNum) => (
-            <button
-              key={pNum}
-              onClick={() => onPageChange(pNum)}
-              className={`px-2.5 py-1 text-xs font-semibold rounded-md border transition-colors cursor-pointer ${
-                page === pNum
-                  ? 'bg-indigo-600 text-white border-indigo-600'
-                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-              }`}
-            >
-              {pNum}
-            </button>
-          ))}
+        {pages <= 7 && Array.from({ length: pages }, (_, idx) => idx + 1).map((pNum) => (
+          <button
+            key={pNum}
+            onClick={() => onPageChange(pNum)}
+            className="px-2.5 py-1 text-xs font-semibold rounded-lg cursor-pointer transition-all duration-150"
+            style={
+              page === pNum
+                ? {
+                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                    color: 'white',
+                    border: 'none',
+                    boxShadow: '0 0 12px rgba(99,102,241,0.3)',
+                  }
+                : {
+                    background: 'rgba(255,255,255,0.04)',
+                    color: 'var(--text-muted)',
+                    border: '1px solid var(--border-normal)',
+                  }
+            }
+          >
+            {pNum}
+          </button>
+        ))}
 
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={page >= pages}
-          onClick={() => onPageChange(page + 1)}
-          className="flex items-center gap-1"
-        >
+        <Button size="sm" variant="outline" disabled={page >= pages} onClick={() => onPageChange(page + 1)} className="flex items-center gap-1">
           Next <ChevronRight className="w-3.5 h-3.5" />
         </Button>
       </div>

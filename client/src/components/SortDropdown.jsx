@@ -11,31 +11,30 @@ export const SortDropdown = ({
   className = '',
 }) => {
   const handleFieldChange = (e) => {
-    const newField = e.target.value;
-    if (onSortChange) {
-      onSortChange({ sortBy: newField, order });
-    }
+    if (onSortChange) onSortChange({ sortBy: e.target.value, order });
   };
 
   const toggleOrder = () => {
-    const newOrder = order === 'asc' ? 'desc' : 'asc';
-    if (onSortChange) {
-      onSortChange({ sortBy, order: newOrder });
-    }
+    if (onSortChange) onSortChange({ sortBy, order: order === 'asc' ? 'desc' : 'asc' });
+  };
+
+  const selectStyle = {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid var(--border-normal)',
+    color: 'var(--text-secondary)',
+    fontSize: '12px',
+    padding: '6px 10px',
+    borderRadius: '8px',
+    outline: 'none',
+    cursor: 'pointer',
   };
 
   return (
     <div className={`flex items-center gap-1.5 ${className}`}>
-      <div className="flex items-center gap-1 text-slate-400">
-        <ArrowUpDown className="w-3.5 h-3.5 shrink-0" />
-      </div>
-      <select
-        value={sortBy}
-        onChange={handleFieldChange}
-        className="text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-colors"
-      >
+      <ArrowUpDown className="w-3.5 h-3.5 shrink-0" style={{ color: 'var(--text-muted)' }} />
+      <select value={sortBy} onChange={handleFieldChange} style={selectStyle}>
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>
+          <option key={opt.value} value={opt.value} style={{ background: '#0d1220' }}>
             {opt.label}
           </option>
         ))}
@@ -43,14 +42,11 @@ export const SortDropdown = ({
       <button
         type="button"
         onClick={toggleOrder}
-        className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 cursor-pointer transition-colors"
-        title={order === 'asc' ? 'Ascending (click for Descending)' : 'Descending (click for Ascending)'}
+        className="p-1.5 rounded-lg cursor-pointer transition-all duration-150"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-normal)', color: '#818cf8' }}
+        title={order === 'asc' ? 'Ascending' : 'Descending'}
       >
-        {order === 'asc' ? (
-          <ArrowUp className="w-3.5 h-3.5 text-indigo-600" />
-        ) : (
-          <ArrowDown className="w-3.5 h-3.5 text-indigo-600" />
-        )}
+        {order === 'asc' ? <ArrowUp className="w-3.5 h-3.5" /> : <ArrowDown className="w-3.5 h-3.5" />}
       </button>
     </div>
   );

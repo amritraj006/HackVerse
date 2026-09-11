@@ -1,12 +1,12 @@
 import { Card } from './Card';
 
 const colorThemes = {
-  indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-  emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-  amber: 'bg-amber-50 text-amber-600 border-amber-100',
-  rose: 'bg-rose-50 text-rose-600 border-rose-100',
-  blue: 'bg-blue-50 text-blue-600 border-blue-100',
-  purple: 'bg-purple-50 text-purple-600 border-purple-100',
+  indigo:  { from: '#6366f1', to: '#8b5cf6', glow: 'rgba(99,102,241,0.25)',  text: '#a5b4fc' },
+  emerald: { from: '#10b981', to: '#059669', glow: 'rgba(16,185,129,0.25)',  text: '#6ee7b7' },
+  amber:   { from: '#f59e0b', to: '#d97706', glow: 'rgba(245,158,11,0.25)', text: '#fcd34d' },
+  rose:    { from: '#f43f5e', to: '#e11d48', glow: 'rgba(244,63,94,0.25)',  text: '#fca5a5' },
+  blue:    { from: '#3b82f6', to: '#2563eb', glow: 'rgba(59,130,246,0.25)', text: '#93c5fd' },
+  purple:  { from: '#a855f7', to: '#7c3aed', glow: 'rgba(168,85,247,0.25)', text: '#d8b4fe' },
 };
 
 export const StatCard = ({
@@ -18,34 +18,54 @@ export const StatCard = ({
   color = 'indigo',
   className = '',
 }) => {
+  const theme = colorThemes[color] || colorThemes.indigo;
+
   return (
-    <Card className={`hover:shadow-xs transition-shadow ${className}`}>
+    <Card className={`${className}`}>
       <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+        <div className="space-y-1 flex-1 min-w-0">
+          <p
+            className="text-[10px] font-bold uppercase tracking-widest"
+            style={{ color: 'var(--text-muted)' }}
+          >
             {title}
           </p>
-          <p className="text-xl font-bold text-slate-900 tracking-tight">{value}</p>
-          {subtitle && <p className="text-[11px] text-slate-500">{subtitle}</p>}
+          <p
+            className="text-2xl font-bold tracking-tight"
+            style={{ color: 'var(--text-primary)' }}
+          >
+            {value}
+          </p>
+          {subtitle && (
+            <p className="text-[11px]" style={{ color: 'var(--text-muted)' }}>
+              {subtitle}
+            </p>
+          )}
         </div>
 
         <div
-          className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border ${colorThemes[color] || colorThemes.indigo}`}
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ml-3"
+          style={{
+            background: `linear-gradient(135deg, ${theme.from}, ${theme.to})`,
+            boxShadow: `0 0 20px ${theme.glow}`,
+          }}
         >
-          {Icon && <Icon className="w-4 h-4" />}
+          {Icon && <Icon className="w-5 h-5 text-white" />}
         </div>
       </div>
 
       {trend && (
-        <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-1 text-[11px]">
+        <div
+          className="mt-3 pt-2.5 flex items-center gap-1.5 text-[11px]"
+          style={{ borderTop: '1px solid var(--border-subtle)' }}
+        >
           <span
-            className={`font-semibold ${
-              trend.positive ? 'text-emerald-600' : 'text-rose-600'
-            }`}
+            className="font-semibold"
+            style={{ color: trend.positive ? '#10b981' : '#f43f5e' }}
           >
             {trend.positive ? '↑' : '↓'} {trend.value}
           </span>
-          <span className="text-slate-400">{trend.label}</span>
+          <span style={{ color: 'var(--text-muted)' }}>{trend.label}</span>
         </div>
       )}
     </Card>
