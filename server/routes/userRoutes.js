@@ -9,11 +9,12 @@ const {
 } = require('../controllers/userController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
+const { uploadRateLimiter } = require('../middleware/rateLimiter');
 
 // Profile routes
 router.get('/profile', protect, getCurrentProfile);
 router.put('/profile', protect, updateProfile);
-router.post('/profile/avatar', protect, upload.single('avatar'), uploadAvatar);
+router.post('/profile/avatar', protect, uploadRateLimiter, upload.single('avatar'), uploadAvatar);
 
 // Admin & Organizer: list users (organizers need this for judge assignment)
 router.get('/', protect, authorize('admin', 'organizer'), getUsers);

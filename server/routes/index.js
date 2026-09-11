@@ -10,12 +10,21 @@ const teamRoutes = require('./teamRoutes');
 const submissionRoutes = require('./submissionRoutes');
 const notificationRoutes = require('./notificationRoutes');
 
-// API Health Check
+const uploadService = require('../services/uploadService');
+
+// API Health Check with Circuit Breaker and Process Status
 router.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
     message: 'HackVerse API is running smoothly',
     timestamp: new Date().toISOString(),
+    process: {
+      pid: process.pid,
+      uptimeSeconds: Math.floor(process.uptime()),
+    },
+    circuitBreakers: {
+      cloudinary: uploadService.getCircuitStatus(),
+    },
   });
 });
 

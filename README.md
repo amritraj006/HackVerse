@@ -1,5 +1,7 @@
 # HackVerse
 
+[![CI/CD Pipeline](https://github.com/amritraj006/HackVerse/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/amritraj006/HackVerse/actions/workflows/ci-cd.yml)
+
 HackVerse is an end-to-end hackathon management and project evaluation platform designed to coordinate technical competitions for organizers, participants, and judges. The platform manages the entire competition lifecycle—including event creation, solo or team registration, multi-member team formation with join codes, file-backed project submissions, multi-criteria judge evaluations, automated lifecycle status transitions, and public leaderboard publishing. HackVerse is built with React, Node.js, Express, MongoDB, and Tailwind CSS.
 
 ---
@@ -36,8 +38,12 @@ HackVerse is an end-to-end hackathon management and project evaluation platform 
 * **Event Governance**: Platform-wide view to inspect and remove hackathons or invalid submissions.
 * **Automatic Admin Seeding**: Automatically seeds a default administrator account on first boot if no admin exists.
 
-### Platform Automation
+### Platform Automation & Infrastructure
 * **Automated Lifecycle Scheduler**: A background scheduler checks competition dates periodically (every 60 seconds by default), transitioning events from `upcoming` to `ongoing` to `ended` and initializing result states.
+* **Tiered API Rate Limiting**: Guards against brute-force attacks and volumetric traffic with distinct limiters for global endpoints (150 req/15 min), authentication routes (10 req/15 min), and file uploads (20 req/15 min).
+* **Circuit Breaker Pattern**: Wraps external Cloudinary media interactions with a 3-state (`CLOSED`, `OPEN`, `HALF_OPEN`) circuit breaker, failing fast and routing to local `/uploads` storage when the cloud provider degrades.
+* **Process-Level Load Balancer**: Multi-worker process clustering using Node.js `node:cluster` to balance incoming HTTP requests across CPU cores via round-robin distribution with automatic worker revival.
+* **Docker Containerization**: Multi-stage Dockerfiles for client (Nginx) and server (Node.js Alpine) orchestrated via `docker-compose.yml` with MongoDB health checks and persistent volume mounts.
 * **Dual Storage Pipeline**: Image and document uploads upload directly to Cloudinary when credentials are configured, with automatic fallback to local disk storage (`/uploads`).
 
 ---
@@ -56,7 +62,10 @@ HackVerse is an end-to-end hackathon management and project evaluation platform 
 | **Web Framework** | Express 5 |
 | **Database** | MongoDB |
 | **Object Data Modeling** | Mongoose 9 |
-| **Authentication & Security** | JSON Web Tokens (`jsonwebtoken`), `bcryptjs` |
+| **Authentication & Security** | JSON Web Tokens (`jsonwebtoken`), `bcryptjs`, `express-rate-limit` |
+| **Resilience & Fault Tolerance**| Circuit Breaker (`CLOSED`, `OPEN`, `HALF_OPEN`), Node.js `cluster` |
+| **Containerization & Proxy** | Docker, Docker Compose, Nginx Alpine |
+| **CI/CD & Automation** | GitHub Actions |
 | **File Upload Handling** | Multer |
 | **Cloud Storage** | Cloudinary (with local storage fallback) |
 | **Validation** | Express Validator |
@@ -178,6 +187,50 @@ When an organizer assigns judges to an event, notifications are dispatched. Upon
 ### 5. Dual File Storage Strategy
 File uploads (user avatars, presentation decks, project screenshots) pass through Multer with file type filtering (`.jpeg`, `.jpg`, `.png`, `.gif`, `.pdf`, `.zip`) and size limits. If Cloudinary environment variables are present, files are streamed to cloud storage and local temp copies are pruned. If credentials are not configured, the system writes to `/uploads` with a static URL path fallback.
 
+### 6. Tiered Rate Limiting Architecture
+Configured via `express-rate-limit` to mitigate DoS, brute-force attacks, and abusive file uploads:
+* **Global API Limiter**: Enforces a threshold of 150 requests per 15-minute window across `/api/v1`.
+* **Auth Rate Limiter**: Restricts `/api/v1/auth/login`, `/signup`, and `/register` to 10 attempts per 15 minutes, returning HTTP 429 and `RateLimit-*` headers.
+* **Upload Rate Limiter**: Caps multipart file upload endpoints to 20 requests per 15 minutes.
+* Reverse-proxy awareness configured via `app.set('trust proxy', 1)` to ensure accurate client IP identification through Nginx or Docker networks.
+
+### 7. Circuit Breaker Pattern for External Services
+External dependencies (Cloudinary API) are wrapped in a 3-state state machine (`server/utils/CircuitBreaker.js`):
+* **`CLOSED`**: Requests proceed normally. Consecutive failures are tracked up to a threshold (default: 3).
+* **`OPEN`**: Tripped upon threshold breach. Immediately short-circuits calls to the fallback handler without network latency, preventing thread starvation.
+* **`HALF_OPEN`**: After a 30-second cooldown period, a single probe request is permitted. A successful response closes the circuit; failure re-opens it.
+* Diagnostics and real-time state are exposed through the `/api/v1/health` endpoint.
+
+### 8. Multi-Process Load Balancing (Node.js Cluster)
+When `CLUSTER_MODE=true` is enabled, `server.js` initiates process clustering using Node.js `node:cluster`:
+* The primary master process forks worker processes equal to `WEB_CONCURRENCY` (or system CPU count).
+* The OS kernel distributes incoming connections evenly across workers using round-robin scheduling.
+* Master process monitors worker health and automatically spawns replacement workers upon unhandled exits.
+* Background singletons (`seedAdmin()` and `startHackathonScheduler()`) execute exclusively on the master process to eliminate duplicate cron intervals.
+
+---
+
+## CI/CD Pipeline
+
+HackVerse includes an automated continuous integration and delivery pipeline implemented using **GitHub Actions** (`.github/workflows/ci-cd.yml`):
+
+* **Triggers**: Executed on every `push` and `pull_request` targeting the `main` branch, as well as manual runs via `workflow_dispatch`.
+* **Concurrency Control**: Automatically cancels outdated in-progress workflow runs on rapid branch updates.
+* **Frontend CI (`frontend-ci`)**:
+  * Sets up Node.js 20 with npm dependency caching.
+  * Runs ESLint (`npm run lint`) for code quality and style compliance.
+  * Builds the Vite React production bundle (`npm run build`).
+* **Backend CI (`backend-ci`)**:
+  * Sets up Node.js 20 with npm dependency caching.
+  * Validates script integrity and executes syntax checks (`npm test`).
+* **Docker Validation (`docker-compose-validate`)**:
+  * Validates the multi-container `docker-compose.yml` configuration and environment mapping.
+* **Docker Build & Verify (`docker-build`)**:
+  * Sets up Docker Buildx and QEMU.
+  * Builds both the backend and frontend multi-stage Docker images using GitHub Actions cache (`type=gha`) for fast builds.
+* **Continuous Delivery (`cd-pipeline`)**:
+  * Validates complete pipeline readiness upon successful merges into `main`.
+
 ---
 
 ## API Overview
@@ -296,18 +349,46 @@ Authentication is based on stateless JSON Web Tokens (JWT):
 
 ## Installation & Setup
 
-### Prerequisites
+### Option A: Quick Start with Docker Compose (Recommended)
+You can launch the entire stack—MongoDB, Node.js backend, and Nginx frontend—with a single command:
+
+```bash
+# 1. Clone repository
+git clone https://github.com/amritraj006/HackVerse.git
+cd HackVerse
+
+# 2. Build and start all containers in detached mode
+docker compose up --build -d
+
+# 3. View container health and logs
+docker compose ps
+docker compose logs -f
+```
+* **Frontend Web Application**: Accessible at `http://localhost:5173`.
+* **Backend REST API**: Accessible at `http://localhost:8341/api/v1`.
+* **MongoDB**: Accessible on `localhost:27017` with data persisted in the `mongo_data` volume.
+
+To stop the containers:
+```bash
+docker compose down
+```
+
+---
+
+### Option B: Manual Local Setup
+
+#### Prerequisites
 * [Node.js](https://nodejs.org/) (v18 or higher recommended)
 * [npm](https://www.npmjs.com/)
 * [MongoDB](https://www.mongodb.com/) (local instance running on port 27017 or MongoDB Atlas connection URI)
 
-### 1. Clone Repository
+#### 1. Clone Repository
 ```bash
 git clone https://github.com/amritraj006/HackVerse.git
 cd HackVerse
 ```
 
-### 2. Configure Backend Environment
+#### 2. Configure Backend Environment
 Create a `.env` file in the `server` directory:
 
 ```bash
@@ -345,9 +426,25 @@ npm install
 ```env
 PORT=8341
 NODE_ENV=development
+CLIENT_URL=http://localhost:5173
 MONGO_URI=mongodb://localhost:27017/hackverse
 JWT_SECRET=your_jwt_secret_key_here
 JWT_EXPIRES_IN=7d
+
+# Process Cluster / Load Balancer Settings
+CLUSTER_MODE=false
+WEB_CONCURRENCY=2
+
+# Rate Limiting Configuration
+RATE_LIMIT_WINDOW_MS=900000
+RATE_LIMIT_MAX_REQUESTS=150
+AUTH_RATE_LIMIT_MAX=10
+UPLOAD_RATE_LIMIT_MAX=20
+
+# Circuit Breaker Configuration
+CIRCUIT_BREAKER_FAILURES=3
+CIRCUIT_BREAKER_RECOVERY_MS=30000
+CIRCUIT_BREAKER_TIMEOUT_MS=8000
 
 # File Upload Settings
 MAX_FILE_SIZE=5242880

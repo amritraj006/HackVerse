@@ -13,6 +13,7 @@ const {
 } = require('../controllers/submissionController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 const upload = require('../middleware/uploadMiddleware');
+const { uploadRateLimiter } = require('../middleware/rateLimiter');
 
 // Public showcase & single submission detail
 router.get('/', getAllSubmissions);
@@ -29,6 +30,7 @@ router.get('/hackathon/:hackathonId', protect, getHackathonSubmissions);
 router.post(
   '/',
   protect,
+  uploadRateLimiter,
   upload.fields([
     { name: 'presentationFile', maxCount: 1 },
     { name: 'screenshots', maxCount: 5 },

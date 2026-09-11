@@ -3,8 +3,12 @@ const cors = require('cors');
 const path = require('path');
 const apiRoutes = require('./routes');
 const { notFoundHandler, globalErrorHandler } = require('./middleware/errorMiddleware');
+const { globalApiLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
+
+// Trust reverse proxy (Nginx, Docker bridge) for accurate client IP identification in rate limiters
+app.set('trust proxy', 1);
 
 // Allowed origins (environment variable + fallback localhost ports)
 const allowedOrigins = [
@@ -44,8 +48,8 @@ app.get('/', (req, res) => {
   });
 });
 
-// API v1 master routes
-app.use('/api/v1', apiRoutes);
+// API v1 master routes with global rate limiter
+app.use('/api/v1', globalApiLimiter, apiRoutes);
 
 // Error handling middlewares
 app.use(notFoundHandler);
