@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
+import { getAssetUrl } from '../utils/helpers';
 
 export const SubmissionDetailModal = ({ isOpen, submission, onClose }) => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -33,12 +34,11 @@ export const SubmissionDetailModal = ({ isOpen, submission, onClose }) => {
     teamMembers = [],
     evaluations = [],
     score,
+    isWinner,
+    winnerPosition,
   } = submission;
 
-  const getFullUrl = (url) => {
-    if (!url) return '';
-    return url.startsWith('http') ? url : `http://localhost:5001${url}`;
-  };
+  const getFullUrl = (url) => getAssetUrl(url);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 overflow-y-auto">
@@ -50,6 +50,11 @@ export const SubmissionDetailModal = ({ isOpen, submission, onClose }) => {
               <span className="px-2 py-0.5 text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full">
                 {hackathon?.title || 'Hackathon Project'}
               </span>
+              {isWinner && (
+                <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 rounded-full flex items-center gap-1">
+                  <Trophy className="w-3 h-3 text-amber-600 fill-amber-500" /> {winnerPosition || 'Winner'}
+                </span>
+              )}
               {score > 0 && (
                 <span className="px-2 py-0.5 text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 rounded-full flex items-center gap-1">
                   <Star className="w-3 h-3 fill-amber-400 text-amber-500" /> Score: {score.toFixed(1)}

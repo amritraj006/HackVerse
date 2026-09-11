@@ -30,13 +30,21 @@ class TeamService {
       throw error;
     }
 
-    // Check participant limit slots availability for hackathon
-    const hackathonService = require('./hackathonService');
-    const stats = await hackathonService.getParticipantStats(hackathonId);
-    if (hackathon.maxParticipants > 0 && stats.totalRegisteredUsers + 1 > hackathon.maxParticipants) {
-      const error = new Error(`Registration full: This hackathon has reached its maximum capacity of ${hackathon.maxParticipants} participants.`);
-      error.statusCode = 400;
-      throw error;
+    // Check if user is already registered solo
+    const existingRegistration = await Registration.findOne({
+      hackathon: hackathonId,
+      participant: userId,
+      status: 'active',
+    });
+
+    // If user is not yet registered, check participant capacity
+    if (!existingRegistration && hackathon.maxParticipants > 0) {
+      const stats = await hackathonService.getParticipantStats(hackathonId);
+      if (stats.totalRegisteredUsers + 1 > hackathon.maxParticipants) {
+        const error = new Error(`Registration full: This hackathon has reached its maximum capacity of ${hackathon.maxParticipants} participants.`);
+        error.statusCode = 400;
+        throw error;
+      }
     }
 
     // Check if user is already in a team for this hackathon
@@ -51,19 +59,6 @@ class TeamService {
       throw error;
     }
 
-    // Check if user is registered solo for this hackathon
-    const existingRegistration = await Registration.findOne({
-      hackathon: hackathonId,
-      participant: userId,
-      status: 'active',
-    });
-
-    if (existingRegistration) {
-      const error = new Error('You are registered solo for this hackathon. You must leave your solo registration before creating a team.');
-      error.statusCode = 400;
-      throw error;
-    }
-
     const joinCode = this.generateJoinCode();
 
     const team = await Team.create({
@@ -72,13 +67,13 @@ class TeamService {
       leader: userId,
       members: [userId],
       joinCode,
-      status: 'pending',
+      status: 'approved',
     });
 
-    // Auto-create active registration for team leader on this hackathon
+    // Auto-create or ensure active registration for team leader on this hackathon
     await Registration.findOneAndUpdate(
       { hackathon: hackathonId, participant: userId },
-      { status: 'active', registeredAt: new Date() },
+      { status: 'active', registeredAt: existingRegistration?.registeredAt || new Date() },
       { upsert: true, new: true }
     );
 

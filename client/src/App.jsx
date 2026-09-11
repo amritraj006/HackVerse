@@ -55,7 +55,6 @@ function App() {
               {/* Organizer / Admin Only Protected Routes */}
               <Route element={<ProtectedRoute allowedRoles={['organizer', 'admin']} />}>
                 <Route path="hackathons/:id/manage" element={<ManageHackathon />} />
-                <Route path="hackathons/new" element={<Dashboard />} />
               </Route>
 
               {/* Admin Only Exclusive Routes */}

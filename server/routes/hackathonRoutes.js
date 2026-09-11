@@ -19,7 +19,10 @@ const {
   getJudgeView,
 } = require('../controllers/hackathonController');
 const { protect, authorize } = require('../middleware/authMiddleware');
-const { createHackathonValidationRules } = require('../validations/hackathonValidation');
+const {
+  createHackathonValidationRules,
+  updateHackathonValidationRules,
+} = require('../validations/hackathonValidation');
 
 // Public routes
 router.get('/', getHackathons);
@@ -43,7 +46,7 @@ router.put(
   '/:id',
   protect,
   authorize('organizer', 'admin'),
-  createHackathonValidationRules,
+  updateHackathonValidationRules,
   updateHackathon
 );
 

@@ -21,26 +21,25 @@ const updateHackathonStatuses = async () => {
     );
 
     // 2. Transition 'ongoing' -> 'ended' when current time passes endDate
-    // If no winner has been declared yet, resultStatus remains 'pending'
     const ongoingToEndedResult = await Hackathon.updateMany(
       {
         status: 'ongoing',
         endDate: { $lte: now },
       },
-      [
-        {
-          $set: {
-            status: 'ended',
-            resultStatus: {
-              $cond: {
-                if: { $eq: ['$resultStatus', 'published'] },
-                then: 'published',
-                else: 'pending',
-              },
-            },
-          },
-        },
-      ]
+      {
+        $set: { status: 'ended' },
+      }
+    );
+
+    // 3. For newly ended hackathons that never had results published, mark resultStatus as 'pending'
+    await Hackathon.updateMany(
+      {
+        status: 'ended',
+        resultStatus: { $nin: ['published', 'pending'] },
+      },
+      {
+        $set: { resultStatus: 'pending' },
+      }
     );
 
     if (upcomingToOngoingResult.modifiedCount > 0) {

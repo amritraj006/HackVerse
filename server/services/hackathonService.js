@@ -23,7 +23,11 @@ class HackathonService {
       limit = 10,
     } = params;
 
-    const query = { status: 'upcoming' };
+    const query = {};
+    const validStatuses = ['upcoming', 'ongoing', 'ended', 'draft'];
+    if (status && validStatuses.includes(status)) {
+      query.status = status;
+    }
 
     if (search) {
       const searchRegex = new RegExp(search.trim(), 'i');
@@ -242,12 +246,15 @@ class HackathonService {
       throw error;
     }
 
-    if (hackathon.status !== 'upcoming') {
-      const error = new Error(
-        `Editing is blocked. Hackathons can only be edited while their status is upcoming (current status: ${hackathon.status}).`
-      );
+    if (hackathon.status === 'ended') {
+      const error = new Error('Editing is blocked. This hackathon has already ended.');
       error.statusCode = 400;
       throw error;
+    }
+
+    // Do not allow changing startDate if the hackathon is already ongoing
+    if (hackathon.status === 'ongoing' && data.startDate) {
+      delete data.startDate;
     }
 
     if (data.tags && typeof data.tags === 'string') {
@@ -425,13 +432,6 @@ class HackathonService {
       throw error;
     }
 
-    // ─── RESTRICTION: Only 1 judge may be assigned per hackathon ───────────
-    if (judgeIds.length > 1) {
-      const error = new Error('Only one judge can be assigned per hackathon. Please select exactly one judge.');
-      error.statusCode = 400;
-      throw error;
-    }
-
     // Verify all IDs belong to judge/admin accounts
     const validJudges = await User.find({ _id: { $in: judgeIds }, role: { $in: ['judge', 'admin'] } });
     const validJudgeIds = validJudges.map((j) => j._id.toString());
@@ -600,14 +600,81 @@ class HackathonService {
     hackathon.isResultsPublished = true;
     hackathon.resultStatus = 'published';
     hackathon.status = 'ended';
-    // Winners are always derived from the calculated ranking, never selected manually.
-    hackathon.winners = leaderboard.rankings.slice(0, 3).map((entry, index) => ({
+
+    const topEntries = leaderboard.rankings.slice(0, 3);
+    hackathon.winners = topEntries.map((entry, index) => ({
       rank: index + 1,
       submission: entry.submissionId,
       prize: positionLabels[index],
     }));
 
     await hackathon.save();
+
+    // 1. Reset any existing winner flags for this hackathon
+    await Submission.updateMany(
+      { hackathon: id },
+      { $set: { isWinner: false, winnerPosition: '' } }
+    );
+    await User.updateMany(
+      { 'wins.hackathon': id },
+      { $pull: { wins: { hackathon: id } } }
+    );
+
+    // 2. Mark winning submissions and update User.wins
+    for (let index = 0; index < topEntries.length; index++) {
+      const entry = topEntries[index];
+      const positionLabel = positionLabels[index];
+
+      const sub = await Submission.findById(entry.submissionId).populate('team');
+      if (sub) {
+        sub.isWinner = true;
+        sub.winnerPosition = positionLabel;
+        await sub.save();
+
+        const winnerUserIds = new Set();
+        if (sub.team) {
+          if (sub.team.leader) winnerUserIds.add(sub.team.leader.toString());
+          (sub.team.members || []).forEach((m) => winnerUserIds.add((m._id || m).toString()));
+        } else if (sub.submittedBy) {
+          winnerUserIds.add(sub.submittedBy.toString());
+        }
+
+        if (winnerUserIds.size > 0) {
+          await User.updateMany(
+            { _id: { $in: [...winnerUserIds] } },
+            {
+              $push: {
+                wins: {
+                  hackathon: id,
+                  submission: sub._id,
+                  position: positionLabel,
+                },
+              },
+            }
+          );
+        }
+      }
+    }
+
+    // 3. Broadcast notification to all participants
+    try {
+      const registrations = await Registration.find({ hackathon: id, status: 'active' }).select('participant');
+      if (registrations.length > 0) {
+        const notifs = registrations.map((r) => ({
+          user: r.participant,
+          sender: user?.id,
+          type: 'hackathon',
+          title: `Results Published: ${hackathon.title}`,
+          message: `The official winners and leaderboard for "${hackathon.title}" are now published! Check the hackathon page to see the winners.`,
+          hackathon: hackathon._id,
+          status: 'read',
+        }));
+        await Notification.insertMany(notifs);
+      }
+    } catch (notifErr) {
+      console.error('[HackathonService] Failed to send publish notifications:', notifErr.message);
+    }
+
     return await this.getHackathonById(id);
   }
 

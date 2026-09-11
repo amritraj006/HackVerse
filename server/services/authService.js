@@ -14,12 +14,16 @@ class AuthService {
       throw error;
     }
 
+    // Only allow public creation of participant, organizer, or judge roles
+    const allowedRoles = ['participant', 'organizer', 'judge'];
+    const assignedRole = allowedRoles.includes(role) ? role : 'participant';
+
     // Create user
     const user = await User.create({
       name,
       email,
       password,
-      role: role || 'participant',
+      role: assignedRole,
     });
 
     // Generate JWT Token
@@ -49,6 +53,13 @@ class AuthService {
     if (!isMatch) {
       const error = new Error('Invalid email or password');
       error.statusCode = 401;
+      throw error;
+    }
+
+    // Check if user account is suspended/blocked
+    if (user.isBlocked) {
+      const error = new Error('Your account has been suspended by an administrator. Please contact support.');
+      error.statusCode = 403;
       throw error;
     }
 

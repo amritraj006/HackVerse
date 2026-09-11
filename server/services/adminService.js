@@ -1,6 +1,9 @@
 const User = require('../models/User');
 const Hackathon = require('../models/Hackathon');
 const Submission = require('../models/Submission');
+const Team = require('../models/Team');
+const Registration = require('../models/Registration');
+const Notification = require('../models/Notification');
 
 class AdminService {
   /**
@@ -226,8 +229,14 @@ class AdminService {
       throw error;
     }
 
+    // Cascade delete teams, submissions, registrations, notifications
+    await Team.deleteMany({ hackathon: hackathonId });
+    await Submission.deleteMany({ hackathon: hackathonId });
+    await Registration.deleteMany({ hackathon: hackathonId });
+    await Notification.deleteMany({ hackathon: hackathonId });
     await Hackathon.findByIdAndDelete(hackathonId);
-    return { id: hackathonId, message: 'Hackathon deleted successfully' };
+
+    return { id: hackathonId, message: 'Hackathon and associated data deleted successfully' };
   }
 
   /**

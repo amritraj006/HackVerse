@@ -36,6 +36,30 @@ const createHackathonValidationRules = [
   validate,
 ];
 
+const updateHackathonValidationRules = [
+  body('title').optional().notEmpty().withMessage('Hackathon title cannot be empty'),
+  body('description').optional().notEmpty().withMessage('Description cannot be empty'),
+  body('registrationDeadline')
+    .optional()
+    .isISO8601()
+    .withMessage('Valid registration deadline is required'),
+  body('startDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Valid start date is required'),
+  body('endDate')
+    .optional()
+    .isISO8601()
+    .withMessage('Valid end date is required'),
+  body('maxParticipants')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Max participants must be a non-negative number'),
+  validate,
+];
+
 module.exports = {
   createHackathonValidationRules,
+  updateHackathonValidationRules,
 };
+

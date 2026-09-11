@@ -57,34 +57,36 @@ export const Sidebar = ({ isOpen, onClose }) => {
             </nav>
           </div>
 
-          {/* Section: System & Support */}
-          <div>
-            <p className="px-2 pb-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-              System
-            </p>
-            <nav className="space-y-0.5">
-              {SECONDARY_NAV_ITEMS.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <NavLink
-                    key={item.path}
-                    to={item.path}
-                    onClick={() => onClose && onClose()}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 ${
-                        isActive
-                          ? 'bg-indigo-50 text-indigo-700 font-semibold'
-                          : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                      }`
-                    }
-                  >
-                    <Icon className="w-4 h-4 shrink-0" />
-                    <span>{item.name}</span>
-                  </NavLink>
-                );
-              })}
-            </nav>
-          </div>
+          {/* Section: System & Support — only render if there are secondary items */}
+          {SECONDARY_NAV_ITEMS.length > 0 && (
+            <div>
+              <p className="px-2 pb-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                System
+              </p>
+              <nav className="space-y-0.5">
+                {SECONDARY_NAV_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      onClick={() => onClose && onClose()}
+                      className={({ isActive }) =>
+                        `flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-150 ${
+                          isActive
+                            ? 'bg-indigo-50 text-indigo-700 font-semibold'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                        }`
+                      }
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span>{item.name}</span>
+                    </NavLink>
+                  );
+                })}
+              </nav>
+            </div>
+          )}
         </div>
 
         {/* Sidebar Footer info with active Role badge */}

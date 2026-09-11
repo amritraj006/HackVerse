@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Filter, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Alert } from '../components/Alert';
@@ -14,7 +13,10 @@ import { useAuth } from '../hooks/useAuth';
 import { useQueryParams } from '../hooks/useQueryParams';
 
 const STATUS_FILTER_OPTIONS = [
-  { value: 'upcoming', label: 'Upcoming' },
+  { value: '', label: 'All' },
+  { value: 'ongoing', label: '🟢 Live' },
+  { value: 'upcoming', label: '🔵 Upcoming' },
+  { value: 'ended', label: '⬛ Concluded' },
 ];
 
 const SORT_OPTIONS = [
@@ -26,7 +28,7 @@ const SORT_OPTIONS = [
 
 const DEFAULT_PARAMS = {
   search: '',
-  status: 'upcoming',
+  status: '',
   sortBy: 'createdAt',
   order: 'desc',
   page: '1',
@@ -35,14 +37,7 @@ const DEFAULT_PARAMS = {
 
 export const Hackathons = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
 
-  // Access control: Don't show explore hackathons page /hackathons for judge, admin, and host (organizer)
-  useEffect(() => {
-    if (user && ['organizer', 'judge', 'admin'].includes(user.role)) {
-      navigate('/dashboard', { replace: true });
-    }
-  }, [user, navigate]);
 
   const [queryParams, setQueryParams, resetQueryParams] = useQueryParams(DEFAULT_PARAMS);
 
@@ -177,7 +172,7 @@ export const Hackathons = () => {
         <div>
           <h1 className="text-base font-bold text-slate-900">Explore Hackathons</h1>
           <p className="text-xs text-slate-500">
-            Discover upcoming hackathons worldwide.
+            Browse and discover hackathons on the platform.
             {pagination.total > 0 && (
               <span className="ml-1 font-semibold text-slate-700">{pagination.total} total events.</span>
             )}

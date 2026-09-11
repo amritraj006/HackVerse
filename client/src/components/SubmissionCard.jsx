@@ -10,7 +10,9 @@ import {
   Trash2,
   CheckCircle2,
   Clock,
+  Trophy,
 } from 'lucide-react';
+import { getAssetUrl } from '../utils/helpers';
 
 export const SubmissionCard = ({
   submission,
@@ -34,6 +36,8 @@ export const SubmissionCard = ({
     submittedBy,
     team,
     teamMembers = [],
+    isWinner,
+    winnerPosition,
   } = submission;
 
   const isCreatorOrOwner =
@@ -60,23 +64,31 @@ export const SubmissionCard = ({
           <span className="px-2 py-0.5 text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full shrink-0">
             {hackathon?.title || 'Hackathon'}
           </span>
-          <span
-            className={`px-2 py-0.5 text-[10px] font-semibold rounded-full border shrink-0 ${
-              status === 'submitted'
-                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : 'bg-amber-50 text-amber-700 border-amber-200'
-            }`}
-          >
-            {status === 'submitted' ? (
-              <span className="inline-flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" /> Submitted
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1">
-                <Clock className="w-3 h-3" /> Draft
+          <div className="flex items-center gap-1.5 shrink-0">
+            {isWinner && (
+              <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 rounded-full flex items-center gap-1">
+                <Trophy className="w-3 h-3 text-amber-600 fill-amber-500" />
+                {winnerPosition || 'Winner'}
               </span>
             )}
-          </span>
+            <span
+              className={`px-2 py-0.5 text-[10px] font-semibold rounded-full border shrink-0 ${
+                status === 'submitted'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-amber-50 text-amber-700 border-amber-200'
+              }`}
+            >
+              {status === 'submitted' ? (
+                <span className="inline-flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" /> Submitted
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="w-3 h-3" /> Draft
+                </span>
+              )}
+            </span>
+          </div>
         </div>
 
         <div>
@@ -96,7 +108,7 @@ export const SubmissionCard = ({
             {screenshots.slice(0, 3).map((img, idx) => (
               <img
                 key={idx}
-                src={img.startsWith('http') ? img : `http://localhost:5001${img}`}
+                src={getAssetUrl(img)}
                 alt={`Screenshot ${idx + 1}`}
                 className="w-12 h-9 object-cover rounded border border-slate-200 shrink-0"
               />
@@ -145,7 +157,7 @@ export const SubmissionCard = ({
           )}
           {presentationFile && (
             <a
-              href={presentationFile.startsWith('http') ? presentationFile : `http://localhost:5001${presentationFile}`}
+              href={getAssetUrl(presentationFile)}
               target="_blank"
               rel="noreferrer"
               className="inline-flex items-center gap-1 text-slate-700 hover:text-indigo-600 font-medium transition-colors"

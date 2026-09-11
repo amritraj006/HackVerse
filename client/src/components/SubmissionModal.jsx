@@ -30,7 +30,8 @@ export const SubmissionModal = ({ isOpen, submission = null, onClose, onSuccess 
     registrationService.getMyRegistrations({ status: 'active', limit: 100 })
       .then((res) => {
         if (!isMounted) return;
-        const regList = res?.data || [];
+        const raw = res?.data;
+        const regList = Array.isArray(raw) ? raw : raw?.registrations || [];
         const registeredHackathons = regList
           .map((reg) => reg.hackathon)
           .filter((h) => h && h._id);
