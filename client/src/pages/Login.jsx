@@ -4,10 +4,13 @@ import { Input } from '../components/Input';
 import { Button } from '../components/Button';
 import { Alert } from '../components/Alert';
 import { useAuth } from '../hooks/useAuth';
-import { Mail, Lock, LogIn, Zap } from 'lucide-react';
+import { Mail, Lock, LogIn } from 'lucide-react';
 
 export const Login = () => {
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+  });
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,7 +23,9 @@ export const Login = () => {
   const handleChange = (e) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
-    if (errors[id]) setErrors((prev) => ({ ...prev, [id]: '' }));
+    if (errors[id]) {
+      setErrors((prev) => ({ ...prev, [id]: '' }));
+    }
     if (formError) setFormError('');
   };
 
@@ -31,7 +36,11 @@ export const Login = () => {
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
-    if (!formData.password) newErrors.password = 'Password is required';
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -39,38 +48,30 @@ export const Login = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
+
     setIsSubmitting(true);
     setFormError('');
+
     const result = await login(formData);
     setIsSubmitting(false);
-    if (result.success) navigate(from, { replace: true });
-    else setFormError(result.error);
+
+    if (result.success) {
+      navigate(from, { replace: true });
+    } else {
+      setFormError(result.error);
+    }
   };
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="text-center space-y-1.5">
-        <div
-          className="inline-flex items-center justify-center w-10 h-10 rounded-xl mb-2"
-          style={{
-            background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.2))',
-            border: '1px solid rgba(99,102,241,0.3)',
-          }}
-        >
-          <Zap className="w-5 h-5" style={{ color: '#818cf8' }} />
-        </div>
-        <h1 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
-          Welcome back
-        </h1>
-        <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-          Sign in to your hackathons, submissions, and developer profile
-        </p>
+    <div className="space-y-4">
+      <div className="text-center space-y-1">
+        <h1 className="text-base font-bold text-slate-900">Sign in to HackVerse</h1>
+        <p className="text-xs text-slate-500">Access your hackathons, submissions, and developer profile</p>
       </div>
 
       <Alert type="error" message={formError} onClose={() => setFormError('')} />
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3.5 pt-1">
         <Input
           label="Email Address"
           id="email"
@@ -83,72 +84,46 @@ export const Login = () => {
           required
         />
 
-        <Input
-          label="Password"
-          id="password"
-          type="password"
-          placeholder="••••••••"
-          value={formData.password}
-          onChange={handleChange}
-          error={errors.password}
-          icon={Lock}
-          required
-        />
+        <div className="space-y-1">
+          <Input
+            label="Password"
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            value={formData.password}
+            onChange={handleChange}
+            error={errors.password}
+            icon={Lock}
+            required
+          />
+        </div>
 
         <Button
           type="submit"
           variant="primary"
           size="md"
-          className="w-full mt-1 font-bold"
+          className="w-full mt-2 font-semibold"
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            <span className="inline-flex items-center gap-2">
-              <span
-                className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full inline-block"
-                style={{ animation: 'spin 0.8s linear infinite' }}
-              />
+            <span className="inline-flex items-center gap-1.5">
+              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
               Signing In...
             </span>
           ) : (
-            <span className="inline-flex items-center gap-2">
-              <LogIn className="w-3.5 h-3.5" />
-              Sign In
+            <span className="inline-flex items-center gap-1.5">
+              <LogIn className="w-3.5 h-3.5" /> Sign In
             </span>
           )}
         </Button>
       </form>
 
-      {/* Divider */}
-      <div className="relative flex items-center gap-3">
-        <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
-        <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
-          New to HackVerse?
-        </span>
-        <div className="flex-1 h-px" style={{ background: 'var(--border-subtle)' }} />
+      <div className="text-center pt-2 text-xs text-slate-500">
+        Don't have an account?{' '}
+        <Link to="/register" className="font-semibold text-indigo-600 hover:underline">
+          Create one now
+        </Link>
       </div>
-
-      <Link to="/register" className="block">
-        <button
-          type="button"
-          className="w-full py-2 text-xs font-semibold rounded-lg transition-all duration-150 cursor-pointer"
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid var(--border-normal)',
-            color: '#a5b4fc',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'rgba(99,102,241,0.08)';
-            e.currentTarget.style.borderColor = 'rgba(99,102,241,0.3)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-            e.currentTarget.style.borderColor = 'var(--border-normal)';
-          }}
-        >
-          Create an account →
-        </button>
-      </Link>
     </div>
   );
 };

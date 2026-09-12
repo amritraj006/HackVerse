@@ -13,23 +13,15 @@ export const Input = ({
   ...props
 }) => {
   return (
-    <div className={`space-y-1.5 ${className}`}>
+    <div className={`space-y-1 ${className}`}>
       {label && (
-        <label
-          htmlFor={id}
-          className="block text-xs font-semibold"
-          style={{ color: 'var(--text-secondary)' }}
-        >
-          {label}{' '}
-          {required && <span style={{ color: '#f43f5e' }}>*</span>}
+        <label htmlFor={id} className="block text-xs font-semibold text-slate-700">
+          {label} {required && <span className="text-rose-500">*</span>}
         </label>
       )}
       <div className="relative">
         {Icon && (
-          <Icon
-            className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"
-            style={{ color: 'var(--text-muted)' }}
-          />
+          <Icon className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
         )}
         <input
           id={id}
@@ -39,41 +31,17 @@ export const Input = ({
           placeholder={placeholder}
           required={required}
           disabled={disabled}
-          className={`w-full py-2 text-xs rounded-lg transition-all duration-200 outline-none disabled:opacity-40 disabled:cursor-not-allowed ${
-            Icon ? 'pl-9 pr-3' : 'px-3'
+          className={`w-full py-1.5 text-xs bg-slate-50 border rounded-lg text-slate-800 placeholder-slate-400 transition-all duration-150 focus:outline-none focus:bg-white disabled:opacity-60 disabled:cursor-not-allowed ${
+            Icon ? 'pl-8 pr-3' : 'px-3'
+          } ${
+            error
+              ? 'border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+              : 'border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
           }`}
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: error
-              ? '1px solid rgba(244,63,94,0.6)'
-              : '1px solid var(--border-normal)',
-            color: 'var(--text-primary)',
-            boxShadow: error
-              ? '0 0 0 3px rgba(244,63,94,0.12), inset 0 1px 0 rgba(255,255,255,0.03)'
-              : 'inset 0 1px 0 rgba(255,255,255,0.03)',
-          }}
-          onFocus={(e) => {
-            if (!error) {
-              e.currentTarget.style.border = '1px solid rgba(99,102,241,0.6)';
-              e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.12), inset 0 1px 0 rgba(255,255,255,0.03)';
-              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-            }
-          }}
-          onBlur={(e) => {
-            if (!error) {
-              e.currentTarget.style.border = '1px solid var(--border-normal)';
-              e.currentTarget.style.boxShadow = 'inset 0 1px 0 rgba(255,255,255,0.03)';
-              e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
-            }
-          }}
           {...props}
         />
       </div>
-      {error && (
-        <p className="text-[11px] font-medium flex items-center gap-1" style={{ color: '#f43f5e' }}>
-          {error}
-        </p>
-      )}
+      {error && <p className="text-[11px] text-rose-500 font-medium">{error}</p>}
     </div>
   );
 };

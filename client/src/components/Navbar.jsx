@@ -21,12 +21,15 @@ export const Navbar = ({ onToggleSidebar }) => {
   const popoverRef = useRef(null);
   const avatarUrl = user?.avatar;
 
+  // Fetch real notifications from API
   const fetchNotifications = useCallback(async () => {
     if (!isAuthenticated) return;
     setNotifLoading(true);
     try {
       const res = await notificationService.getAll();
-      if (res && res.data) setNotifications(res.data);
+      if (res && res.data) {
+        setNotifications(res.data);
+      }
     } catch {
       // Silently fail for notification fetch
     } finally {
@@ -40,16 +43,21 @@ export const Navbar = ({ onToggleSidebar }) => {
       const load = async () => {
         try {
           const res = await notificationService.getAll();
-          if (!cancelled && res?.data) setNotifications(res.data);
+          if (!cancelled && res?.data) {
+            setNotifications(res.data);
+          }
         } catch {
           // Silently fail
         }
       };
       load();
     }
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [isAuthenticated]);
 
+  // Click outside to close notification popover
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (popoverRef.current && !popoverRef.current.contains(e.target)) {
@@ -75,7 +83,9 @@ export const Navbar = ({ onToggleSidebar }) => {
     setActionLoadingId(notifId);
     try {
       await notificationService.acceptInvitation(notifId);
-      setNotifications((prev) => prev.map((n) => (n._id === notifId ? { ...n, status: 'accepted' } : n)));
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === notifId ? { ...n, status: 'accepted' } : n))
+      );
       notify.success('Invitation accepted successfully!');
     } catch (err) {
       notify.error(err.message || 'Failed to accept invitation');
@@ -88,7 +98,9 @@ export const Navbar = ({ onToggleSidebar }) => {
     setActionLoadingId(notifId);
     try {
       await notificationService.rejectInvitation(notifId);
-      setNotifications((prev) => prev.map((n) => (n._id === notifId ? { ...n, status: 'rejected' } : n)));
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === notifId ? { ...n, status: 'rejected' } : n))
+      );
       notify.info('Invitation declined.');
     } catch (err) {
       notify.error(err.message || 'Failed to reject invitation');
@@ -97,70 +109,53 @@ export const Navbar = ({ onToggleSidebar }) => {
     }
   };
 
+
   const getNotificationIcon = (type) => {
     switch (type) {
-      case 'team_invite':  return <UserCheck className="w-3.5 h-3.5" style={{ color: '#818cf8' }} />;
-      case 'judge_invite': return <Scale     className="w-3.5 h-3.5" style={{ color: '#a78bfa' }} />;
-      case 'hackathon':    return <Trophy    className="w-3.5 h-3.5" style={{ color: '#818cf8' }} />;
-      default:             return <Sparkles  className="w-3.5 h-3.5" style={{ color: '#fbbf24' }} />;
+      case 'team_invite':
+        return <UserCheck className="w-3.5 h-3.5 text-indigo-600" />;
+      case 'judge_invite':
+        return <Scale className="w-3.5 h-3.5 text-purple-600" />;
+      case 'hackathon':
+        return <Trophy className="w-3.5 h-3.5 text-indigo-600" />;
+      case 'system':
+      default:
+        return <Sparkles className="w-3.5 h-3.5 text-amber-500" />;
     }
   };
 
   const getStatusColor = (status) => {
-    if (status === 'accepted') return '#10b981';
-    if (status === 'rejected') return '#f43f5e';
-    return 'var(--text-muted)';
+    if (status === 'accepted') return 'text-emerald-600';
+    if (status === 'rejected') return 'text-rose-600';
+    return 'text-slate-500';
   };
 
   return (
-    <header
-      className="sticky top-0 z-30 px-4 py-2.5 flex items-center justify-between"
-      style={{
-        background: 'rgba(7,11,20,0.85)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderBottom: '1px solid var(--border-subtle)',
-        boxShadow: '0 1px 0 rgba(255,255,255,0.03)',
-      }}
-    >
-      {/* Left: Brand + sidebar toggle */}
+    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-2.5 flex items-center justify-between shadow-2xs">
+      {/* Left section: Brand logo & sidebar toggle */}
       <div className="flex items-center gap-3">
         <button
           onClick={onToggleSidebar}
-          className="p-1.5 rounded-lg transition-colors md:hidden cursor-pointer"
-          style={{ color: 'var(--text-muted)' }}
+          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors md:hidden"
           aria-label="Toggle navigation menu"
         >
           <Menu className="w-4 h-4" />
         </button>
 
         <Link to="/" className="flex items-center gap-2 group">
-          <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center text-white shadow-lg transition-all duration-200 group-hover:scale-105"
-            style={{
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              boxShadow: '0 0 16px rgba(99,102,241,0.4)',
-            }}
-          >
+          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs group-hover:bg-indigo-700 transition-colors">
             <Code2 className="w-4 h-4" />
           </div>
-          <span className="font-bold text-sm tracking-tight gradient-text group-hover:opacity-80 transition-opacity">
+          <span className="font-bold text-sm tracking-tight text-slate-900 group-hover:text-indigo-600 transition-colors">
             HackVerse
           </span>
-          <span
-            className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border"
-            style={{
-              background: 'rgba(99,102,241,0.12)',
-              color: '#818cf8',
-              borderColor: 'rgba(99,102,241,0.25)',
-            }}
-          >
+          <span className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-indigo-50 text-indigo-700 rounded border border-indigo-200">
             Platform
           </span>
         </Link>
       </div>
 
-      {/* Right: Actions & Profile */}
+      {/* Right section: Actions & Profile */}
       <div className="flex items-center gap-2">
         {/* Host Hackathon — only for organizers */}
         {user?.role === 'organizer' && (
@@ -172,7 +167,7 @@ export const Navbar = ({ onToggleSidebar }) => {
           </Link>
         )}
 
-        {/* Notifications */}
+        {/* Notifications Button & Popover */}
         {isAuthenticated && (
           <div className="relative" ref={popoverRef}>
             <button
@@ -180,88 +175,57 @@ export const Navbar = ({ onToggleSidebar }) => {
                 setShowNotifications((prev) => !prev);
                 if (!showNotifications) fetchNotifications();
               }}
-              className="relative p-2 rounded-lg transition-all duration-150 cursor-pointer"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                e.currentTarget.style.color = 'var(--text-primary)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'transparent';
-                e.currentTarget.style.color = 'var(--text-muted)';
-              }}
+              className="relative p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
               aria-label="View notifications"
+              title="Notifications"
             >
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span
-                  className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 text-white font-bold text-[9px] rounded-full flex items-center justify-center animate-pulse-slow"
-                  style={{
-                    background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                    boxShadow: '0 0 8px rgba(99,102,241,0.5)',
-                  }}
-                >
+                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 bg-indigo-600 text-white font-bold text-[9px] rounded-full flex items-center justify-center ring-2 ring-white">
                   {unreadCount}
                 </span>
               )}
             </button>
 
-            {/* Notification Dropdown */}
+            {/* Notifications Dropdown Panel */}
             {showNotifications && (
-              <div
-                className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl z-50 overflow-hidden text-xs animate-fade-in"
-                style={{
-                  background: 'rgba(13,18,32,0.98)',
-                  border: '1px solid var(--border-normal)',
-                  boxShadow: '0 20px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(99,102,241,0.08)',
-                  backdropFilter: 'blur(20px)',
-                }}
-              >
-                {/* Header */}
-                <div
-                  className="p-3 flex items-center justify-between"
-                  style={{ borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.02)' }}
-                >
-                  <div className="flex items-center gap-1.5 font-bold" style={{ color: 'var(--text-primary)' }}>
-                    <Bell className="w-3.5 h-3.5" style={{ color: '#818cf8' }} />
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-slate-200/90 z-50 overflow-hidden text-xs">
+                <div className="p-3 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-slate-900">
+                    <Bell className="w-3.5 h-3.5 text-indigo-600" />
                     <span>Notifications</span>
                     {unreadCount > 0 && (
-                      <span
-                        className="px-1.5 py-0.5 text-[10px] font-semibold rounded-full"
-                        style={{ background: 'rgba(99,102,241,0.15)', color: '#a5b4fc' }}
-                      >
+                      <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-indigo-100 text-indigo-700 rounded-full">
                         {unreadCount} pending
                       </span>
                     )}
                   </div>
-                  {unreadCount > 0 && (
-                    <button
-                      onClick={handleMarkAllRead}
-                      className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium transition-colors cursor-pointer"
-                      style={{ color: '#818cf8' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                    >
-                      <CheckCheck className="w-3 h-3" /> Read all
-                    </button>
-                  )}
+
+                  <div className="flex items-center gap-1">
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={handleMarkAllRead}
+                        className="p-1 text-[11px] text-indigo-600 hover:bg-indigo-50 rounded font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                        title="Mark all as read"
+                      >
+                        <CheckCheck className="w-3 h-3" /> Read all
+                      </button>
+                    )}
+                  </div>
                 </div>
 
-                {/* Notification Items */}
-                <div className="max-h-80 overflow-y-auto divide-y" style={{ borderColor: 'var(--border-subtle)' }}>
+                {/* Notification Items List */}
+                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
                   {notifLoading ? (
-                    <div className="py-8 text-center space-y-2">
-                      <div
-                        className="w-5 h-5 rounded-full border-2 border-t-transparent mx-auto"
-                        style={{ borderColor: '#6366f1', borderTopColor: 'transparent', animation: 'spin 0.8s linear infinite' }}
-                      />
-                      <p style={{ color: 'var(--text-muted)' }}>Loading...</p>
+                    <div className="py-8 text-center text-slate-400 space-y-1">
+                      <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                      <p className="text-[11px]">Loading...</p>
                     </div>
                   ) : notifications.length === 0 ? (
-                    <div className="py-8 text-center space-y-1">
-                      <Info className="w-6 h-6 mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
-                      <p className="font-medium" style={{ color: 'var(--text-secondary)' }}>No notifications</p>
-                      <p style={{ color: 'var(--text-muted)' }}>You're all caught up!</p>
+                    <div className="py-8 text-center text-slate-400 space-y-1">
+                      <Info className="w-6 h-6 text-slate-300 mx-auto" />
+                      <p className="font-medium text-slate-600">No notifications</p>
+                      <p className="text-[11px]">You're all caught up!</p>
                     </div>
                   ) : (
                     notifications.map((n) => {
@@ -270,87 +234,77 @@ export const Navbar = ({ onToggleSidebar }) => {
                       return (
                         <div
                           key={n._id}
-                          className="p-3 flex gap-2.5"
-                          style={{ background: isPending ? 'rgba(99,102,241,0.04)' : 'transparent' }}
+                          className={`p-3 flex gap-2.5 ${isPending ? 'bg-indigo-50/40' : 'bg-white'}`}
                         >
-                          <div
-                            className="p-1.5 rounded-lg shrink-0 h-fit mt-0.5"
-                            style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-subtle)' }}
-                          >
+                          <div className="p-1.5 bg-slate-100 rounded-lg shrink-0 h-fit mt-0.5">
                             {getNotificationIcon(n.type)}
                           </div>
                           <div className="flex-1 min-w-0 space-y-1">
                             <div className="flex items-center justify-between gap-1">
-                              <p
-                                className="font-semibold truncate"
-                                style={{ color: isPending ? 'var(--text-primary)' : 'var(--text-secondary)' }}
-                              >
+                              <p className={`font-semibold truncate ${isPending ? 'text-slate-900' : 'text-slate-700'}`}>
                                 {n.title}
                               </p>
-                              <span className="text-[10px] shrink-0" style={{ color: 'var(--text-muted)' }}>
+                              <span className="text-[10px] text-slate-400 shrink-0">
                                 {new Date(n.createdAt).toLocaleDateString()}
                               </span>
                             </div>
-                            <p className="text-[11px] leading-snug" style={{ color: 'var(--text-muted)' }}>
-                              {n.message}
-                            </p>
+                            <p className="text-[11px] text-slate-600 leading-snug">{n.message}</p>
 
-                            {/* Accept/Reject for team_invite */}
+                            {/* Accept / Reject buttons for pending team invites */}
                             {n.type === 'team_invite' && n.status === 'pending' && (
                               <div className="flex items-center gap-1.5 pt-1">
                                 <button
                                   onClick={() => handleAcceptInvite(n._id)}
                                   disabled={isActing}
-                                  className="flex items-center gap-1 px-2.5 py-1 text-white text-[11px] font-semibold rounded-lg disabled:opacity-50 transition-all cursor-pointer"
-                                  style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)' }}
+                                  className="flex items-center gap-1 px-2.5 py-1 bg-indigo-600 text-white text-[11px] font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors cursor-pointer"
                                 >
-                                  {isActing
-                                    ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full inline-block" style={{ animation: 'spin 0.8s linear infinite' }} />
-                                    : <Check className="w-3 h-3" />}
+                                  {isActing ? (
+                                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                                  ) : (
+                                    <Check className="w-3 h-3" />
+                                  )}
                                   Accept
                                 </button>
                                 <button
                                   onClick={() => handleRejectInvite(n._id)}
                                   disabled={isActing}
-                                  className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg disabled:opacity-50 transition-all cursor-pointer"
-                                  style={{ background: 'rgba(244,63,94,0.1)', color: '#fca5a5', border: '1px solid rgba(244,63,94,0.25)' }}
+                                  className="flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 text-slate-600 text-[11px] font-semibold rounded-lg hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 disabled:opacity-50 transition-colors cursor-pointer"
                                 >
-                                  <XCircle className="w-3 h-3" /> Decline
+                                  <XCircle className="w-3 h-3" />
+                                  Decline
                                 </button>
                               </div>
                             )}
 
-                            {/* Accept/Reject for judge_invite */}
+                            {/* Accept / Reject buttons for pending judge invites */}
                             {n.type === 'judge_invite' && n.status === 'pending' && (
                               <div className="flex items-center gap-1.5 pt-1">
                                 <button
                                   onClick={() => handleAcceptInvite(n._id)}
                                   disabled={isActing}
-                                  className="flex items-center gap-1 px-2.5 py-1 text-white text-[11px] font-semibold rounded-lg disabled:opacity-50 transition-all cursor-pointer"
-                                  style={{ background: 'linear-gradient(135deg, #a855f7, #7c3aed)' }}
+                                  className="flex items-center gap-1 px-2.5 py-1 bg-purple-600 text-white text-[11px] font-semibold rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors cursor-pointer"
                                 >
-                                  {isActing
-                                    ? <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full inline-block" style={{ animation: 'spin 0.8s linear infinite' }} />
-                                    : <Check className="w-3 h-3" />}
+                                  {isActing ? (
+                                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                                  ) : (
+                                    <Check className="w-3 h-3" />
+                                  )}
                                   Accept Role
                                 </button>
                                 <button
                                   onClick={() => handleRejectInvite(n._id)}
                                   disabled={isActing}
-                                  className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-lg disabled:opacity-50 transition-all cursor-pointer"
-                                  style={{ background: 'rgba(244,63,94,0.1)', color: '#fca5a5', border: '1px solid rgba(244,63,94,0.25)' }}
+                                  className="flex items-center gap-1 px-2.5 py-1 bg-white border border-slate-200 text-slate-600 text-[11px] font-semibold rounded-lg hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 disabled:opacity-50 transition-colors cursor-pointer"
                                 >
-                                  <XCircle className="w-3 h-3" /> Decline
+                                  <XCircle className="w-3 h-3" />
+                                  Decline
                                 </button>
                               </div>
                             )}
 
                             {/* Status badge for resolved invites */}
                             {(n.type === 'team_invite' || n.type === 'judge_invite') && n.status !== 'pending' && (
-                              <span
-                                className="text-[10px] font-semibold"
-                                style={{ color: getStatusColor(n.status) }}
-                              >
+                              <span className={`text-[10px] font-semibold ${getStatusColor(n.status)}`}>
                                 {n.status === 'accepted' ? '✓ Accepted' : '✗ Declined'}
                               </span>
                             )}
@@ -361,18 +315,13 @@ export const Navbar = ({ onToggleSidebar }) => {
                   )}
                 </div>
 
-                {/* Footer link */}
-                <div
-                  className="p-2 text-center"
-                  style={{ borderTop: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.01)' }}
-                >
+                <div className="p-2 bg-slate-50 border-t border-slate-100 text-center">
                   <Link
-                    to={(!user || user.role === 'participant') ? '/hackathons' : '/dashboard'}
+                    to={(!user || user.role === 'participant') ? "/hackathons" : "/dashboard"}
                     onClick={() => setShowNotifications(false)}
-                    className="text-[11px] font-semibold transition-colors"
-                    style={{ color: '#818cf8' }}
+                    className="text-[11px] font-semibold text-indigo-600 hover:underline"
                   >
-                    {(!user || user.role === 'participant') ? 'View All Platform Events →' : 'Go to Dashboard →'}
+                    {(!user || user.role === 'participant') ? "View All Platform Events →" : "Go to Dashboard →"}
                   </Link>
                 </div>
               </div>
@@ -380,27 +329,15 @@ export const Navbar = ({ onToggleSidebar }) => {
           </div>
         )}
 
-        {/* Profile / Auth */}
+        {/* Profile / Auth Button */}
         {isAuthenticated ? (
-          <div
-            className="flex items-center gap-2 pl-3"
-            style={{ borderLeft: '1px solid var(--border-subtle)' }}
-          >
+          <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
             <Link
               to="/profile"
-              className="flex items-center gap-2 p-1 rounded-lg transition-all duration-150"
+              className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-slate-100 transition-colors"
               title="View Profile"
-              onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.06)'}
-              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
             >
-              <div
-                className="w-7 h-7 rounded-full text-white flex items-center justify-center text-xs font-bold overflow-hidden"
-                style={{
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                  boxShadow: '0 0 10px rgba(99,102,241,0.4)',
-                  border: '2px solid rgba(99,102,241,0.3)',
-                }}
-              >
+              <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-semibold overflow-hidden border border-slate-200">
                 {avatarUrl ? (
                   <img
                     src={
@@ -410,22 +347,21 @@ export const Navbar = ({ onToggleSidebar }) => {
                     }
                     alt={user?.name}
                     className="w-full h-full object-cover"
-                    onError={(e) => { e.target.style.display = 'none'; }}
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                    }}
                   />
                 ) : (
                   <span>{user?.name ? user.name.charAt(0).toUpperCase() : 'U'}</span>
                 )}
               </div>
-              <span className="hidden lg:inline text-xs font-semibold" style={{ color: 'var(--text-secondary)' }}>
+              <span className="hidden lg:inline text-xs font-medium text-slate-800">
                 {user?.name?.split(' ')[0]}
               </span>
             </Link>
             <button
               onClick={logout}
-              className="text-xs font-medium transition-colors cursor-pointer px-2 py-1 rounded-lg"
-              style={{ color: 'var(--text-muted)' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#f43f5e'; e.currentTarget.style.background = 'rgba(244,63,94,0.08)'; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'transparent'; }}
+              className="text-xs text-slate-500 hover:text-rose-600 font-medium transition-colors cursor-pointer"
             >
               Logout
             </button>
@@ -433,10 +369,14 @@ export const Navbar = ({ onToggleSidebar }) => {
         ) : (
           <div className="flex items-center gap-1.5 pl-2">
             <Link to="/login">
-              <Button size="sm" variant="ghost">Sign In</Button>
+              <Button size="sm" variant="ghost">
+                Sign In
+              </Button>
             </Link>
             <Link to="/register">
-              <Button size="sm" variant="primary">Register</Button>
+              <Button size="sm" variant="secondary">
+                Register
+              </Button>
             </Link>
           </div>
         )}

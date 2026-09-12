@@ -10,7 +10,6 @@ import {
   ArrowRight,
   Sparkles,
   TrendingUp,
-  Zap,
 } from 'lucide-react';
 import { hackathonService } from '../services/hackathonService';
 import { registrationService } from '../services/registrationService';
@@ -29,6 +28,7 @@ export const Home = () => {
   const [featuredLoading, setFeaturedLoading] = useState(true);
   const [registeredIds, setRegisteredIds] = useState(new Set());
 
+  // Fetch platform-level stats by querying hackathon counts
   useEffect(() => {
     let isMounted = true;
     Promise.all([
@@ -43,10 +43,13 @@ export const Home = () => {
           loading: false,
         });
       })
-      .catch(() => { if (isMounted) setStats((s) => ({ ...s, loading: false })); });
+      .catch(() => {
+        if (isMounted) setStats((s) => ({ ...s, loading: false }));
+      });
     return () => { isMounted = false; };
   }, []);
 
+  // Fetch featured hackathons (mix of ongoing + upcoming)
   useEffect(() => {
     let isMounted = true;
     hackathonService.getAll({ sortBy: 'startDate', order: 'asc', limit: 6 })
@@ -60,6 +63,7 @@ export const Home = () => {
     return () => { isMounted = false; };
   }, []);
 
+  // Load user's registered hackathon IDs
   useEffect(() => {
     if (!user) return;
     let isMounted = true;
@@ -76,95 +80,32 @@ export const Home = () => {
   const statFmt = (val) => (val === null ? '...' : val);
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Hero Banner */}
-      <div
-        className="relative rounded-2xl overflow-hidden"
-        style={{ minHeight: '220px' }}
-      >
-        {/* Gradient background */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: 'linear-gradient(135deg, #0d1535 0%, #0f172a 40%, #130a2e 70%, #070b14 100%)',
-          }}
-        />
-
-        {/* Animated orbs */}
-        <div
-          className="pointer-events-none absolute animate-float"
-          style={{
-            top: '-40px', right: '-40px',
-            width: '280px', height: '280px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(99,102,241,0.2) 0%, transparent 70%)',
-            filter: 'blur(40px)',
-          }}
-        />
-        <div
-          className="pointer-events-none absolute animate-float"
-          style={{
-            bottom: '-20px', left: '30%',
-            width: '200px', height: '200px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%)',
-            filter: 'blur(30px)',
-            animationDelay: '2s',
-          }}
-        />
-
-        {/* Subtle grid texture */}
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            backgroundImage: 'radial-gradient(rgba(255,255,255,0.04) 1px, transparent 1px)',
-            backgroundSize: '32px 32px',
-          }}
-        />
-
-        {/* Content */}
-        <div className="relative z-10 p-8 md:p-10 max-w-2xl">
-          <div
-            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full mb-4 text-[11px] font-semibold"
-            style={{
-              background: 'rgba(99,102,241,0.12)',
-              border: '1px solid rgba(99,102,241,0.25)',
-              color: '#a5b4fc',
-            }}
-          >
-            <Sparkles className="w-3 h-3" />
+      <div className="relative rounded-2xl bg-gradient-to-r from-indigo-900 via-indigo-800 to-slate-900 p-6 md:p-8 text-white overflow-hidden shadow-xs">
+        {/* Decorative blobs */}
+        <div className="pointer-events-none absolute -top-10 -right-10 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-0 right-1/3 w-40 h-40 rounded-full bg-purple-500/10 blur-2xl" />
+        <div className="relative z-10 max-w-xl space-y-3">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 text-indigo-200 text-[11px] font-medium backdrop-blur-xs border border-white/10">
+            <Sparkles className="w-3 h-3 text-indigo-400" />
             <span>HackVerse · Global Hackathon Network</span>
           </div>
-
-          <h1
-            className="text-2xl md:text-3xl font-bold tracking-tight mb-3 leading-tight"
-            style={{ color: 'var(--text-primary)' }}
-          >
-            Build.{' '}
-            <span className="gradient-text">Compete.</span>
-            {' '}Win.
+          <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white leading-snug">
+            Build. Compete. Win.
           </h1>
-
-          <p
-            className="text-sm leading-relaxed mb-6 max-w-lg"
-            style={{ color: 'var(--text-muted)' }}
-          >
+          <p className="text-xs text-indigo-100/80 leading-relaxed">
             Join the HackVerse community — discover active hackathons, form teams, submit
             your best work, and compete against innovators worldwide.
           </p>
-
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 pt-2">
             <Link to="/hackathons">
-              <Button size="lg" variant="primary" className="font-semibold">
-                Explore Hackathons <ArrowRight className="w-4 h-4" />
+              <Button size="sm" className="text-indigo-900 font-semibold border-0">
+                Explore Hackathons <ArrowRight className="w-3.5 h-3.5" />
               </Button>
             </Link>
             <Link to="/dashboard">
-              <Button
-                size="lg"
-                variant="ghost"
-                style={{ color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.06)', border: '1px solid var(--border-normal)' }}
-              >
+              <Button size="sm" variant="ghost" className="text-white hover:bg-white/10">
                 My Dashboard
               </Button>
             </Link>
@@ -174,120 +115,52 @@ export const Home = () => {
 
       {/* Live Stats Row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Ongoing */}
-        <div
-          className="flex items-center gap-4 p-4 rounded-xl hover-lift transition-all duration-200"
-          style={{
-            background: 'linear-gradient(135deg, rgba(17,24,39,0.9), rgba(13,18,32,0.95))',
-            border: '1px solid var(--border-normal)',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
-          }}
-        >
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, #10b981, #059669)',
-              boxShadow: '0 0 16px rgba(16,185,129,0.3)',
-            }}
-          >
-            <TrendingUp className="w-5 h-5 text-white" />
+        <Card className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <TrendingUp className="w-4 h-4" />
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-              Live Hackathons
-            </p>
-            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-              {stats.loading
-                ? <span className="animate-pulse-slow" style={{ color: 'var(--text-muted)' }}>—</span>
-                : statFmt(stats.ongoingCount)}
+            <p className="text-[11px] text-slate-500 font-medium">Live Hackathons</p>
+            <p className="text-lg font-bold text-slate-900">
+              {stats.loading ? <span className="text-slate-300 animate-pulse">—</span> : statFmt(stats.ongoingCount)}
             </p>
           </div>
-        </div>
+        </Card>
 
-        {/* Upcoming */}
-        <div
-          className="flex items-center gap-4 p-4 rounded-xl hover-lift transition-all duration-200"
-          style={{
-            background: 'linear-gradient(135deg, rgba(17,24,39,0.9), rgba(13,18,32,0.95))',
-            border: '1px solid var(--border-normal)',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
-          }}
-        >
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-              boxShadow: '0 0 16px rgba(99,102,241,0.3)',
-            }}
-          >
-            <Trophy className="w-5 h-5 text-white" />
+        <Card className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+            <Trophy className="w-4 h-4" />
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-              Upcoming Events
-            </p>
-            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-              {stats.loading
-                ? <span className="animate-pulse-slow" style={{ color: 'var(--text-muted)' }}>—</span>
-                : statFmt(stats.upcomingCount)}
+            <p className="text-[11px] text-slate-500 font-medium">Upcoming Events</p>
+            <p className="text-lg font-bold text-slate-900">
+              {stats.loading ? <span className="text-slate-300 animate-pulse">—</span> : statFmt(stats.upcomingCount)}
             </p>
           </div>
-        </div>
+        </Card>
 
-        {/* Total */}
-        <div
-          className="flex items-center gap-4 p-4 rounded-xl hover-lift transition-all duration-200"
-          style={{
-            background: 'linear-gradient(135deg, rgba(17,24,39,0.9), rgba(13,18,32,0.95))',
-            border: '1px solid var(--border-normal)',
-            boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
-          }}
-        >
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-            style={{
-              background: 'linear-gradient(135deg, #f59e0b, #d97706)',
-              boxShadow: '0 0 16px rgba(245,158,11,0.3)',
-            }}
-          >
-            <Zap className="w-5 h-5 text-white" />
+        <Card className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <FolderGit2 className="w-4 h-4" />
           </div>
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'var(--text-muted)' }}>
-              Total Events
-            </p>
-            <p className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+            <p className="text-[11px] text-slate-500 font-medium">Total Events</p>
+            <p className="text-lg font-bold text-slate-900">
               {stats.loading
-                ? <span className="animate-pulse-slow" style={{ color: 'var(--text-muted)' }}>—</span>
+                ? <span className="text-slate-300 animate-pulse">—</span>
                 : (stats.ongoingCount ?? 0) + (stats.upcomingCount ?? 0)}
             </p>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Featured Hackathons */}
       <div>
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', boxShadow: '0 0 12px rgba(99,102,241,0.3)' }}
-            >
-              <Users className="w-4 h-4 text-white" />
-            </div>
-            <h2 className="text-sm font-bold" style={{ color: 'var(--text-primary)' }}>
-              Featured Events
-            </h2>
-          </div>
-          <Link
-            to="/hackathons"
-            className="text-xs font-semibold flex items-center gap-1 px-3 py-1.5 rounded-lg transition-all duration-150"
-            style={{
-              color: '#818cf8',
-              background: 'rgba(99,102,241,0.08)',
-              border: '1px solid rgba(99,102,241,0.2)',
-            }}
-          >
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+            <Users className="w-4 h-4 text-indigo-500" /> Featured Events
+          </h2>
+          <Link to="/hackathons" className="text-xs font-semibold text-indigo-600 hover:underline flex items-center gap-1">
             View All <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
@@ -295,24 +168,12 @@ export const Home = () => {
         {featuredLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-52 rounded-xl animate-shimmer"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-subtle)' }}
-              />
+              <div key={i} className="h-48 bg-slate-100 rounded-xl animate-pulse" />
             ))}
           </div>
         ) : featured.length === 0 ? (
-          <div
-            className="py-12 text-center rounded-xl"
-            style={{
-              background: 'rgba(255,255,255,0.02)',
-              border: '1px dashed var(--border-normal)',
-              color: 'var(--text-muted)',
-            }}
-          >
-            <Trophy className="w-8 h-8 mx-auto mb-3 opacity-30" />
-            <p className="text-sm font-medium">No hackathons yet. Check back soon!</p>
+          <div className="py-10 text-center text-xs text-slate-500 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+            No hackathons yet. Check back soon!
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

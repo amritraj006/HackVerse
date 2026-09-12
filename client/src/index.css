@@ -1,39 +1,9 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
-/* ============================================================
-   DESIGN TOKENS — HackVerse Dark Theme
-   ============================================================ */
 @layer base {
   :root {
     --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-
-    /* Backgrounds */
-    --bg-base:    #070b14;
-    --bg-surface: #0d1220;
-    --bg-raised:  #111827;
-    --bg-overlay: #1a2235;
-
-    /* Borders */
-    --border-subtle: rgba(148, 163, 184, 0.08);
-    --border-normal: rgba(148, 163, 184, 0.14);
-    --border-strong: rgba(148, 163, 184, 0.22);
-
-    /* Brand Gradient */
-    --brand-from: #6366f1;
-    --brand-to:   #8b5cf6;
-    --brand-glow: rgba(99, 102, 241, 0.25);
-
-    /* Text */
-    --text-primary:  #f1f5f9;
-    --text-secondary:#94a3b8;
-    --text-muted:    #64748b;
-
-    /* Status */
-    --color-success: #10b981;
-    --color-warning: #f59e0b;
-    --color-danger:  #f43f5e;
-    --color-info:    #6366f1;
   }
 
   * {
@@ -44,191 +14,46 @@
   }
 
   body {
-    background-color: var(--bg-base);
-    color: var(--text-primary);
+    background-color: #f8fafc;
+    color: #0f172a;
     font-size: 13px;
-    line-height: 1.6;
+    line-height: 1.5;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
+}
 
-  ::selection {
-    background: rgba(99, 102, 241, 0.3);
-    color: #f1f5f9;
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Utility Animations */
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
-
-/* ============================================================
-   CUSTOM SCROLLBAR
-   ============================================================ */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #0d1220; }
-::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 6px; }
-::-webkit-scrollbar-thumb:hover { background: #334155; }
-
-/* ============================================================
-   GLASS MORPHISM UTILITIES
-   ============================================================ */
-.glass {
-  background: rgba(13, 18, 32, 0.75);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border-normal);
-}
-
-.glass-light {
-  background: rgba(255, 255, 255, 0.04);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--border-subtle);
-}
-
-.glass-card {
-  background: linear-gradient(135deg, rgba(17, 24, 39, 0.9), rgba(13, 18, 32, 0.95));
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--border-normal);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255,255,255,0.04);
-}
-
-/* ============================================================
-   GRADIENT UTILITIES
-   ============================================================ */
-.gradient-brand {
-  background: linear-gradient(135deg, var(--brand-from), var(--brand-to));
-}
-
-.gradient-text {
-  background: linear-gradient(135deg, #818cf8, #a78bfa, #c084fc);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.gradient-border {
-  position: relative;
-}
-.gradient-border::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, var(--brand-from), var(--brand-to));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  mask-composite: exclude;
-  pointer-events: none;
-}
-
-/* ============================================================
-   GLOW EFFECTS
-   ============================================================ */
-.glow-brand {
-  box-shadow: 0 0 20px var(--brand-glow), 0 0 40px rgba(99, 102, 241, 0.1);
-}
-
-.glow-success { box-shadow: 0 0 16px rgba(16, 185, 129, 0.2); }
-.glow-danger  { box-shadow: 0 0 16px rgba(244, 63, 94, 0.2); }
-
-/* ============================================================
-   ANIMATIONS
-   ============================================================ */
-.animate-fade-in {
-  animation: fadeInUp 0.3s ease-out both;
-}
-
-.animate-float {
-  animation: floatOrb 6s ease-in-out infinite;
-}
-
-.animate-pulse-slow {
-  animation: pulseSlow 3s ease-in-out infinite;
-}
-
-.animate-shimmer {
-  position: relative;
-  overflow: hidden;
-}
-.animate-shimmer::after {
-  content: '';
-  position: absolute;
-  top: 0; left: -100%;
-  width: 100%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
-  animation: shimmer 2s infinite;
-}
-
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes floatOrb {
-  0%, 100% { transform: translateY(0px) scale(1); }
-  50%       { transform: translateY(-20px) scale(1.05); }
-}
-
-@keyframes pulseSlow {
-  0%, 100% { opacity: 0.6; }
-  50%       { opacity: 1; }
-}
-
-@keyframes shimmer {
-  0%   { left: -100%; }
-  100% { left: 200%; }
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes gradientShift {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-
-/* Hero animated gradient */
-.hero-gradient {
-  background: linear-gradient(-45deg, #070b14, #0d1535, #130a2e, #0f172a, #070b14);
-  background-size: 400% 400%;
-  animation: gradientShift 12s ease infinite;
-}
-
-/* ============================================================
-   NAV LINK ACTIVE INDICATOR
-   ============================================================ */
-.nav-active-bar {
-  position: relative;
-}
-.nav-active-bar::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 60%;
-  border-radius: 0 3px 3px 0;
-  background: linear-gradient(to bottom, var(--brand-from), var(--brand-to));
-}
-
-/* ============================================================
-   INTERACTIVE STATES
-   ============================================================ */
-.hover-lift {
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-}
-
-/* ============================================================
-   STATUS BADGE GLOW
-   ============================================================ */
-.badge-ongoing  { box-shadow: 0 0 8px rgba(16, 185, 129, 0.3); }
-.badge-upcoming { box-shadow: 0 0 8px rgba(99, 102, 241, 0.3); }
-.badge-draft    { box-shadow: 0 0 8px rgba(245, 158, 11, 0.3); }
