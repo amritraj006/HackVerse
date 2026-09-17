@@ -42,7 +42,6 @@ HackVerse is an end-to-end hackathon management and project evaluation platform 
 * **Automated Lifecycle Scheduler**: A background scheduler checks competition dates periodically (every 60 seconds by default), transitioning events from `upcoming` to `ongoing` to `ended` and initializing result states.
 * **Production-Ready Hybrid Rate Limiting**: Guards against brute-force attacks and volumetric traffic with a dual-key strategy: limits authenticated users by user ID (`user:<id>`) and unauthenticated requests by client IP (`ip:<ip>`), with dedicated limiters for global endpoints (150 req/15 min), strict IP-based authentication routes (10 req/15 min), and file uploads (20 req/15 min).
 * **Circuit Breaker Pattern**: Wraps external Cloudinary media interactions with a 3-state (`CLOSED`, `OPEN`, `HALF_OPEN`) circuit breaker, failing fast and routing to local `/uploads` storage when the cloud provider degrades.
-* **Process-Level Load Balancer**: Multi-worker process clustering using Node.js `node:cluster` to balance incoming HTTP requests across CPU cores via round-robin distribution with automatic worker revival.
 * **Docker Containerization**: Multi-stage Dockerfiles for client (Nginx) and server (Node.js Alpine) orchestrated via `docker-compose.yml` with MongoDB health checks and persistent volume mounts.
 * **Dual Storage Pipeline**: Image and document uploads upload directly to Cloudinary when credentials are configured, with automatic fallback to local disk storage (`/uploads`).
 
@@ -63,7 +62,7 @@ HackVerse is an end-to-end hackathon management and project evaluation platform 
 | **Database** | MongoDB |
 | **Object Data Modeling** | Mongoose 9 |
 | **Authentication & Security** | JSON Web Tokens (`jsonwebtoken`), `bcryptjs`, `express-rate-limit` |
-| **Resilience & Fault Tolerance**| Circuit Breaker (`CLOSED`, `OPEN`, `HALF_OPEN`), Node.js `cluster` |
+| **Resilience & Fault Tolerance**| Circuit Breaker (`CLOSED`, `OPEN`, `HALF_OPEN`) |
 | **Containerization & Proxy** | Docker, Docker Compose, Nginx Alpine |
 | **CI/CD & Automation** | GitHub Actions |
 | **File Upload Handling** | Multer |
@@ -241,13 +240,6 @@ External dependencies (Cloudinary API) are wrapped in a 3-state state machine (`
 * **`OPEN`**: Tripped upon threshold breach. Immediately short-circuits calls to the fallback handler without network latency, preventing thread starvation.
 * **`HALF_OPEN`**: After a 30-second cooldown period, a single probe request is permitted. A successful response closes the circuit; failure re-opens it.
 * Diagnostics and real-time state are exposed through the `/api/v1/health` endpoint.
-
-### 8. Multi-Process Load Balancing (Node.js Cluster)
-When `CLUSTER_MODE=true` is enabled, `server.js` initiates process clustering using Node.js `node:cluster`:
-* The primary master process forks worker processes equal to `WEB_CONCURRENCY` (or system CPU count).
-* The OS kernel distributes incoming connections evenly across workers using round-robin scheduling.
-* Master process monitors worker health and automatically spawns replacement workers upon unhandled exits.
-* Background singletons (`seedAdmin()` and `startHackathonScheduler()`) execute exclusively on the master process to eliminate duplicate cron intervals.
 
 ---
 
@@ -471,10 +463,6 @@ CLIENT_URL=http://localhost:5173
 MONGO_URI=mongodb://localhost:27017/hackverse
 JWT_SECRET=your_jwt_secret_key_here
 JWT_EXPIRES_IN=7d
-
-# Process Cluster / Load Balancer Settings
-CLUSTER_MODE=false
-WEB_CONCURRENCY=2
 
 # Rate Limiting Configuration
 RATE_LIMIT_WINDOW_MS=900000

@@ -39,9 +39,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-hackverse_production_jwt_secret_key_change_me_in_prod}
       JWT_EXPIRES_IN: 7d
       CLIENT_URL: http://localhost:5173
-      # Process Cluster / Load Balancer toggle
-      CLUSTER_MODE: ${CLUSTER_MODE:-false}
-      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
       # Rate Limiting Configuration
       RATE_LIMIT_WINDOW_MS: 900000
       RATE_LIMIT_MAX_REQUESTS: 150
