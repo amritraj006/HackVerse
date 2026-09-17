@@ -1,10 +1,10 @@
-const User = require('../models/User');
-const logger = require('./logger');
+import User from '../models/User.js';
+import logger from './logger.js';
 
 /**
  * Seed initial default Super Admin account if no admin exists in database.
  */
-const seedAdmin = async () => {
+export const seedAdmin = async () => {
   try {
     const adminExists = await User.findOne({ role: 'admin' });
     if (!adminExists) {
@@ -26,4 +26,4 @@ const seedAdmin = async () => {
   }
 };
 
-module.exports = seedAdmin;
+export default seedAdmin;

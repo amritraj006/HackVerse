@@ -1,6 +1,5 @@
-const rateLimit = require('express-rate-limit');
-const { ipKeyGenerator } = rateLimit;
-const { errorResponse } = require('../utils/apiResponse');
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import { errorResponse } from '../utils/apiResponse.js';
 
 /**
  * Hybrid Rate-Limit Key Generator:
@@ -12,7 +11,7 @@ const { errorResponse } = require('../utils/apiResponse');
  * - Safe fallback to IP when req.user is absent
  * - Uses express-rate-limit's ipKeyGenerator to normalize IPv6 subnets (/56) and prevent address cycling bypasses
  */
-const getRateLimitKey = (req) => {
+export const getRateLimitKey = (req) => {
   if (req.user?.id) {
     return `user:${req.user.id}`;
   }
@@ -24,7 +23,7 @@ const getRateLimitKey = (req) => {
 /**
  * Standard handler for rate limit violations returning unified API error response
  */
-const createRateLimitHandler = (customMessage) => {
+export const createRateLimitHandler = (customMessage) => {
   return (req, res, next, options) => {
     const retryAfter = Math.ceil(options.windowMs / 1000 / 60);
     return errorResponse(
@@ -40,7 +39,7 @@ const createRateLimitHandler = (customMessage) => {
  * Applied across all /api/v1 routes (150 requests per 15 minutes by default)
  * Hybrid key: user ID if authenticated, client IP fallback if unauthenticated
  */
-const globalApiLimiter = rateLimit({
+export const globalApiLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
   max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '150', 10),
   standardHeaders: true, // Return standard RateLimit headers in response
@@ -58,7 +57,7 @@ const globalApiLimiter = rateLimit({
  * Protects login and registration against credential stuffing & brute-force attacks (10 attempts per 15 mins)
  * Strictly IP-based (unauthenticated users do not possess a verified authenticated identity)
  */
-const authRateLimiter = rateLimit({
+export const authRateLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
   max: parseInt(process.env.AUTH_RATE_LIMIT_MAX || '10', 10),
   standardHeaders: true,
@@ -71,7 +70,7 @@ const authRateLimiter = rateLimit({
  * Guards heavy multipart/form-data upload endpoints (20 uploads per 15 mins)
  * Hybrid key: user ID if authenticated, client IP fallback if unauthenticated
  */
-const uploadRateLimiter = rateLimit({
+export const uploadRateLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes
   max: parseInt(process.env.UPLOAD_RATE_LIMIT_MAX || '20', 10),
   standardHeaders: true,
@@ -80,7 +79,7 @@ const uploadRateLimiter = rateLimit({
   handler: createRateLimitHandler('Upload rate limit reached. Please wait before submitting additional files.'),
 });
 
-module.exports = {
+export default {
   getRateLimitKey,
   createRateLimitHandler,
   globalApiLimiter,

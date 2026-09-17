@@ -1,16 +1,16 @@
-const { errorResponse } = require('../utils/apiResponse');
+import { errorResponse } from '../utils/apiResponse.js';
 
 /**
  * 404 Not Found Middleware
  */
-const notFoundHandler = (req, res, next) => {
+export const notFoundHandler = (req, res, next) => {
   return errorResponse(res, 404, `Cannot find route ${req.originalUrl} on this server`);
 };
 
 /**
  * Global Error Handler Middleware
  */
-const globalErrorHandler = (err, req, res, next) => {
+export const globalErrorHandler = (err, req, res, next) => {
   console.error('[Error Middleware]', err);
 
   const statusCode = err.statusCode || err.status || 500;
@@ -20,7 +20,7 @@ const globalErrorHandler = (err, req, res, next) => {
   return errorResponse(res, statusCode, message, errors);
 };
 
-module.exports = {
+export default {
   notFoundHandler,
   globalErrorHandler,
 };

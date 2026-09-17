@@ -1,8 +1,8 @@
-const User = require('../models/User');
-const adminService = require('../services/adminService');
-const uploadService = require('../services/uploadService');
-const asyncHandler = require('../utils/asyncHandler');
-const { successResponse, errorResponse } = require('../utils/apiResponse');
+import User from '../models/User.js';
+import adminService from '../services/adminService.js';
+import uploadService from '../services/uploadService.js';
+import asyncHandler from '../utils/asyncHandler.js';
+import { successResponse, errorResponse } from '../utils/apiResponse.js';
 
 /**
  * @desc    Get user list
@@ -98,7 +98,15 @@ const uploadAvatar = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = {
+export {
+  getUsers,
+  getUserProfile,
+  getCurrentProfile,
+  updateProfile,
+  uploadAvatar,
+};
+
+export default {
   getUsers,
   getUserProfile,
   getCurrentProfile,

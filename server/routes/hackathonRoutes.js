@@ -1,6 +1,5 @@
-const express = require('express');
-const router = express.Router();
-const {
+import express from 'express';
+import {
   getHackathons,
   getHackathonById,
   getMyEvents,
@@ -17,12 +16,14 @@ const {
   getLeaderboard,
   getLeaderboardPreview,
   getJudgeView,
-} = require('../controllers/hackathonController');
-const { protect, authorize } = require('../middleware/authMiddleware');
-const {
+} from '../controllers/hackathonController.js';
+import { protect, authorize } from '../middleware/authMiddleware.js';
+import {
   createHackathonValidationRules,
   updateHackathonValidationRules,
-} = require('../validations/hackathonValidation');
+} from '../validations/hackathonValidation.js';
+
+const router = express.Router();
 
 // Public routes
 router.get('/', getHackathons);
@@ -106,4 +107,4 @@ router.get(
   getSubmissions
 );
 
-module.exports = router;
+export default router;

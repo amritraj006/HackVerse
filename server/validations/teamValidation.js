@@ -1,19 +1,7 @@
-const { body, validationResult } = require('express-validator');
-const { errorResponse } = require('../utils/apiResponse');
+import { body } from 'express-validator';
+import { validate } from './validate.js';
 
-const validate = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const formattedErrors = errors.array().map((err) => ({
-      field: err.path,
-      message: err.msg,
-    }));
-    return errorResponse(res, 400, 'Validation failed', formattedErrors);
-  }
-  next();
-};
-
-const createTeamValidationRules = [
+export const createTeamValidationRules = [
   body('hackathonId')
     .notEmpty()
     .withMessage('Hackathon ID is required')
@@ -23,12 +11,12 @@ const createTeamValidationRules = [
   validate,
 ];
 
-const joinTeamValidationRules = [
+export const joinTeamValidationRules = [
   body('joinCode').trim().notEmpty().withMessage('Join code is required'),
   validate,
 ];
 
-module.exports = {
+export default {
   createTeamValidationRules,
   joinTeamValidationRules,
 };

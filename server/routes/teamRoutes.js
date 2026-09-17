@@ -1,6 +1,5 @@
-const express = require('express');
-const router = express.Router();
-const {
+import express from 'express';
+import {
   createTeam,
   joinTeamByCode,
   getMyTeams,
@@ -11,12 +10,14 @@ const {
   transferLeadership,
   leaveTeam,
   deleteTeam,
-} = require('../controllers/teamController');
-const { protect } = require('../middleware/authMiddleware');
-const {
+} from '../controllers/teamController.js';
+import { protect } from '../middleware/authMiddleware.js';
+import {
   createTeamValidationRules,
   joinTeamValidationRules,
-} = require('../validations/teamValidation');
+} from '../validations/teamValidation.js';
+
+const router = express.Router();
 
 router.use(protect);
 
@@ -32,4 +33,4 @@ router.put('/:id/transfer-leadership', transferLeadership);
 router.post('/:id/leave', leaveTeam);
 router.delete('/:id', deleteTeam);
 
-module.exports = router;
+export default router;

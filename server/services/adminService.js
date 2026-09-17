@@ -1,26 +1,38 @@
-const User = require('../models/User');
-const Hackathon = require('../models/Hackathon');
-const Submission = require('../models/Submission');
-const Team = require('../models/Team');
-const Registration = require('../models/Registration');
-const Notification = require('../models/Notification');
+import User from '../models/User.js';
+import Hackathon from '../models/Hackathon.js';
+import Submission from '../models/Submission.js';
+import Team from '../models/Team.js';
+import Registration from '../models/Registration.js';
+import Notification from '../models/Notification.js';
 
-class AdminService {
+export class AdminService {
   /**
-   * Get overall system metrics and analytics
+   * Get overall system metrics and analytics (optimized with concurrent queries)
    */
   async getAnalytics() {
-    const totalUsers = await User.countDocuments();
-    const participantsCount = await User.countDocuments({ role: 'participant' });
-    const organizersCount = await User.countDocuments({ role: 'organizer' });
-    const judgesCount = await User.countDocuments({ role: 'judge' });
-    const adminsCount = await User.countDocuments({ role: 'admin' });
-    const blockedCount = await User.countDocuments({ isBlocked: true });
-
-    const totalHackathons = await Hackathon.countDocuments();
-    const activeHackathons = await Hackathon.countDocuments({ status: 'ongoing' });
-    const upcomingHackathons = await Hackathon.countDocuments({ status: 'upcoming' });
-    const totalSubmissions = await Submission.countDocuments();
+    const [
+      totalUsers,
+      participantsCount,
+      organizersCount,
+      judgesCount,
+      adminsCount,
+      blockedCount,
+      totalHackathons,
+      activeHackathons,
+      upcomingHackathons,
+      totalSubmissions,
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ role: 'participant' }),
+      User.countDocuments({ role: 'organizer' }),
+      User.countDocuments({ role: 'judge' }),
+      User.countDocuments({ role: 'admin' }),
+      User.countDocuments({ isBlocked: true }),
+      Hackathon.countDocuments(),
+      Hackathon.countDocuments({ status: 'ongoing' }),
+      Hackathon.countDocuments({ status: 'upcoming' }),
+      Submission.countDocuments(),
+    ]);
 
     return {
       users: {
@@ -78,14 +90,16 @@ class AdminService {
     const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
     const skip = (pageNum - 1) * limitNum;
 
-    const users = await User.find(query)
-      .select('-password')
-      .sort(sortObj)
-      .skip(skip)
-      .limit(limitNum)
-      .lean();
+    const [users, total] = await Promise.all([
+      User.find(query)
+        .select('-password')
+        .sort(sortObj)
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      User.countDocuments(query),
+    ]);
 
-    const total = await User.countDocuments(query);
     const pages = Math.ceil(total / limitNum) || 1;
 
     return {
@@ -98,7 +112,6 @@ class AdminService {
       },
     };
   }
-
 
   /**
    * Toggle or set user block status
@@ -197,14 +210,16 @@ class AdminService {
     const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
     const skip = (pageNum - 1) * limitNum;
 
-    const hackathons = await Hackathon.find(query)
-      .populate('organizer', 'name email avatar')
-      .sort(sortObj)
-      .skip(skip)
-      .limit(limitNum)
-      .lean();
+    const [hackathons, total] = await Promise.all([
+      Hackathon.find(query)
+        .populate('organizer', 'name email avatar')
+        .sort(sortObj)
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Hackathon.countDocuments(query),
+    ]);
 
-    const total = await Hackathon.countDocuments(query);
     const pages = Math.ceil(total / limitNum) || 1;
 
     return {
@@ -229,12 +244,14 @@ class AdminService {
       throw error;
     }
 
-    // Cascade delete teams, submissions, registrations, notifications
-    await Team.deleteMany({ hackathon: hackathonId });
-    await Submission.deleteMany({ hackathon: hackathonId });
-    await Registration.deleteMany({ hackathon: hackathonId });
-    await Notification.deleteMany({ hackathon: hackathonId });
-    await Hackathon.findByIdAndDelete(hackathonId);
+    // Cascade delete teams, submissions, registrations, notifications concurrently
+    await Promise.all([
+      Team.deleteMany({ hackathon: hackathonId }),
+      Submission.deleteMany({ hackathon: hackathonId }),
+      Registration.deleteMany({ hackathon: hackathonId }),
+      Notification.deleteMany({ hackathon: hackathonId }),
+      Hackathon.findByIdAndDelete(hackathonId),
+    ]);
 
     return { id: hackathonId, message: 'Hackathon and associated data deleted successfully' };
   }
@@ -270,15 +287,17 @@ class AdminService {
     const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
     const skip = (pageNum - 1) * limitNum;
 
-    const submissions = await Submission.find(query)
-      .populate('hackathon', 'title')
-      .populate('submittedBy', 'name email')
-      .sort(sortObj)
-      .skip(skip)
-      .limit(limitNum)
-      .lean();
+    const [submissions, total] = await Promise.all([
+      Submission.find(query)
+        .populate('hackathon', 'title')
+        .populate('submittedBy', 'name email')
+        .sort(sortObj)
+        .skip(skip)
+        .limit(limitNum)
+        .lean(),
+      Submission.countDocuments(query),
+    ]);
 
-    const total = await Submission.countDocuments(query);
     const pages = Math.ceil(total / limitNum) || 1;
 
     return {
@@ -291,7 +310,6 @@ class AdminService {
       },
     };
   }
-
 
   /**
    * Delete submission by ID
@@ -309,4 +327,5 @@ class AdminService {
   }
 }
 
-module.exports = new AdminService();
+export const adminService = new AdminService();
+export default adminService;

@@ -1,7 +1,6 @@
-require("dotenv").config();
-
-const connectDB = require("./config/db");
-const User = require("./models/User");
+import 'dotenv/config';
+import connectDB from './config/db.js';
+import User from './models/User.js';
 
 const users = [];
 
@@ -11,7 +10,7 @@ for (let i = 1; i <= 6; i++) {
     name: `User${i}`,
     email: `user${i}@gmail.com`,
     password: `user${i}@1234`,
-    role: "participant",
+    role: 'participant',
   });
 }
 
@@ -21,7 +20,7 @@ for (let i = 1; i <= 6; i++) {
     name: `Host${i}`,
     email: `host${i}@gmail.com`,
     password: `host${i}@1234`,
-    role: "organizer",
+    role: 'organizer',
   });
 }
 
@@ -31,7 +30,7 @@ for (let i = 1; i <= 6; i++) {
     name: `Judge${i}`,
     email: `judge${i}@gmail.com`,
     password: `judge${i}@1234`,
-    role: "judge",
+    role: 'judge',
   });
 }
 
@@ -48,10 +47,10 @@ const insertUsers = async () => {
       await user.save();
     }
 
-    console.log("✅ 18 users inserted successfully.");
+    console.log('✅ 18 users inserted successfully.');
     process.exit(0);
   } catch (error) {
-    console.error("❌ Error inserting users:", error);
+    console.error('❌ Error inserting users:', error);
     process.exit(1);
   }
 };

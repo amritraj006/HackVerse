@@ -1,6 +1,6 @@
-const asyncHandler = require('../utils/asyncHandler');
-const { successResponse } = require('../utils/apiResponse');
-const teamService = require('../services/teamService');
+import asyncHandler from '../utils/asyncHandler.js';
+import { successResponse } from '../utils/apiResponse.js';
+import teamService from '../services/teamService.js';
 
 /**
  * @desc    Create a new team
@@ -106,7 +106,20 @@ const deleteTeam = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'Team deleted successfully', result);
 });
 
-module.exports = {
+export {
+  createTeam,
+  joinTeamByCode,
+  getMyTeams,
+  getHackathonTeams,
+  getTeamById,
+  inviteMember,
+  removeMember,
+  transferLeadership,
+  leaveTeam,
+  deleteTeam,
+};
+
+export default {
   createTeam,
   joinTeamByCode,
   getMyTeams,

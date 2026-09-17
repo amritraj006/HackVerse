@@ -1,7 +1,7 @@
 /**
  * Standardized Success Response
  */
-const successResponse = (res, statusCode = 200, message = 'Success', data = null) => {
+export const successResponse = (res, statusCode = 200, message = 'Success', data = null) => {
   return res.status(statusCode).json({
     success: true,
     message,
@@ -12,7 +12,7 @@ const successResponse = (res, statusCode = 200, message = 'Success', data = null
 /**
  * Standardized Error Response
  */
-const errorResponse = (res, statusCode = 500, message = 'Internal Server Error', errors = null) => {
+export const errorResponse = (res, statusCode = 500, message = 'Internal Server Error', errors = null) => {
   return res.status(statusCode).json({
     success: false,
     message,
@@ -20,7 +20,7 @@ const errorResponse = (res, statusCode = 500, message = 'Internal Server Error',
   });
 };
 
-module.exports = {
+export default {
   successResponse,
   errorResponse,
 };

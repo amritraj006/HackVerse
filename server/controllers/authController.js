@@ -1,13 +1,13 @@
-const asyncHandler = require('../utils/asyncHandler');
-const { successResponse } = require('../utils/apiResponse');
-const authService = require('../services/authService');
+import asyncHandler from '../utils/asyncHandler.js';
+import { successResponse } from '../utils/apiResponse.js';
+import authService from '../services/authService.js';
 
 /**
  * @desc    Register / Signup a new user
  * @route   POST /api/v1/auth/signup or /api/v1/auth/register
  * @access  Public
  */
-const register = asyncHandler(async (req, res) => {
+export const register = asyncHandler(async (req, res) => {
   const result = await authService.registerUser(req.body);
   return successResponse(res, 201, 'User registered successfully', result);
 });
@@ -17,7 +17,7 @@ const register = asyncHandler(async (req, res) => {
  * @route   POST /api/v1/auth/login
  * @access  Public
  */
-const login = asyncHandler(async (req, res) => {
+export const login = asyncHandler(async (req, res) => {
   const result = await authService.loginUser(req.body);
   return successResponse(res, 200, 'Login successful', result);
 });
@@ -27,7 +27,7 @@ const login = asyncHandler(async (req, res) => {
  * @route   POST /api/v1/auth/logout
  * @access  Public / Private
  */
-const logout = asyncHandler(async (req, res) => {
+export const logout = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'Logout successful', null);
 });
 
@@ -36,12 +36,12 @@ const logout = asyncHandler(async (req, res) => {
  * @route   GET /api/v1/auth/me
  * @access  Private
  */
-const getMe = asyncHandler(async (req, res) => {
+export const getMe = asyncHandler(async (req, res) => {
   const user = await authService.getUserProfile(req.user.id);
   return successResponse(res, 200, 'User profile retrieved successfully', { user });
 });
 
-module.exports = {
+export default {
   register,
   login,
   logout,

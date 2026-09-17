@@ -1,6 +1,5 @@
-const express = require('express');
-const router = express.Router();
-const {
+import express from 'express';
+import {
   getAnalytics,
   getUsers,
   toggleBlockUser,
@@ -10,8 +9,10 @@ const {
   deleteHackathon,
   getSubmissions,
   deleteSubmission,
-} = require('../controllers/adminController');
-const { protect, authorize } = require('../middleware/authMiddleware');
+} from '../controllers/adminController.js';
+import { protect, authorize } from '../middleware/authMiddleware.js';
+
+const router = express.Router();
 
 // All admin routes require authentication and Admin role
 router.use(protect, authorize('admin'));
@@ -33,4 +34,4 @@ router.delete('/hackathons/:id', deleteHackathon);
 router.get('/submissions', getSubmissions);
 router.delete('/submissions/:id', deleteSubmission);
 
-module.exports = router;
+export default router;

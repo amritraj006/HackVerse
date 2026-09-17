@@ -1,9 +1,9 @@
-const jwt = require('jsonwebtoken');
+import jwt from 'jsonwebtoken';
 
 /**
  * Generate a JWT token with user id and role payload
  */
-const generateToken = (user) => {
+export const generateToken = (user) => {
   return jwt.sign(
     {
       id: user._id,
@@ -17,6 +17,6 @@ const generateToken = (user) => {
   );
 };
 
-module.exports = {
+export default {
   generateToken,
 };

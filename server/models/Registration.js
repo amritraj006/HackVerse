@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const registrationSchema = new mongoose.Schema(
   {
@@ -30,4 +30,5 @@ const registrationSchema = new mongoose.Schema(
 // Unique registration per participant per hackathon
 registrationSchema.index({ hackathon: 1, participant: 1 }, { unique: true });
 
-module.exports = mongoose.model('Registration', registrationSchema);
+export const Registration = mongoose.model('Registration', registrationSchema);
+export default Registration;

@@ -1,13 +1,13 @@
-const asyncHandler = require('../utils/asyncHandler');
-const { successResponse } = require('../utils/apiResponse');
-const adminService = require('../services/adminService');
+import asyncHandler from '../utils/asyncHandler.js';
+import { successResponse } from '../utils/apiResponse.js';
+import adminService from '../services/adminService.js';
 
 /**
  * @desc    Get system analytics summary
  * @route   GET /api/v1/admin/analytics
  * @access  Private (Admin)
  */
-const getAnalytics = asyncHandler(async (req, res) => {
+export const getAnalytics = asyncHandler(async (req, res) => {
   const analytics = await adminService.getAnalytics();
   return successResponse(res, 200, 'Analytics retrieved successfully', analytics);
 });
@@ -17,7 +17,7 @@ const getAnalytics = asyncHandler(async (req, res) => {
  * @route   GET /api/v1/admin/users
  * @access  Private (Admin)
  */
-const getUsers = asyncHandler(async (req, res) => {
+export const getUsers = asyncHandler(async (req, res) => {
   const result = await adminService.getUsers(req.query);
   return successResponse(res, 200, 'Users list retrieved successfully', result);
 });
@@ -27,7 +27,7 @@ const getUsers = asyncHandler(async (req, res) => {
  * @route   PUT /api/v1/admin/users/:id/block
  * @access  Private (Admin)
  */
-const toggleBlockUser = asyncHandler(async (req, res) => {
+export const toggleBlockUser = asyncHandler(async (req, res) => {
   const { isBlocked } = req.body;
   const updatedUser = await adminService.toggleBlockUser(req.params.id, isBlocked);
   const statusMsg = updatedUser.isBlocked ? 'User has been blocked' : 'User has been unblocked';
@@ -39,7 +39,7 @@ const toggleBlockUser = asyncHandler(async (req, res) => {
  * @route   PUT /api/v1/admin/users/:id/role
  * @access  Private (Admin)
  */
-const updateUserRole = asyncHandler(async (req, res) => {
+export const updateUserRole = asyncHandler(async (req, res) => {
   const { role } = req.body;
   const updatedUser = await adminService.updateUserRole(req.params.id, role);
   return successResponse(res, 200, `User role updated to ${role}`, updatedUser);
@@ -50,7 +50,7 @@ const updateUserRole = asyncHandler(async (req, res) => {
  * @route   DELETE /api/v1/admin/users/:id
  * @access  Private (Admin)
  */
-const deleteUser = asyncHandler(async (req, res) => {
+export const deleteUser = asyncHandler(async (req, res) => {
   const result = await adminService.deleteUser(req.params.id);
   return successResponse(res, 200, 'User deleted successfully', result);
 });
@@ -60,7 +60,7 @@ const deleteUser = asyncHandler(async (req, res) => {
  * @route   GET /api/v1/admin/hackathons
  * @access  Private (Admin)
  */
-const getHackathons = asyncHandler(async (req, res) => {
+export const getHackathons = asyncHandler(async (req, res) => {
   const result = await adminService.getHackathons(req.query);
   return successResponse(res, 200, 'Hackathons retrieved successfully', result);
 });
@@ -70,7 +70,7 @@ const getHackathons = asyncHandler(async (req, res) => {
  * @route   DELETE /api/v1/admin/hackathons/:id
  * @access  Private (Admin)
  */
-const deleteHackathon = asyncHandler(async (req, res) => {
+export const deleteHackathon = asyncHandler(async (req, res) => {
   const result = await adminService.deleteHackathon(req.params.id);
   return successResponse(res, 200, 'Hackathon deleted successfully', result);
 });
@@ -80,7 +80,7 @@ const deleteHackathon = asyncHandler(async (req, res) => {
  * @route   GET /api/v1/admin/submissions
  * @access  Private (Admin)
  */
-const getSubmissions = asyncHandler(async (req, res) => {
+export const getSubmissions = asyncHandler(async (req, res) => {
   const result = await adminService.getSubmissions(req.query);
   return successResponse(res, 200, 'Submissions retrieved successfully', result);
 });
@@ -90,12 +90,12 @@ const getSubmissions = asyncHandler(async (req, res) => {
  * @route   DELETE /api/v1/admin/submissions/:id
  * @access  Private (Admin)
  */
-const deleteSubmission = asyncHandler(async (req, res) => {
+export const deleteSubmission = asyncHandler(async (req, res) => {
   const result = await adminService.deleteSubmission(req.params.id);
   return successResponse(res, 200, 'Submission deleted successfully', result);
 });
 
-module.exports = {
+export default {
   getAnalytics,
   getUsers,
   toggleBlockUser,

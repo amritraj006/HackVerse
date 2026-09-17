@@ -1,6 +1,6 @@
-const asyncHandler = require('../utils/asyncHandler');
-const { successResponse } = require('../utils/apiResponse');
-const submissionService = require('../services/submissionService');
+import asyncHandler from '../utils/asyncHandler.js';
+import { successResponse } from '../utils/apiResponse.js';
+import submissionService from '../services/submissionService.js';
 
 /**
  * @desc    Submit or update project
@@ -92,7 +92,19 @@ const declareWinner = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'Winner declared successfully! Winning status updated for all team members.', winnerSubmission);
 });
 
-module.exports = {
+export {
+  submitProject,
+  getMySubmissions,
+  getAllSubmissions,
+  getHackathonSubmissions,
+  getSubmissionById,
+  deleteSubmission,
+  getAssignedSubmissions,
+  submitEvaluation,
+  declareWinner,
+};
+
+export default {
   submitProject,
   getMySubmissions,
   getAllSubmissions,

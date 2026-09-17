@@ -1,15 +1,16 @@
-const express = require('express');
-const router = express.Router();
-const {
+import express from 'express';
+import {
   getUsers,
   getUserProfile,
   getCurrentProfile,
   updateProfile,
   uploadAvatar,
-} = require('../controllers/userController');
-const { protect, authorize } = require('../middleware/authMiddleware');
-const upload = require('../middleware/uploadMiddleware');
-const { uploadRateLimiter } = require('../middleware/rateLimiter');
+} from '../controllers/userController.js';
+import { protect, authorize } from '../middleware/authMiddleware.js';
+import upload from '../middleware/uploadMiddleware.js';
+import { uploadRateLimiter } from '../middleware/rateLimiter.js';
+
+const router = express.Router();
 
 // Profile routes
 router.get('/profile', protect, getCurrentProfile);
@@ -22,4 +23,4 @@ router.get('/', protect, authorize('admin', 'organizer'), getUsers);
 // Public profile by ID (Keep last to avoid route conflict)
 router.get('/:id', getUserProfile);
 
-module.exports = router;
+export default router;

@@ -1,6 +1,5 @@
-const express = require('express');
-const router = express.Router();
-const {
+import express from 'express';
+import {
   submitProject,
   getMySubmissions,
   getAllSubmissions,
@@ -10,10 +9,12 @@ const {
   getAssignedSubmissions,
   submitEvaluation,
   declareWinner,
-} = require('../controllers/submissionController');
-const { protect, authorize } = require('../middleware/authMiddleware');
-const upload = require('../middleware/uploadMiddleware');
-const { uploadRateLimiter } = require('../middleware/rateLimiter');
+} from '../controllers/submissionController.js';
+import { protect, authorize } from '../middleware/authMiddleware.js';
+import upload from '../middleware/uploadMiddleware.js';
+import { uploadRateLimiter } from '../middleware/rateLimiter.js';
+
+const router = express.Router();
 
 // Public showcase & single submission detail
 router.get('/', getAllSubmissions);
@@ -24,7 +25,6 @@ router.post('/:id/evaluations', protect, authorize('judge', 'admin'), submitEval
 router.put('/:id/winner', protect, authorize('judge', 'admin'), declareWinner);
 router.get('/my-submissions', protect, getMySubmissions);
 router.get('/hackathon/:hackathonId', protect, getHackathonSubmissions);
-
 
 // Create / Update project submission with file uploads
 router.post(
@@ -43,4 +43,4 @@ router.delete('/:id', protect, deleteSubmission);
 // Keep the project detail publicly accessible, but after all named routes.
 router.get('/:id', getSubmissionById);
 
-module.exports = router;
+export default router;

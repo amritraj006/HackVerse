@@ -1,8 +1,9 @@
-const Submission = require('../models/Submission');
-const Hackathon = require('../models/Hackathon');
-const Team = require('../models/Team');
-const Registration = require('../models/Registration');
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
+import Submission from '../models/Submission.js';
+import Hackathon from '../models/Hackathon.js';
+import Team from '../models/Team.js';
+import Registration from '../models/Registration.js';
+import User from '../models/User.js';
 
 const JUDGING_CRITERIA = [
   { criterion: 'Innovation', maxScore: 10 },
@@ -444,8 +445,6 @@ class SubmissionService {
    * - Clears the isWinner flag from any previously declared winner for the same hackathon.
    */
   async declareWinner(submissionId, userId, userRole) {
-    const User = require('../models/User');
-
     const submission = await Submission.findById(submissionId)
       .populate('team', 'name leader members')
       .populate('teamMembers', '_id name')
@@ -516,4 +515,5 @@ class SubmissionService {
   }
 }
 
-module.exports = new SubmissionService();
+export const submissionService = new SubmissionService();
+export default submissionService;

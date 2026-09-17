@@ -1,11 +1,11 @@
-const Hackathon = require('../models/Hackathon');
+import Hackathon from '../models/Hackathon.js';
 
 /**
  * Automatically updates hackathon statuses based on current date:
  * - 'upcoming' -> 'ongoing' when current date >= startDate
  * - 'ongoing' -> 'ended' when current date >= endDate
  */
-const updateHackathonStatuses = async () => {
+export const updateHackathonStatuses = async () => {
   try {
     const now = new Date();
 
@@ -58,7 +58,7 @@ const updateHackathonStatuses = async () => {
  * Initializes periodic background task for lifecycle management
  * @param {number} intervalMs - Interval in milliseconds (default: 60 seconds)
  */
-const startHackathonScheduler = (intervalMs = 60000) => {
+export const startHackathonScheduler = (intervalMs = 60000) => {
   // Run once immediately on start
   updateHackathonStatuses();
 
@@ -67,7 +67,7 @@ const startHackathonScheduler = (intervalMs = 60000) => {
   return intervalId;
 };
 
-module.exports = {
+export default {
   updateHackathonStatuses,
   startHackathonScheduler,
 };

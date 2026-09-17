@@ -1,12 +1,13 @@
-const express = require('express');
-const router = express.Router();
-const {
+import express from 'express';
+import {
   getNotifications,
   acceptInvitation,
   rejectInvitation,
   markAllAsRead,
-} = require('../controllers/notificationController');
-const { protect } = require('../middleware/authMiddleware');
+} from '../controllers/notificationController.js';
+import { protect } from '../middleware/authMiddleware.js';
+
+const router = express.Router();
 
 router.use(protect);
 
@@ -15,4 +16,4 @@ router.put('/read-all', markAllAsRead);
 router.post('/:id/accept', acceptInvitation);
 router.post('/:id/reject', rejectInvitation);
 
-module.exports = router;
+export default router;

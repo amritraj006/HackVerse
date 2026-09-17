@@ -1,13 +1,13 @@
-const asyncHandler = require('../utils/asyncHandler');
-const { successResponse } = require('../utils/apiResponse');
-const participantService = require('../services/participantService');
+import asyncHandler from '../utils/asyncHandler.js';
+import { successResponse } from '../utils/apiResponse.js';
+import participantService from '../services/participantService.js';
 
 /**
  * @desc    Register current user for a hackathon
  * @route   POST /api/v1/registrations/:hackathonId
  * @access  Private (Participant/Admin)
  */
-const register = asyncHandler(async (req, res) => {
+export const register = asyncHandler(async (req, res) => {
   const registration = await participantService.registerForHackathon(
     req.params.hackathonId,
     req.user.id,
@@ -21,7 +21,7 @@ const register = asyncHandler(async (req, res) => {
  * @route   DELETE /api/v1/registrations/:hackathonId
  * @access  Private (Participant/Admin)
  */
-const cancelRegistration = asyncHandler(async (req, res) => {
+export const cancelRegistration = asyncHandler(async (req, res) => {
   const result = await participantService.cancelRegistration(
     req.params.hackathonId,
     req.user.id
@@ -34,7 +34,7 @@ const cancelRegistration = asyncHandler(async (req, res) => {
  * @route   GET /api/v1/registrations/my-registrations
  * @access  Private
  */
-const getMyRegistrations = asyncHandler(async (req, res) => {
+export const getMyRegistrations = asyncHandler(async (req, res) => {
   const result = await participantService.getMyRegistrations(req.user.id, req.query);
   return successResponse(res, 200, 'Registrations retrieved successfully', result);
 });
@@ -44,7 +44,7 @@ const getMyRegistrations = asyncHandler(async (req, res) => {
  * @route   GET /api/v1/registrations/:hackathonId/status
  * @access  Private
  */
-const getRegistrationStatus = asyncHandler(async (req, res) => {
+export const getRegistrationStatus = asyncHandler(async (req, res) => {
   const result = await participantService.getRegistrationStatus(
     req.params.hackathonId,
     req.user.id
@@ -52,7 +52,7 @@ const getRegistrationStatus = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'Registration status retrieved', result);
 });
 
-module.exports = {
+export default {
   register,
   cancelRegistration,
   getMyRegistrations,

@@ -1,7 +1,10 @@
-const Registration = require('../models/Registration');
-const Hackathon = require('../models/Hackathon');
-const User = require('../models/User');
-const Team = require('../models/Team');
+import Registration from '../models/Registration.js';
+import Hackathon from '../models/Hackathon.js';
+import User from '../models/User.js';
+import Team from '../models/Team.js';
+import Notification from '../models/Notification.js';
+import Submission from '../models/Submission.js';
+import hackathonService from './hackathonService.js';
 
 class ParticipantService {
   /**
@@ -49,7 +52,6 @@ class ParticipantService {
     }
 
     // Check participant limit slots availability
-    const hackathonService = require('./hackathonService');
     const stats = await hackathonService.getParticipantStats(hackathonId);
     if (hackathon.maxParticipants > 0 && stats.totalRegisteredUsers >= hackathon.maxParticipants) {
       const error = new Error(`Registration full: This hackathon has reached its maximum capacity of ${hackathon.maxParticipants} participants.`);
@@ -104,9 +106,6 @@ class ParticipantService {
    * Cancel participant registration for a hackathon
    */
   async cancelRegistration(hackathonId, participantId) {
-    const Team = require('../models/Team');
-    const Notification = require('../models/Notification');
-
     // Fetch hackathon to check if it has started
     const hackathon = await Hackathon.findById(hackathonId);
     if (!hackathon) {
@@ -298,7 +297,6 @@ class ParticipantService {
       .populate('leader', 'name email avatar')
       .populate('members', 'name email avatar skills');
 
-    const Submission = require('../models/Submission');
     let submission = null;
 
     if (userTeam) {
@@ -335,4 +333,5 @@ class ParticipantService {
   }
 }
 
-module.exports = new ParticipantService();
+export const participantService = new ParticipantService();
+export default participantService;

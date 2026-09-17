@@ -1,10 +1,10 @@
-const cloudinary = require('../config/cloudinary');
-const fs = require('fs');
-const path = require('path');
-const logger = require('../utils/logger');
-const { CircuitBreaker } = require('../utils/CircuitBreaker');
+import fs from 'node:fs';
+import path from 'node:path';
+import cloudinary from '../config/cloudinary.js';
+import logger from '../utils/logger.js';
+import { CircuitBreaker } from '../utils/CircuitBreaker.js';
 
-class UploadService {
+export class UploadService {
   constructor() {
     // Circuit breaker guarding Cloudinary external uploads
     this.cloudinaryBreaker = new CircuitBreaker({
@@ -31,10 +31,11 @@ class UploadService {
     const localUrl = `/uploads/${file.filename}`;
 
     // Check if Cloudinary credentials are configured
-    const hasCloudinaryCreds =
+    const hasCloudinaryCreds = Boolean(
       process.env.CLOUDINARY_CLOUD_NAME &&
       process.env.CLOUDINARY_API_KEY &&
-      process.env.CLOUDINARY_API_SECRET;
+      process.env.CLOUDINARY_API_SECRET
+    );
 
     if (!hasCloudinaryCreds) {
       logger.info('[UploadService] Cloudinary credentials not configured; using local storage.');
@@ -79,4 +80,5 @@ class UploadService {
   }
 }
 
-module.exports = new UploadService();
+export const uploadService = new UploadService();
+export default uploadService;

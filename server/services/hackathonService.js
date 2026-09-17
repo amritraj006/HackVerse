@@ -1,10 +1,10 @@
-const Hackathon = require('../models/Hackathon');
-const Team = require('../models/Team');
-const Submission = require('../models/Submission');
-const Registration = require('../models/Registration');
-const Notification = require('../models/Notification');
-const User = require('../models/User');
-const { updateHackathonStatuses } = require('../utils/hackathonScheduler');
+import Hackathon from '../models/Hackathon.js';
+import Team from '../models/Team.js';
+import Submission from '../models/Submission.js';
+import Registration from '../models/Registration.js';
+import Notification from '../models/Notification.js';
+import User from '../models/User.js';
+import { updateHackathonStatuses } from '../utils/hackathonScheduler.js';
 
 class HackathonService {
   /**
@@ -97,8 +97,11 @@ class HackathonService {
    * e.g. 3 teams with 3 members each = 9 team users, 11 solo users = 20 total users.
    */
   async getParticipantStats(hackathonId) {
-    const hackathon = await Hackathon.findById(hackathonId).select('maxParticipants');
-    const teams = await Team.find({ hackathon: hackathonId }).select('leader members');
+    const [hackathon, teams, registrations] = await Promise.all([
+      Hackathon.findById(hackathonId).select('maxParticipants'),
+      Team.find({ hackathon: hackathonId }).select('leader members'),
+      Registration.find({ hackathon: hackathonId, status: 'active' }).select('participant'),
+    ]);
 
     const teamMemberIds = new Set();
     teams.forEach((t) => {
@@ -106,7 +109,6 @@ class HackathonService {
       (t.members || []).forEach((m) => teamMemberIds.add(m.toString()));
     });
 
-    const registrations = await Registration.find({ hackathon: hackathonId, status: 'active' }).select('participant');
     const soloUserIds = new Set();
 
     registrations.forEach((r) => {
@@ -809,7 +811,6 @@ class HackathonService {
 
     // Send notifications to all team members when status changes
     if (status === 'approved' && prevStatus !== 'approved') {
-      const Notification = require('../models/Notification');
       const leaderIdStr = team.leader?._id ? team.leader._id.toString() : team.leader.toString();
       const memberIdsStr = (team.members || []).map((m) => (m._id ? m._id.toString() : m.toString()));
       const allMemberIds = Array.from(new Set([leaderIdStr, ...memberIdsStr]));
@@ -827,7 +828,6 @@ class HackathonService {
         });
       }
     } else if (status === 'rejected' && prevStatus !== 'rejected') {
-      const Notification = require('../models/Notification');
       const leaderIdStr = team.leader?._id ? team.leader._id.toString() : team.leader.toString();
       const memberIdsStr = (team.members || []).map((m) => (m._id ? m._id.toString() : m.toString()));
       const allMemberIds = Array.from(new Set([leaderIdStr, ...memberIdsStr]));
@@ -927,4 +927,5 @@ class HackathonService {
   }
 }
 
-module.exports = new HackathonService();
+export const hackathonService = new HackathonService();
+export default hackathonService;

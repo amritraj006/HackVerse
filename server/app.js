@@ -1,9 +1,13 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const apiRoutes = require('./routes');
-const { notFoundHandler, globalErrorHandler } = require('./middleware/errorMiddleware');
-const { globalApiLimiter } = require('./middleware/rateLimiter');
+import express from 'express';
+import cors from 'cors';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import apiRoutes from './routes/index.js';
+import { notFoundHandler, globalErrorHandler } from './middleware/errorMiddleware.js';
+import { globalApiLimiter } from './middleware/rateLimiter.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -20,7 +24,7 @@ const allowedOrigins = [
 // Middlewares
 app.use(
   cors({
-    origin: function (origin, callback) {
+    origin: (origin, callback) => {
       // Allow requests with no origin (Postman, mobile apps, curl, etc.)
       if (!origin) return callback(null, true);
 
@@ -55,4 +59,5 @@ app.use('/api/v1', globalApiLimiter, apiRoutes);
 app.use(notFoundHandler);
 app.use(globalErrorHandler);
 
-module.exports = app;
+export { app };
+export default app;

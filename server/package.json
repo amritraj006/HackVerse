@@ -1,9 +1,10 @@
 {
   "name": "server",
   "version": "1.0.0",
+  "type": "module",
   "main": "server.js",
   "scripts": {
-    "test": "node --check server.js app.js utils/*.js services/*.js middleware/*.js controllers/*.js routes/*.js",
+    "test": "node --check server.js app.js config/*.js models/*.js utils/*.js services/*.js middleware/*.js controllers/*.js routes/*.js validations/*.js insert.js",
     "start": "node server.js",
     "dev": "nodemon server.js"
   },

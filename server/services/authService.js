@@ -1,13 +1,14 @@
-const User = require('../models/User');
-const { generateToken } = require('../utils/jwtUtils');
+import User from '../models/User.js';
+import { generateToken } from '../utils/jwtUtils.js';
 
-class AuthService {
+export class AuthService {
   /**
    * Register a new user
    */
   async registerUser({ name, email, password, role }) {
     // Check if user already exists
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    const normalizedEmail = email.trim().toLowerCase();
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       const error = new Error('User with this email already exists');
       error.statusCode = 400;
@@ -20,8 +21,8 @@ class AuthService {
 
     // Create user
     const user = await User.create({
-      name,
-      email,
+      name: name.trim(),
+      email: normalizedEmail,
       password,
       role: assignedRole,
     });
@@ -40,7 +41,8 @@ class AuthService {
    */
   async loginUser({ email, password }) {
     // Find user and explicitly include password field
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    const normalizedEmail = email.trim().toLowerCase();
+    const user = await User.findOne({ email: normalizedEmail }).select('+password');
 
     if (!user) {
       const error = new Error('Invalid email or password');
@@ -86,4 +88,5 @@ class AuthService {
   }
 }
 
-module.exports = new AuthService();
+export const authService = new AuthService();
+export default authService;

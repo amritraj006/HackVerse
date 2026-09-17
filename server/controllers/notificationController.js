@@ -1,8 +1,8 @@
-const Notification = require('../models/Notification');
-const teamService = require('../services/teamService');
-const hackathonService = require('../services/hackathonService');
-const asyncHandler = require('../utils/asyncHandler');
-const { successResponse } = require('../utils/apiResponse');
+import Notification from '../models/Notification.js';
+import teamService from '../services/teamService.js';
+import hackathonService from '../services/hackathonService.js';
+import asyncHandler from '../utils/asyncHandler.js';
+import { successResponse } from '../utils/apiResponse.js';
 
 /**
  * @desc    Get user notifications
@@ -86,7 +86,14 @@ const markAllAsRead = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'All notifications marked as read', null);
 });
 
-module.exports = {
+export {
+  getNotifications,
+  acceptInvitation,
+  rejectInvitation,
+  markAllAsRead,
+};
+
+export default {
   getNotifications,
   acceptInvitation,
   rejectInvitation,

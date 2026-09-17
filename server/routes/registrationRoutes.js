@@ -1,12 +1,13 @@
-const express = require('express');
-const router = express.Router();
-const {
+import express from 'express';
+import {
   register,
   cancelRegistration,
   getMyRegistrations,
   getRegistrationStatus,
-} = require('../controllers/participantController');
-const { protect } = require('../middleware/authMiddleware');
+} from '../controllers/participantController.js';
+import { protect } from '../middleware/authMiddleware.js';
+
+const router = express.Router();
 
 // All registration routes require authentication
 router.use(protect);
@@ -19,4 +20,4 @@ router.get('/:hackathonId/status', getRegistrationStatus);
 router.post('/:hackathonId', register);
 router.delete('/:hackathonId', cancelRegistration);
 
-module.exports = router;
+export default router;

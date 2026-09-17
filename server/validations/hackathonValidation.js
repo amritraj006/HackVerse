@@ -1,15 +1,7 @@
-const { body, validationResult } = require('express-validator');
-const { errorResponse } = require('../utils/apiResponse');
+import { body } from 'express-validator';
+import { validate } from './validate.js';
 
-const validate = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return errorResponse(res, 400, 'Validation failed', errors.array());
-  }
-  next();
-};
-
-const createHackathonValidationRules = [
+export const createHackathonValidationRules = [
   body('title').notEmpty().withMessage('Hackathon title is required'),
   body('description').notEmpty().withMessage('Description is required'),
   body('registrationDeadline')
@@ -36,7 +28,7 @@ const createHackathonValidationRules = [
   validate,
 ];
 
-const updateHackathonValidationRules = [
+export const updateHackathonValidationRules = [
   body('title').optional().notEmpty().withMessage('Hackathon title cannot be empty'),
   body('description').optional().notEmpty().withMessage('Description cannot be empty'),
   body('registrationDeadline')
@@ -58,8 +50,7 @@ const updateHackathonValidationRules = [
   validate,
 ];
 
-module.exports = {
+export default {
   createHackathonValidationRules,
   updateHackathonValidationRules,
 };
-

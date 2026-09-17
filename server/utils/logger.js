@@ -1,7 +1,7 @@
 /**
  * Basic logger utility for structured console logging
  */
-const logger = {
+export const logger = {
   info: (msg, meta = '') => {
     console.log(`[INFO] [${new Date().toISOString()}] ${msg}`, meta);
   },
@@ -18,4 +18,4 @@ const logger = {
   },
 };
 
-module.exports = logger;
+export default logger;

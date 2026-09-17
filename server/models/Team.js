@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const teamSchema = new mongoose.Schema(
   {
@@ -65,5 +65,5 @@ teamSchema.index({ leader: 1 });
 teamSchema.index({ members: 1 });
 teamSchema.index({ joinCode: 1 });
 
-module.exports = mongoose.model('Team', teamSchema);
-
+export const Team = mongoose.model('Team', teamSchema);
+export default Team;

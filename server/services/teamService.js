@@ -1,9 +1,10 @@
-const Team = require('../models/Team');
-const Hackathon = require('../models/Hackathon');
-const User = require('../models/User');
-const Notification = require('../models/Notification');
-const Registration = require('../models/Registration');
-const crypto = require('crypto');
+import crypto from 'node:crypto';
+import Team from '../models/Team.js';
+import Hackathon from '../models/Hackathon.js';
+import User from '../models/User.js';
+import Notification from '../models/Notification.js';
+import Registration from '../models/Registration.js';
+import hackathonService from './hackathonService.js';
 
 class TeamService {
   /**
@@ -114,7 +115,6 @@ class TeamService {
     }
 
     if (hackathon && hackathon.maxParticipants > 0) {
-      const hackathonService = require('./hackathonService');
       const stats = await hackathonService.getParticipantStats(hackathon._id);
       if (stats.totalRegisteredUsers + 1 > hackathon.maxParticipants) {
         const error = new Error(`Registration full: Cannot join team because hackathon participant limit of ${hackathon.maxParticipants} users has been reached.`);
@@ -307,7 +307,6 @@ class TeamService {
     }
 
     if (team.hackathon && team.hackathon.maxParticipants > 0) {
-      const hackathonService = require('./hackathonService');
       const stats = await hackathonService.getParticipantStats(team.hackathon._id);
       if (stats.totalRegisteredUsers + 1 > team.hackathon.maxParticipants) {
         const error = new Error(`Cannot send invitation: Hackathon participant limit of ${team.hackathon.maxParticipants} users has been reached.`);
@@ -417,7 +416,6 @@ class TeamService {
     }
 
     if (team.hackathon && team.hackathon.maxParticipants > 0) {
-      const hackathonService = require('./hackathonService');
       const stats = await hackathonService.getParticipantStats(team.hackathon._id);
       if (stats.totalRegisteredUsers + 1 > team.hackathon.maxParticipants) {
         const error = new Error(`Registration full: Cannot accept invitation because hackathon participant limit of ${team.hackathon.maxParticipants} users has been reached.`);
@@ -673,4 +671,5 @@ class TeamService {
   }
 }
 
-module.exports = new TeamService();
+export const teamService = new TeamService();
+export default teamService;

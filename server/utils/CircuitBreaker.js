@@ -1,12 +1,12 @@
-const logger = require('./logger');
+import logger from './logger.js';
 
-const CircuitState = Object.freeze({
+export const CircuitState = Object.freeze({
   CLOSED: 'CLOSED',
   OPEN: 'OPEN',
   HALF_OPEN: 'HALF_OPEN',
 });
 
-class CircuitBreaker {
+export class CircuitBreaker {
   /**
    * @param {Object} options
    * @param {string} options.name - Service or operation identifier
@@ -162,7 +162,4 @@ class CircuitBreaker {
   }
 }
 
-module.exports = {
-  CircuitBreaker,
-  CircuitState,
-};
+export default CircuitBreaker;

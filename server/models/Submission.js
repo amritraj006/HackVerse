@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const submissionSchema = new mongoose.Schema(
   {
@@ -128,5 +128,5 @@ submissionSchema.index({ hackathon: 1, status: 1, score: -1 });
 submissionSchema.index({ status: 1, createdAt: -1 });
 submissionSchema.index({ 'evaluations.judge': 1 });
 
-module.exports = mongoose.model('Submission', submissionSchema);
-
+export const Submission = mongoose.model('Submission', submissionSchema);
+export default Submission;

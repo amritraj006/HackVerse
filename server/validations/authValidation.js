@@ -1,19 +1,7 @@
-const { body, validationResult } = require('express-validator');
-const { errorResponse } = require('../utils/apiResponse');
+import { body } from 'express-validator';
+import { validate } from './validate.js';
 
-const validate = (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    const formattedErrors = errors.array().map((err) => ({
-      field: err.path,
-      message: err.msg,
-    }));
-    return errorResponse(res, 400, 'Validation failed', formattedErrors);
-  }
-  next();
-};
-
-const registerValidationRules = [
+export const registerValidationRules = [
   body('name').trim().notEmpty().withMessage('Name is required'),
   body('email').trim().isEmail().withMessage('Please provide a valid email address').normalizeEmail(),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters long'),
@@ -24,13 +12,13 @@ const registerValidationRules = [
   validate,
 ];
 
-const loginValidationRules = [
+export const loginValidationRules = [
   body('email').trim().isEmail().withMessage('Please provide a valid email address').normalizeEmail(),
   body('password').notEmpty().withMessage('Password is required'),
   validate,
 ];
 
-module.exports = {
+export default {
   registerValidationRules,
   loginValidationRules,
 };

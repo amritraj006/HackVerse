@@ -1,8 +1,8 @@
-require('dotenv').config();
-const app = require('./app');
-const connectDB = require('./config/db');
-const seedAdmin = require('./utils/seedAdmin');
-const { startHackathonScheduler } = require('./utils/hackathonScheduler');
+import 'dotenv/config';
+import app from './app.js';
+import connectDB from './config/db.js';
+import seedAdmin from './utils/seedAdmin.js';
+import { startHackathonScheduler } from './utils/hackathonScheduler.js';
 
 const PORT = process.env.PORT || 8341;
 

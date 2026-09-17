@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const hackathonSchema = new mongoose.Schema(
   {
@@ -108,5 +108,5 @@ hackathonSchema.index({ organizer: 1 });
 hackathonSchema.index({ tags: 1 });
 hackathonSchema.index({ startDate: 1 });
 
-module.exports = mongoose.model('Hackathon', hackathonSchema);
-
+export const Hackathon = mongoose.model('Hackathon', hackathonSchema);
+export default Hackathon;

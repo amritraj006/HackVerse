@@ -1,11 +1,11 @@
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const { errorResponse } = require('../utils/apiResponse');
+import jwt from 'jsonwebtoken';
+import User from '../models/User.js';
+import { errorResponse } from '../utils/apiResponse.js';
 
 /**
  * JWT Authentication Middleware
  */
-const protect = async (req, res, next) => {
+export const protect = async (req, res, next) => {
   let token;
 
   if (
@@ -51,7 +51,7 @@ const protect = async (req, res, next) => {
 /**
  * Role-Based Access Control Middleware
  */
-const authorize = (...roles) => {
+export const authorize = (...roles) => {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
       return errorResponse(
@@ -64,7 +64,7 @@ const authorize = (...roles) => {
   };
 };
 
-module.exports = {
+export default {
   protect,
   authorize,
 };

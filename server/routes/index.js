@@ -1,16 +1,15 @@
-const express = require('express');
+import express from 'express';
+import authRoutes from './authRoutes.js';
+import hackathonRoutes from './hackathonRoutes.js';
+import userRoutes from './userRoutes.js';
+import adminRoutes from './adminRoutes.js';
+import registrationRoutes from './registrationRoutes.js';
+import teamRoutes from './teamRoutes.js';
+import submissionRoutes from './submissionRoutes.js';
+import notificationRoutes from './notificationRoutes.js';
+import uploadService from '../services/uploadService.js';
+
 const router = express.Router();
-
-const authRoutes = require('./authRoutes');
-const hackathonRoutes = require('./hackathonRoutes');
-const userRoutes = require('./userRoutes');
-const adminRoutes = require('./adminRoutes');
-const registrationRoutes = require('./registrationRoutes');
-const teamRoutes = require('./teamRoutes');
-const submissionRoutes = require('./submissionRoutes');
-const notificationRoutes = require('./notificationRoutes');
-
-const uploadService = require('../services/uploadService');
 
 // API Health Check with Circuit Breaker and Process Status
 router.get('/health', (req, res) => {
@@ -38,4 +37,4 @@ router.use('/teams', teamRoutes);
 router.use('/submissions', submissionRoutes);
 router.use('/notifications', notificationRoutes);
 
-module.exports = router;
+export default router;

@@ -1,6 +1,6 @@
-const asyncHandler = require('../utils/asyncHandler');
-const { successResponse } = require('../utils/apiResponse');
-const hackathonService = require('../services/hackathonService');
+import asyncHandler from '../utils/asyncHandler.js';
+import { successResponse } from '../utils/apiResponse.js';
+import hackathonService from '../services/hackathonService.js';
 
 /**
  * @desc    Get all public hackathons
@@ -167,7 +167,26 @@ const getJudgeView = asyncHandler(async (req, res) => {
   return successResponse(res, 200, 'Judge view data retrieved successfully', result);
 });
 
-module.exports = {
+export {
+  getHackathons,
+  getHackathonById,
+  getMyEvents,
+  createHackathon,
+  updateHackathon,
+  deleteHackathon,
+  toggleRegistration,
+  assignJudges,
+  publishResults,
+  getTeams,
+  getParticipants,
+  updateTeamStatus,
+  getSubmissions,
+  getLeaderboard,
+  getLeaderboardPreview,
+  getJudgeView,
+};
+
+export default {
   getHackathons,
   getHackathonById,
   getMyEvents,
