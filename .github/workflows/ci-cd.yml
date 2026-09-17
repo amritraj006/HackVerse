@@ -17,10 +17,13 @@ concurrency:
 
 
 # ==========================================
-# CI: Frontend Linting & Production Build
+# CI/CD JOBS
 # ==========================================
 jobs:
 
+  # ==========================================
+  # CI: Frontend Linting & Production Build
+  # ==========================================
   frontend-ci:
     name: Frontend CI (Lint & Build)
     runs-on: ubuntu-latest
@@ -30,9 +33,15 @@ jobs:
         working-directory: ./client
 
     steps:
+      # ------------------------------------------
+      # Checkout Repository
+      # ------------------------------------------
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # ------------------------------------------
+      # Setup Node.js
+      # ------------------------------------------
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
@@ -40,12 +49,21 @@ jobs:
           cache: npm
           cache-dependency-path: client/package-lock.json
 
+      # ------------------------------------------
+      # Install Dependencies
+      # ------------------------------------------
       - name: Install Client Dependencies
         run: npm ci
 
+      # ------------------------------------------
+      # Lint
+      # ------------------------------------------
       - name: Run ESLint
         run: npm run lint
 
+      # ------------------------------------------
+      # Production Build
+      # ------------------------------------------
       - name: Build Vite Production Bundle
         run: npm run build
 
@@ -62,9 +80,15 @@ jobs:
         working-directory: ./server
 
     steps:
+      # ------------------------------------------
+      # Checkout Repository
+      # ------------------------------------------
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # ------------------------------------------
+      # Setup Node.js
+      # ------------------------------------------
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
         with:
@@ -72,9 +96,15 @@ jobs:
           cache: npm
           cache-dependency-path: server/package-lock.json
 
+      # ------------------------------------------
+      # Install Dependencies
+      # ------------------------------------------
       - name: Install Server Dependencies
         run: npm ci
 
+      # ------------------------------------------
+      # Backend Tests
+      # ------------------------------------------
       - name: Run Backend Tests
         run: npm test
 
@@ -87,9 +117,15 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ------------------------------------------
+      # Checkout Repository
+      # ------------------------------------------
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # ------------------------------------------
+      # Validate Docker Compose
+      # ------------------------------------------
       - name: Validate Docker Compose
         run: docker compose config
 
@@ -108,19 +144,20 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # ------------------------------------------
+      # Checkout Repository
+      # ------------------------------------------
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-
       # ------------------------------------------
-      # Docker Buildx
+      # Setup Docker Buildx
       # ------------------------------------------
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-
       # ------------------------------------------
-      # Build Backend Image
+      # Build Backend Docker Image
       # ------------------------------------------
       - name: Build Backend Docker Image
         uses: docker/build-push-action@v6
@@ -133,9 +170,8 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-
       # ------------------------------------------
-      # Build Frontend Image
+      # Build Frontend Docker Image
       # ------------------------------------------
       - name: Build Frontend Docker Image
         uses: docker/build-push-action@v6
@@ -154,7 +190,7 @@ jobs:
 
 
   # ==========================================
-  # CD: Deploy to Render
+  # CD: Deploy Frontend & Backend to Render
   # ==========================================
   deploy:
     name: Deploy HackVerse to Render
@@ -162,7 +198,7 @@ jobs:
     needs:
       - docker-build
 
-    # Deploy ONLY after a successful push to main.
+    # Deploy ONLY after successful push to main.
     # Pull requests will run CI but will NOT deploy.
     if: >
       github.ref == 'refs/heads/main' &&
@@ -172,20 +208,62 @@ jobs:
 
     steps:
 
-      # ------------------------------------------
-      # Trigger Render Deployment
-      # ------------------------------------------
-      - name: Trigger Render Deployment
+      # ==========================================
+      # Validate Render Secrets
+      # ==========================================
+      - name: Check Render Deploy Hooks
         env:
-          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+          BACKEND_HOOK: ${{ secrets.RENDER_BACKEND_DEPLOY_HOOK_URL }}
+          FRONTEND_HOOK: ${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK_URL }}
         run: |
+          if [ -z "$BACKEND_HOOK" ]; then
+            echo "ERROR: RENDER_BACKEND_DEPLOY_HOOK_URL is not configured."
+            exit 1
+          fi
+
+          if [ -z "$FRONTEND_HOOK" ]; then
+            echo "ERROR: RENDER_FRONTEND_DEPLOY_HOOK_URL is not configured."
+            exit 1
+          fi
+
+          echo "Both Render deploy hooks are configured."
+
+
+      # ==========================================
+      # Deploy Backend to Render
+      # ==========================================
+      - name: Deploy Backend to Render
+        env:
+          RENDER_BACKEND_DEPLOY_HOOK_URL: ${{ secrets.RENDER_BACKEND_DEPLOY_HOOK_URL }}
+        run: |
+          echo "Triggering backend deployment..."
+
           curl --fail --silent --show-error \
             --request POST \
-            "${RENDER_DEPLOY_HOOK_URL}&ref=${GITHUB_SHA}"
+            "$RENDER_BACKEND_DEPLOY_HOOK_URL"
 
-      # ------------------------------------------
+          echo "Backend deployment triggered successfully."
+
+
+      # ==========================================
+      # Deploy Frontend to Render
+      # ==========================================
+      - name: Deploy Frontend to Render
+        env:
+          RENDER_FRONTEND_DEPLOY_HOOK_URL: ${{ secrets.RENDER_FRONTEND_DEPLOY_HOOK_URL }}
+        run: |
+          echo "Triggering frontend deployment..."
+
+          curl --fail --silent --show-error \
+            --request POST \
+            "$RENDER_FRONTEND_DEPLOY_HOOK_URL"
+
+          echo "Frontend deployment triggered successfully."
+
+
+      # ==========================================
       # Deployment Information
-      # ------------------------------------------
+      # ==========================================
       - name: Deployment Triggered Successfully
         run: |
           echo "=========================================="
@@ -193,7 +271,8 @@ jobs:
           echo "=========================================="
           echo "CI Status: PASSED"
           echo "Docker Build: PASSED"
-          echo "CD Status: Render deployment triggered"
+          echo "Backend: Render deployment triggered"
+          echo "Frontend: Render deployment triggered"
           echo "Commit SHA: ${{ github.sha }}"
           echo "Branch: ${{ github.ref_name }}"
           echo "Triggered by: ${{ github.actor }}"
