@@ -8,6 +8,13 @@ import { hackathonService } from '../../services/hackathonService';
 import { registrationService } from '../../services/registrationService';
 import { formatDate } from '../../utils/helpers';
 import {
+  getEffectiveStatus,
+  isHackathonEnded,
+  isRegistrationEffectivelyOpen,
+  STATUS_BADGE_CLASS,
+  STATUS_LABEL,
+} from '../../utils/hackathonStatus';
+import {
   Trophy,
   Clock,
   CheckCircle2,
@@ -105,8 +112,8 @@ export const ParticipantDashboard = ({ user }) => {
 
   // Compute metrics
   const activeRegs = registrations.filter((r) => r.status === 'active');
-  const ongoingRegs = activeRegs.filter((r) => r.hackathon?.status === 'ongoing');
-  const upcomingRegs = activeRegs.filter((r) => r.hackathon?.status === 'upcoming');
+  const ongoingRegs = activeRegs.filter((r) => getEffectiveStatus(r.hackathon) === 'ongoing');
+  const upcomingRegs = activeRegs.filter((r) => getEffectiveStatus(r.hackathon) === 'upcoming');
 
   // Find next deadline
   const nextDeadline = activeRegs
@@ -203,6 +210,8 @@ export const ParticipantDashboard = ({ user }) => {
                 {activeRegs.map((reg) => {
                   const h = reg.hackathon;
                   if (!h) return null;
+                  const effectiveStatus = getEffectiveStatus(h);
+                  const isEnded = isHackathonEnded(h);
                   return (
                     <div
                       key={reg._id}
@@ -212,16 +221,12 @@ export const ParticipantDashboard = ({ user }) => {
                         <div className="flex items-center gap-2">
                           <span
                             className={`px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full border ${
-                              h.status === 'ongoing'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                : h.status === 'upcoming'
-                                ? 'bg-blue-50 text-blue-700 border-blue-200'
-                                : 'bg-slate-100 text-slate-600 border-slate-200'
+                              STATUS_BADGE_CLASS[effectiveStatus] || 'bg-slate-100 text-slate-600 border-slate-200'
                             }`}
                           >
-                            {h.status}
+                            {STATUS_LABEL[effectiveStatus] || effectiveStatus}
                           </span>
-                          {h.status === 'ended' && (!h.isResultsPublished && h.resultStatus !== 'published') && (
+                          {isEnded && (!h.isResultsPublished && h.resultStatus !== 'published') && (
                             <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full border bg-amber-50 text-amber-700 border-amber-200">
                               Result Pending
                             </span>
@@ -242,7 +247,7 @@ export const ParticipantDashboard = ({ user }) => {
                           <Button size="sm" variant="outline">View</Button>
                         </Link>
                         {(() => {
-                          const hasStarted = ['ongoing', 'ended'].includes(h.status) || (h.startDate && new Date() >= new Date(h.startDate));
+                          const hasStarted = ['ongoing', 'ended'].includes(effectiveStatus) || (h.startDate && new Date() >= new Date(h.startDate));
                           return !hasStarted ? (
                             <Button
                               size="sm"
@@ -291,10 +296,10 @@ export const ParticipantDashboard = ({ user }) => {
                           size="sm"
                           variant="primary"
                           className="flex-1 text-[11px]"
-                          disabled={registeringId === item._id}
+                          disabled={registeringId === item._id || !isRegistrationEffectivelyOpen(item)}
                           onClick={() => handleRegister(item._id)}
                         >
-                          {registeringId === item._id ? 'Joining...' : 'Join'}
+                          {registeringId === item._id ? 'Joining...' : !isRegistrationEffectivelyOpen(item) ? 'Closed' : 'Join'}
                         </Button>
                       )}
                     </div>

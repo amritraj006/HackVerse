@@ -6,6 +6,7 @@ import { Alert } from '../../components/Alert';
 import { HackathonForm } from '../../components/HackathonForm';
 import { hackathonService } from '../../services/hackathonService';
 import { formatDate } from '../../utils/helpers';
+import { getEffectiveStatus, STATUS_BADGE_CLASS } from '../../utils/hackathonStatus';
 import { Trophy, Users, FolderGit2, Plus, Settings, Calendar, RefreshCw } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -68,7 +69,10 @@ export const OrganizerDashboard = ({ user }) => {
     }
   };
 
-  const activeEventsCount = events.filter((e) => e.status === 'ongoing' || e.status === 'upcoming').length;
+  const activeEventsCount = events.filter((e) => {
+    const s = getEffectiveStatus(e);
+    return s === 'ongoing' || s === 'upcoming';
+  }).length;
 
   return (
     <div className="space-y-5">
@@ -150,12 +154,13 @@ export const OrganizerDashboard = ({ user }) => {
                   <div className="flex items-center gap-2">
                     <span
                       className={`px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full border ${
-                        item.status === 'ongoing'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-blue-50 text-blue-700 border-blue-200'
+                        (() => {
+                          const s = getEffectiveStatus(item);
+                          return STATUS_BADGE_CLASS[s] || 'bg-slate-100 text-slate-600 border-slate-200';
+                        })()
                       }`}
                     >
-                      {item.status}
+                      {getEffectiveStatus(item)}
                     </span>
                     <h3 className="text-xs font-bold text-slate-900">{item.title}</h3>
                   </div>

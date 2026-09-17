@@ -4,6 +4,7 @@ import { Input } from './Input';
 import { Alert } from './Alert';
 import { hackathonService } from '../services/hackathonService';
 import { registrationService } from '../services/registrationService';
+import { isHackathonEnded, getEffectiveStatus } from '../utils/hackathonStatus';
 import { X, FolderGit2, Upload, FileText, Image as ImageIcon, Lock } from 'lucide-react';
 
 export const SubmissionModal = ({ isOpen, submission = null, onClose, onSuccess }) => {
@@ -85,8 +86,8 @@ export const SubmissionModal = ({ isOpen, submission = null, onClose, onSuccess 
 
   const selectedHackathon = hackathons.find((h) => h._id === hackathonId);
   const now = new Date();
-  const isNotStarted = selectedHackathon && (selectedHackathon.status === 'upcoming' || (selectedHackathon.startDate && now < new Date(selectedHackathon.startDate)));
-  const isDeadlinePassed = selectedHackathon && (selectedHackathon.status === 'ended' || (selectedHackathon.endDate && now > new Date(selectedHackathon.endDate)));
+  const isNotStarted = selectedHackathon && (getEffectiveStatus(selectedHackathon, now) === 'upcoming' || (selectedHackathon.startDate && now < new Date(selectedHackathon.startDate)));
+  const isDeadlinePassed = selectedHackathon && isHackathonEnded(selectedHackathon, now);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

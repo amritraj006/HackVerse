@@ -9,7 +9,8 @@ import { RegisterHackathonModal } from '../components/RegisterHackathonModal';
 import { hackathonService } from '../services/hackathonService';
 import { registrationService } from '../services/registrationService';
 import { useAuth } from '../hooks/useAuth';
-import { formatDate } from '../utils/helpers';
+import { formatDate, formatDateTime } from '../utils/helpers';
+import { getEffectiveStatus, isHackathonEnded, isRegistrationEffectivelyOpen, STATUS_BADGE_CLASS } from '../utils/hackathonStatus';
 import {
   ArrowLeft,
   Trophy,
@@ -26,13 +27,6 @@ import {
   Clock,
 } from 'lucide-react';
 
-const STATUS_BADGE = {
-  upcoming: 'bg-blue-50 text-blue-700 border-blue-200',
-  ongoing: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-  ended: 'bg-slate-100 text-slate-600 border-slate-200',
-  draft: 'bg-amber-50 text-amber-700 border-amber-200',
-  cancelled: 'bg-rose-50 text-rose-700 border-rose-200',
-};
 
 export const HackathonDetail = () => {
   const { id } = useParams();
@@ -145,12 +139,13 @@ export const HackathonDetail = () => {
     );
   }
 
-  const statusBadge = STATUS_BADGE[hackathon.status] || STATUS_BADGE.draft;
+  const statusBadge = STATUS_BADGE_CLASS[getEffectiveStatus(hackathon)] || STATUS_BADGE_CLASS.draft;
+  const effectiveStatus = getEffectiveStatus(hackathon);
   const isParticipant = !user || user.role === 'participant';
   const canRegister =
     isParticipant &&
-    hackathon.isRegistrationOpen &&
-    hackathon.status === 'upcoming';
+    isRegistrationEffectivelyOpen(hackathon) &&
+    effectiveStatus === 'upcoming';
   const roleRestrictedMessage = user && user.role !== 'participant'
     ? `As a${user.role === 'organizer' ? 'n Organizer' : user.role === 'judge' ? ' Judge' : 'n Admin'}, you cannot register as a participant.`
     : null;
@@ -162,7 +157,7 @@ export const HackathonDetail = () => {
     : false;
   // User can cancel: either solo-registered (no team) or is the team creator,
   // AND only while the hackathon hasn't started yet
-  const hackathonHasStarted = ['ongoing', 'ended'].includes(hackathon.status) ||
+  const hackathonHasStarted = isHackathonEnded(hackathon) ||
     (hackathon.startDate && new Date() >= new Date(hackathon.startDate));
   const canCancelRegistration = isRegistered && (!regStatusData?.team || isTeamCreator) && !hackathonHasStarted;
 
@@ -180,31 +175,31 @@ export const HackathonDetail = () => {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full border ${statusBadge}`}>
-              {hackathon.status}
+              {effectiveStatus}
             </span>
-            {hackathon.isRegistrationOpen ? (
+            {isRegistrationEffectivelyOpen(hackathon) ? (
               <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
                 <Unlock className="w-3 h-3" /> Registrations Open
               </span>
-            ) : (
+            ) : effectiveStatus !== 'ended' ? (
               <span className="flex items-center gap-1 text-[10px] font-semibold text-rose-700 bg-rose-50 border border-rose-200 rounded-full px-2 py-0.5">
                 <Lock className="w-3 h-3" /> Registrations Closed
               </span>
-            )}
+            ) : null}
           </div>
 
           {hackathon.isResultsPublished || hackathon.resultStatus === 'published' ? (
             <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
               <Award className="w-3 h-3" /> Results Published
             </span>
-          ) : hackathon.status === 'ended' ? (
+          ) : effectiveStatus === 'ended' ? (
             <span className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
               <Clock className="w-3 h-3" /> Result Pending
             </span>
           ) : null}
         </div>
 
-        {hackathon.status === 'ended' && (!hackathon.isResultsPublished && hackathon.resultStatus !== 'published') && (
+        {effectiveStatus === 'ended' && (!hackathon.isResultsPublished && hackathon.resultStatus !== 'published') && (
           <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-xs font-semibold">
             <Clock className="w-4 h-4 text-amber-600 shrink-0" />
             <span>Result Pending — This hackathon has ended. Winner results will be displayed once published by the organizers.</span>
@@ -225,11 +220,11 @@ export const HackathonDetail = () => {
           </div>
           <div className="flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-slate-400" />
-            Reg. Deadline: {formatDate(hackathon.registrationDeadline)}
+            Reg. Deadline: {formatDateTime(hackathon.registrationDeadline)}
           </div>
           <div className="flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-slate-400" />
-            {formatDate(hackathon.startDate)} → {formatDate(hackathon.endDate)}
+            {formatDateTime(hackathon.startDate)} → {formatDateTime(hackathon.endDate)}
           </div>
           <div className="flex items-center gap-1.5">
             <Users className="w-4 h-4 text-slate-400" />
@@ -520,15 +515,15 @@ export const HackathonDetail = () => {
             <div className="space-y-2 text-xs">
               <div className="flex justify-between py-1 border-b border-slate-100">
                 <span className="text-slate-500">Reg. Deadline</span>
-                <span className="font-semibold text-slate-800">{formatDate(hackathon.registrationDeadline)}</span>
+                <span className="font-semibold text-slate-800 text-right">{formatDateTime(hackathon.registrationDeadline)}</span>
               </div>
               <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-500">Start Date</span>
-                <span className="font-semibold text-slate-800">{formatDate(hackathon.startDate)}</span>
+                <span className="text-slate-500">Event Starts</span>
+                <span className="font-semibold text-slate-800 text-right">{formatDateTime(hackathon.startDate)}</span>
               </div>
               <div className="flex justify-between py-1">
-                <span className="text-slate-500">End Date</span>
-                <span className="font-semibold text-slate-800">{formatDate(hackathon.endDate)}</span>
+                <span className="text-slate-500">Event Ends</span>
+                <span className="font-semibold text-slate-800 text-right">{formatDateTime(hackathon.endDate)}</span>
               </div>
             </div>
           </Card>

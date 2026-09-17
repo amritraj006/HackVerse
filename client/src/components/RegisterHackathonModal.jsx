@@ -3,6 +3,7 @@ import { X, User, Users, ArrowRight, UserPlus, KeyRound, Sparkles, AlertCircle }
 import { Button } from './Button';
 import { registrationService } from '../services/registrationService';
 import { teamService } from '../services/teamService';
+import { isRegistrationEffectivelyOpen, isHackathonEnded } from '../utils/hackathonStatus';
 
 export const RegisterHackathonModal = ({
   isOpen,
@@ -19,6 +20,11 @@ export const RegisterHackathonModal = ({
 
   if (!isOpen || !hackathon) return null;
 
+  const isEnded = isHackathonEnded(hackathon);
+  const isRegOpen = isRegistrationEffectivelyOpen(hackathon);
+  const isFull = hackathon.maxParticipants > 0 && (hackathon.availableSlots ?? 0) <= 0;
+  const canRegister = isRegOpen && !isEnded && !isFull;
+
   const handleClose = () => {
     setStep('choice');
     setGroupTab('create');
@@ -30,6 +36,7 @@ export const RegisterHackathonModal = ({
 
   // Solo Registration Handler
   const handleSoloRegister = async () => {
+    if (!canRegister) return;
     setLoading(true);
     setError('');
     try {
@@ -46,6 +53,7 @@ export const RegisterHackathonModal = ({
   // Group - Create Team Handler
   const handleCreateTeam = async (e) => {
     e.preventDefault();
+    if (!canRegister) return;
     if (!teamName.trim()) {
       setError('Please enter a team name');
       return;
@@ -70,6 +78,7 @@ export const RegisterHackathonModal = ({
   // Group - Join Team Handler
   const handleJoinTeam = async (e) => {
     e.preventDefault();
+    if (!canRegister) return;
     if (!joinCode.trim()) {
       setError('Please enter a team join code');
       return;
@@ -134,7 +143,18 @@ export const RegisterHackathonModal = ({
             </div>
           )}
 
-          {hackathon.maxParticipants > 0 && hackathon.availableSlots === 0 && (
+          {(!isRegOpen || isEnded) && (
+            <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 font-medium text-[11px]">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>
+                {isEnded
+                  ? 'This hackathon has already ended. Registrations are closed.'
+                  : 'Registration deadline has passed or registrations are closed for this hackathon.'}
+              </span>
+            </div>
+          )}
+
+          {isFull && !isEnded && isRegOpen && (
             <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 font-medium text-[11px]">
               <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <span>
@@ -155,7 +175,7 @@ export const RegisterHackathonModal = ({
                 <button
                   type="button"
                   onClick={handleSoloRegister}
-                  disabled={loading || (hackathon.maxParticipants > 0 && hackathon.availableSlots === 0)}
+                  disabled={loading || !canRegister}
                   className="flex items-center gap-3.5 p-3.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/40 disabled:opacity-50 disabled:cursor-not-allowed text-left transition-all group cursor-pointer"
                 >
                   <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
@@ -176,8 +196,8 @@ export const RegisterHackathonModal = ({
                 <button
                   type="button"
                   onClick={() => setStep('group')}
-                  disabled={loading}
-                  className="flex items-center gap-3.5 p-3.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/40 text-left transition-all group cursor-pointer"
+                  disabled={loading || !canRegister}
+                  className="flex items-center gap-3.5 p-3.5 rounded-xl border border-slate-200 hover:border-indigo-500 hover:bg-indigo-50/40 disabled:opacity-50 disabled:cursor-not-allowed text-left transition-all group cursor-pointer"
                 >
                   <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
                     <Users className="w-5 h-5" />

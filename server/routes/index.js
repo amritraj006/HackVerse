@@ -7,6 +7,7 @@ import registrationRoutes from './registrationRoutes.js';
 import teamRoutes from './teamRoutes.js';
 import submissionRoutes from './submissionRoutes.js';
 import notificationRoutes from './notificationRoutes.js';
+import aiRoutes from './aiRoutes.js';
 import uploadService from '../services/uploadService.js';
 
 const router = express.Router();
@@ -36,5 +37,6 @@ router.use('/registrations', registrationRoutes);
 router.use('/teams', teamRoutes);
 router.use('/submissions', submissionRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/ai', aiRoutes);
 
 export default router;

@@ -3,8 +3,27 @@
  */
 export const formatDate = (dateString) => {
   if (!dateString) return 'N/A';
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return 'N/A';
   const options = { year: 'numeric', month: 'short', day: 'numeric' };
-  return new Date(dateString).toLocaleDateString('en-US', options);
+  return d.toLocaleDateString('en-US', options);
+};
+
+/**
+ * Format Date and Time to readable 12-hour AM/PM string (e.g. "Mar 25, 2026, 10:00 AM")
+ */
+export const formatDateTime = (dateString) => {
+  if (!dateString) return 'N/A';
+  const d = new Date(dateString);
+  if (isNaN(d.getTime())) return 'N/A';
+  return d.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
 };
 
 /**

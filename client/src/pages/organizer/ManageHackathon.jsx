@@ -8,7 +8,8 @@ import { ConfirmModal } from '../../components/ConfirmModal';
 import { HackathonForm } from '../../components/HackathonForm';
 import { hackathonService } from '../../services/hackathonService';
 import { userService } from '../../services/userService';
-import { formatDate } from '../../utils/helpers';
+import { formatDate, formatDateTime } from '../../utils/helpers';
+import { getEffectiveStatus, isHackathonEnded, STATUS_BADGE_CLASS } from '../../utils/hackathonStatus';
 import {
   ArrowLeft,
   Edit,
@@ -291,8 +292,11 @@ export const ManageHackathon = () => {
     );
   }
 
-  // Has the hackathon started? (status or actual time)
-  const hasStarted = ['ongoing', 'ended'].includes(hackathon.status) ||
+  // Compute effective state from dates — more accurate than stored status
+  const effectiveStatus = getEffectiveStatus(hackathon);
+  const isEnded = isHackathonEnded(hackathon);
+  // Has the hackathon started = either ongoing or ended
+  const hasStarted = isEnded ||
     (hackathon.startDate && new Date() >= new Date(hackathon.startDate));
 
   // Columns for Teams table
@@ -393,19 +397,24 @@ export const ManageHackathon = () => {
       <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-xs space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 text-[10px] font-semibold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full">
-              {hackathon.status}
+            <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full`}>
+              {effectiveStatus}
             </span>
             <span
               className={`px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full border ${
-                hackathon.isRegistrationOpen
+                hackathon.isRegistrationOpen && !isEnded
                   ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                   : 'bg-rose-50 text-rose-700 border-rose-200'
               }`}
             >
-              {hackathon.isRegistrationOpen ? 'Registrations Open' : 'Registrations Closed'}
+              {hackathon.isRegistrationOpen && !isEnded ? 'Registrations Open' : 'Registrations Closed'}
             </span>
-            {hasStarted && (
+            {isEnded && (
+              <span className="px-2 py-0.5 text-[10px] font-semibold uppercase bg-slate-100 text-slate-600 border border-slate-200 rounded-full">
+                🔒 Ended
+              </span>
+            )}
+            {hasStarted && !isEnded && (
               <span className="px-2 py-0.5 text-[10px] font-semibold uppercase bg-amber-50 text-amber-800 border border-amber-200 rounded-full">
                 🔒 Limited Editing
               </span>
@@ -415,26 +424,34 @@ export const ManageHackathon = () => {
           <div className="flex items-center gap-2">
             {hasStarted ? (
               <>
-                {/* Registration can only be closed once started, not re-opened */}
-                {hackathon.isRegistrationOpen && (
+                {/* Once ended, editing/re-opening registrations is blocked */}
+                {hackathon.isRegistrationOpen && !isEnded && (
                   <Button size="sm" variant="outline" onClick={handleToggleRegistration}>
                     <Lock className="w-3.5 h-3.5" />
                     <span>Close Registrations</span>
                   </Button>
                 )}
+                {/* Extend limit: only allowed while still active */}
                 <Button
                   size="sm"
                   variant="secondary"
+                  disabled={isEnded}
+                  title={isEnded ? 'Cannot extend participant limit on an ended hackathon' : ''}
                   onClick={() => {
-                    setNewLimitValue(hackathon.maxParticipants > 0 ? String(hackathon.maxParticipants) : '');
-                    setIsLimitModalOpen(true);
+                    if (!isEnded) {
+                      setNewLimitValue(hackathon.maxParticipants > 0 ? String(hackathon.maxParticipants) : '');
+                      setIsLimitModalOpen(true);
+                    }
                   }}
                 >
-                  <Users className="w-3.5 h-3.5" /> Increase Limit
+                  <Users className="w-3.5 h-3.5" />
+                  {isEnded ? 'Limit Locked' : 'Increase Limit'}
                 </Button>
-                <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50" onClick={() => setIsDeleteModalOpen(true)}>
-                  <Trash2 className="w-3.5 h-3.5" />
-                </Button>
+                {!isEnded && (
+                  <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50" onClick={() => setIsDeleteModalOpen(true)}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                )}
               </>
             ) : (
               <>
@@ -454,9 +471,14 @@ export const ManageHackathon = () => {
         </div>
 
         <h1 className="text-lg font-bold text-slate-900">{hackathon.title}</h1>
-        {hasStarted && (
+        {isEnded && (
+          <p className="text-[11px] text-slate-700 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 font-medium">
+            🔒 This hackathon has <strong>ended</strong>. All editing and registration management is now locked.
+          </p>
+        )}
+        {hasStarted && !isEnded && (
           <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 font-medium">
-            ⚠️ This hackathon is {hackathon.status}. Editing and deleting are disabled once a hackathon becomes ongoing or ended.
+            ⚠️ This hackathon is {effectiveStatus}. Editing and deleting are disabled once a hackathon becomes ongoing or ended.
           </p>
         )}
         <p className="text-xs text-slate-600 leading-relaxed max-w-2xl">{hackathon.tagline || hackathon.description}</p>
@@ -554,13 +576,18 @@ export const ManageHackathon = () => {
             </div>
 
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase">Start Date</span>
-              <p className="font-bold text-slate-900 text-sm mt-0.5">{formatDate(hackathon.startDate)}</p>
+              <span className="text-[11px] font-semibold text-slate-400 uppercase">Reg. Deadline</span>
+              <p className="font-bold text-slate-900 text-sm mt-0.5">{formatDateTime(hackathon.registrationDeadline)}</p>
             </div>
 
             <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
-              <span className="text-[11px] font-semibold text-slate-400 uppercase">End Date</span>
-              <p className="font-bold text-slate-900 text-sm mt-0.5">{formatDate(hackathon.endDate)}</p>
+              <span className="text-[11px] font-semibold text-slate-400 uppercase">Start Time</span>
+              <p className="font-bold text-slate-900 text-sm mt-0.5">{formatDateTime(hackathon.startDate)}</p>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60">
+              <span className="text-[11px] font-semibold text-slate-400 uppercase">End Time (Deadline)</span>
+              <p className="font-bold text-slate-900 text-sm mt-0.5">{formatDateTime(hackathon.endDate)}</p>
             </div>
           </div>
         </Card>

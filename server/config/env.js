@@ -8,6 +8,8 @@ export const env = {
   nodeEnv: process.env.NODE_ENV || 'development',
   uploadDir: process.env.UPLOAD_DIR || 'uploads',
   maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '5242880', 10),
+  geminiApiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || '',
+  geminiModel: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
 };
 
 export default env;

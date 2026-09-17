@@ -5,6 +5,7 @@ import Registration from '../models/Registration.js';
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 import { updateHackathonStatuses } from '../utils/hackathonScheduler.js';
+import { getEffectiveStatus, isHackathonEnded } from '../utils/hackathonLifecycle.js';
 
 class HackathonService {
   /**
@@ -21,12 +22,24 @@ class HackathonService {
       order = 'desc',
       page = 1,
       limit = 10,
+      // Internal flag: admin/organizer views pass `showEnded=true` to bypass the public filter
+      showEnded = false,
     } = params;
 
+    const now = new Date();
     const query = {};
     const validStatuses = ['upcoming', 'ongoing', 'ended', 'draft'];
+
     if (status && validStatuses.includes(status)) {
+      // Explicit status filter requested — honour it (covers admin / filter bar usage)
       query.status = status;
+    } else if (!showEnded) {
+      // Public discovery: hide hackathons that have already ended
+      // Use both the DB status field and the endDate to be safe
+      query.$and = [
+        { status: { $ne: 'ended' } },
+        { endDate: { $gt: now } },
+      ];
     }
 
     if (search) {
@@ -71,9 +84,14 @@ class HackathonService {
     const hackathonsWithStats = await Promise.all(
       hackathons.map(async (h) => {
         const stats = await this.getParticipantStats(h._id);
+        const effectiveStatus = getEffectiveStatus(h, now);
         return {
           ...h,
           ...stats,
+          // Override stored status with real-time computed status
+          status: effectiveStatus,
+          // Ensure registration appears closed when hackathon is effectively ended
+          isRegistrationOpen: effectiveStatus === 'ended' ? false : h.isRegistrationOpen,
         };
       })
     );
@@ -160,6 +178,14 @@ class HackathonService {
     const stats = await this.getParticipantStats(id);
     const result = hackathon.toObject();
     Object.assign(result, stats);
+
+    // Always override with date-computed status for accuracy
+    const effectiveStatus = getEffectiveStatus(result);
+    result.status = effectiveStatus;
+    if (effectiveStatus === 'ended') {
+      result.isRegistrationOpen = false;
+    }
+
     return result;
   }
 
@@ -173,10 +199,17 @@ class HackathonService {
       .sort({ createdAt: -1 })
       .lean();
 
+    const now = new Date();
     return await Promise.all(
       events.map(async (e) => {
         const stats = await this.getParticipantStats(e._id);
-        return { ...e, ...stats };
+        const effectiveStatus = getEffectiveStatus(e, now);
+        return {
+          ...e,
+          ...stats,
+          status: effectiveStatus,
+          isRegistrationOpen: effectiveStatus === 'ended' ? false : e.isRegistrationOpen,
+        };
       })
     );
   }
@@ -248,8 +281,9 @@ class HackathonService {
       throw error;
     }
 
-    if (hackathon.status === 'ended') {
-      const error = new Error('Editing is blocked. This hackathon has already ended.');
+    // Block ALL edits (including deadline extension) on ended hackathons
+    if (isHackathonEnded(hackathon)) {
+      const error = new Error('Hackathon has already ended. The submission deadline cannot be extended.');
       error.statusCode = 400;
       throw error;
     }

@@ -13,6 +13,7 @@ import {
   Trophy,
 } from 'lucide-react';
 import { getAssetUrl } from '../utils/helpers';
+import { isHackathonEnded } from '../utils/hackathonStatus';
 
 export const SubmissionCard = ({
   submission,
@@ -54,7 +55,7 @@ export const SubmissionCard = ({
   const isReadOnlyMember = isTeamMember && !isCreatorOrOwner;
 
   // Check if hackathon deadline passed
-  const isDeadlinePassed = hackathon?.endDate && new Date() > new Date(hackathon.endDate);
+  const isDeadlinePassed = isHackathonEnded(hackathon);
 
   return (
     <Card className="flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">

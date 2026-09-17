@@ -4,6 +4,7 @@ import Hackathon from '../models/Hackathon.js';
 import Team from '../models/Team.js';
 import Registration from '../models/Registration.js';
 import User from '../models/User.js';
+import { isHackathonEnded } from '../utils/hackathonLifecycle.js';
 
 const JUDGING_CRITERIA = [
   { criterion: 'Innovation', maxScore: 10 },
@@ -52,9 +53,14 @@ class SubmissionService {
       throw error;
     }
 
-    // 3. Status and date window check:
-    // Submissions and updates are allowed ONLY when hackathon status is ongoing and current time is between startDate and endDate.
+    // 3. Enforce submission window: must be ongoing and within startDate → endDate range
     const now = new Date();
+
+    if (isHackathonEnded(hackathon, now)) {
+      const error = new Error('Submissions are closed. The hackathon submission deadline has passed.');
+      error.statusCode = 400;
+      throw error;
+    }
 
     if (hackathon.status !== 'ongoing') {
       const statusMessage = hackathon.status === 'upcoming'
@@ -67,12 +73,6 @@ class SubmissionService {
 
     if (hackathon.startDate && now < new Date(hackathon.startDate)) {
       const error = new Error('Submissions are not open yet. The hackathon start date has not been reached.');
-      error.statusCode = 400;
-      throw error;
-    }
-
-    if (hackathon.endDate && now > new Date(hackathon.endDate)) {
-      const error = new Error('Submissions are closed. The hackathon submission deadline has passed.');
       error.statusCode = 400;
       throw error;
     }
@@ -427,7 +427,7 @@ class SubmissionService {
     // Check status and deadline window
     const now = new Date();
     if (userRole !== 'admin') {
-      if (submission.hackathon?.status !== 'ongoing' || (submission.hackathon?.endDate && now > new Date(submission.hackathon.endDate))) {
+      if (isHackathonEnded(submission.hackathon, now) || submission.hackathon?.status !== 'ongoing') {
         const error = new Error('Cannot delete submission after the hackathon deadline or once the hackathon has ended.');
         error.statusCode = 400;
         throw error;

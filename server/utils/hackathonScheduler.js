@@ -1,37 +1,55 @@
 import Hackathon from '../models/Hackathon.js';
 
 /**
- * Automatically updates hackathon statuses based on current date:
- * - 'upcoming' -> 'ongoing' when current date >= startDate
- * - 'ongoing' -> 'ended' when current date >= endDate
+ * Periodically syncs hackathon `status` and `isRegistrationOpen` in the DB
+ * so queries can filter by indexed fields efficiently.
+ *
+ * Lifecycle transitions:
+ *   upcoming  → ongoing   when now >= startDate
+ *   *         → ended     when now >= endDate  (catches any state that slipped through)
+ *   ended     → close     isRegistrationOpen = false
  */
 export const updateHackathonStatuses = async () => {
   try {
     const now = new Date();
 
-    // 1. Transition 'upcoming' -> 'ongoing'
-    const upcomingToOngoingResult = await Hackathon.updateMany(
+    // 1. Any non-ended hackathon whose endDate has passed → ended + close registrations
+    const toEndedResult = await Hackathon.updateMany(
+      {
+        status: { $ne: 'ended' },
+        endDate: { $lte: now },
+      },
+      {
+        $set: { status: 'ended', isRegistrationOpen: false },
+      }
+    );
+
+    // 2. Transition upcoming → ongoing when startDate reached (and not yet ended)
+    const toOngoingResult = await Hackathon.updateMany(
       {
         status: 'upcoming',
         startDate: { $lte: now },
+        // Guard: don't flip if endDate is also past (handled above already)
+        endDate: { $gt: now },
       },
       {
         $set: { status: 'ongoing' },
       }
     );
 
-    // 2. Transition 'ongoing' -> 'ended' when current time passes endDate
-    const ongoingToEndedResult = await Hackathon.updateMany(
+    // 3. Close registrations on hackathons whose registrationDeadline has passed
+    await Hackathon.updateMany(
       {
-        status: 'ongoing',
-        endDate: { $lte: now },
+        status: { $ne: 'ended' },
+        isRegistrationOpen: true,
+        registrationDeadline: { $lte: now },
       },
       {
-        $set: { status: 'ended' },
+        $set: { isRegistrationOpen: false },
       }
     );
 
-    // 3. For newly ended hackathons that never had results published, mark resultStatus as 'pending'
+    // 4. Ensure ended hackathons have resultStatus set to 'pending' if not yet published
     await Hackathon.updateMany(
       {
         status: 'ended',
@@ -42,12 +60,11 @@ export const updateHackathonStatuses = async () => {
       }
     );
 
-    if (upcomingToOngoingResult.modifiedCount > 0) {
-      console.log(`[Scheduler] Updated ${upcomingToOngoingResult.modifiedCount} hackathons from 'upcoming' to 'ongoing'`);
+    if (toEndedResult.modifiedCount > 0) {
+      console.log(`[Scheduler] Ended ${toEndedResult.modifiedCount} hackathon(s) past their submission deadline`);
     }
-
-    if (ongoingToEndedResult.modifiedCount > 0) {
-      console.log(`[Scheduler] Updated ${ongoingToEndedResult.modifiedCount} hackathons from 'ongoing' to 'ended'`);
+    if (toOngoingResult.modifiedCount > 0) {
+      console.log(`[Scheduler] Transitioned ${toOngoingResult.modifiedCount} hackathon(s) from 'upcoming' to 'ongoing'`);
     }
   } catch (error) {
     console.error('[Scheduler Error] Failed to update hackathon statuses:', error.message);
@@ -55,19 +72,15 @@ export const updateHackathonStatuses = async () => {
 };
 
 /**
- * Initializes periodic background task for lifecycle management
- * @param {number} intervalMs - Interval in milliseconds (default: 60 seconds)
+ * Starts the background scheduler.
+ * Runs immediately on boot, then on the specified interval.
+ *
+ * @param {number} intervalMs - Poll interval in milliseconds (default: 60s)
+ * @returns {NodeJS.Timeout}
  */
-export const startHackathonScheduler = (intervalMs = 60000) => {
-  // Run once immediately on start
+export const startHackathonScheduler = (intervalMs = 60_000) => {
   updateHackathonStatuses();
-
-  // Schedule background task
-  const intervalId = setInterval(updateHackathonStatuses, intervalMs);
-  return intervalId;
+  return setInterval(updateHackathonStatuses, intervalMs);
 };
 
-export default {
-  updateHackathonStatuses,
-  startHackathonScheduler,
-};
+export default { updateHackathonStatuses, startHackathonScheduler };

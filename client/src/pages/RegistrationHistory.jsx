@@ -7,6 +7,12 @@ import { ConfirmModal } from '../components/ConfirmModal';
 import { registrationService } from '../services/registrationService';
 import { formatDate } from '../utils/helpers';
 import {
+  getEffectiveStatus,
+  isHackathonEnded,
+  STATUS_BADGE_CLASS,
+  STATUS_LABEL,
+} from '../utils/hackathonStatus';
+import {
   Trophy,
   Calendar,
   CheckCircle2,
@@ -157,6 +163,8 @@ export const RegistrationHistory = () => {
               const h = reg.hackathon;
               if (!h) return null;
               const isActive = reg.status === 'active';
+              const effectiveStatus = getEffectiveStatus(h);
+              const isEnded = isHackathonEnded(h);
 
               return (
                 <div key={reg._id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 first:pt-0 last:pb-0">
@@ -176,16 +184,12 @@ export const RegistrationHistory = () => {
                         <h3 className="text-xs font-bold text-slate-900">{h.title}</h3>
                         <span
                           className={`px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full border ${
-                            h.status === 'ongoing'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : h.status === 'upcoming'
-                              ? 'bg-blue-50 text-blue-700 border-blue-200'
-                              : 'bg-slate-100 text-slate-600 border-slate-200'
+                            STATUS_BADGE_CLASS[effectiveStatus] || 'bg-slate-100 text-slate-600 border-slate-200'
                           }`}
                         >
-                          {h.status}
+                          {STATUS_LABEL[effectiveStatus] || effectiveStatus}
                         </span>
-                        {h.status === 'ended' && (!h.isResultsPublished && h.resultStatus !== 'published') && (
+                        {isEnded && (!h.isResultsPublished && h.resultStatus !== 'published') && (
                           <span className="px-2 py-0.5 text-[10px] font-semibold rounded-full border bg-amber-50 text-amber-700 border-amber-200">
                             Result Pending
                           </span>
@@ -228,7 +232,7 @@ export const RegistrationHistory = () => {
                     <Link to={`/hackathons/${h._id}`}>
                       <Button size="sm" variant="outline">View Details</Button>
                     </Link>
-                    {isActive && !(['ongoing', 'ended'].includes(h.status) || (h.startDate && new Date() >= new Date(h.startDate))) && (reg.canCancel !== false ? (
+                    {isActive && !(['ongoing', 'ended'].includes(effectiveStatus) || (h.startDate && new Date() >= new Date(h.startDate))) && (reg.canCancel !== false ? (
                       <Button
                         size="sm"
                         variant="ghost"

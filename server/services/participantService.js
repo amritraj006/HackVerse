@@ -5,6 +5,7 @@ import Team from '../models/Team.js';
 import Notification from '../models/Notification.js';
 import Submission from '../models/Submission.js';
 import hackathonService from './hackathonService.js';
+import { isHackathonEnded, isRegistrationEffectivelyOpen } from '../utils/hackathonLifecycle.js';
 
 class ParticipantService {
   /**
@@ -24,14 +25,15 @@ class ParticipantService {
       throw error;
     }
 
-    if (!hackathon.isRegistrationOpen) {
-      const error = new Error('Registrations for this hackathon are currently closed');
+    // Block registration when hackathon has ended (date-based check — never rely on DB status alone)
+    if (isHackathonEnded(hackathon)) {
+      const error = new Error('This hackathon has ended. Registration is no longer available.');
       error.statusCode = 400;
       throw error;
     }
 
-    if (hackathon.registrationDeadline && new Date() > new Date(hackathon.registrationDeadline)) {
-      const error = new Error('Registration has closed.');
+    if (!isRegistrationEffectivelyOpen(hackathon)) {
+      const error = new Error('Registrations for this hackathon are currently closed');
       error.statusCode = 400;
       throw error;
     }
@@ -114,7 +116,7 @@ class ParticipantService {
       throw error;
     }
 
-    const hasStarted = ['ongoing', 'ended'].includes(hackathon.status) ||
+    const hasStarted = isHackathonEnded(hackathon) ||
       (hackathon.startDate && new Date() >= new Date(hackathon.startDate));
 
     if (hasStarted) {

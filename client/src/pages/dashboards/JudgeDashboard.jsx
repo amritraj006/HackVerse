@@ -6,6 +6,7 @@ import { Alert } from '../../components/Alert';
 import { submissionService } from '../../services/submissionService';
 import { hackathonService } from '../../services/hackathonService';
 import { notificationService } from '../../services/notificationService';
+import { getEffectiveStatus, STATUS_BADGE_CLASS } from '../../utils/hackathonStatus';
 import {
   CheckCircle2,
   Clock,
@@ -390,8 +391,10 @@ export const JudgeDashboard = ({ user }) => {
               <div className="p-4 bg-white border border-slate-200 rounded-xl space-y-2">
                 <div className="flex items-center justify-between">
                   <h2 className="text-sm font-bold text-slate-900">{hackathonViewData.hackathon.title}</h2>
-                  <span className="px-2 py-0.5 text-[10px] font-bold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full">
-                    {hackathonViewData.hackathon.status}
+                  <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-full border ${
+                    STATUS_BADGE_CLASS[getEffectiveStatus(hackathonViewData.hackathon)] || 'bg-slate-100 text-slate-600 border-slate-200'
+                  }`}>
+                    {getEffectiveStatus(hackathonViewData.hackathon)}
                   </span>
                 </div>
                 <p className="text-xs text-slate-500">{hackathonViewData.hackathon.tagline || hackathonViewData.hackathon.description}</p>
