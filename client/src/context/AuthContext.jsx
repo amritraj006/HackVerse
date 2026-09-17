@@ -4,9 +4,16 @@ import { authService } from '../services/authService';
 export const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem('user');
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
   const [token, setToken] = useState(() => localStorage.getItem('token') || null);
-  const [loading, setLoading] = useState(() => !!localStorage.getItem('token'));
+  const [loading, setLoading] = useState(() => !!localStorage.getItem('token') && !localStorage.getItem('user'));
   const [error, setError] = useState(null);
 
   // Verify and fetch user profile when token is present
@@ -20,19 +27,21 @@ export const AuthProvider = ({ children }) => {
           if (isMounted) {
             if (res && res.data && res.data.user) {
               setUser(res.data.user);
-            } else {
-              setUser(null);
-              localStorage.removeItem('token');
-              setToken(null);
+              localStorage.setItem('user', JSON.stringify(res.data.user));
             }
           }
         })
         .catch((err) => {
           if (isMounted) {
-            console.error('[AuthContext] Failed to load current user:', err);
-            setUser(null);
-            localStorage.removeItem('token');
-            setToken(null);
+            console.warn('[AuthContext] Background session check:', err?.message || err);
+            // CRITICAL FIX: Only destroy the session if the server explicitly replied with 401 Unauthorized (expired/invalid token).
+            // Do NOT log out on temporary network issues, Render spin-up/cold starts, 500, or 429 rate limits!
+            if (err.statusCode === 401) {
+              setUser(null);
+              setToken(null);
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+            }
           }
         })
         .finally(() => {
@@ -40,6 +49,8 @@ export const AuthProvider = ({ children }) => {
             setLoading(false);
           }
         });
+    } else {
+      setLoading(false);
     }
 
     return () => {
@@ -54,6 +65,7 @@ export const AuthProvider = ({ children }) => {
       const { user: userData, token: jwtToken } = res.data;
 
       localStorage.setItem('token', jwtToken);
+      localStorage.setItem('user', JSON.stringify(userData));
       setToken(jwtToken);
       setUser(userData);
       return { success: true, user: userData };
@@ -71,6 +83,7 @@ export const AuthProvider = ({ children }) => {
       const { user: newUser, token: jwtToken } = res.data;
 
       localStorage.setItem('token', jwtToken);
+      localStorage.setItem('user', JSON.stringify(newUser));
       setToken(jwtToken);
       setUser(newUser);
       return { success: true, user: newUser };
@@ -81,6 +94,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = (updatedData) => {
+    setUser((prev) => {
+      const updated = { ...(prev || {}), ...updatedData };
+      try {
+        localStorage.setItem('user', JSON.stringify(updated));
+      } catch {
+        // ignore quota error
+      }
+      return updated;
+    });
+  };
+
   const logout = async () => {
     try {
       await authService.logout();
@@ -88,6 +113,7 @@ export const AuthProvider = ({ children }) => {
       // Ignore server logout failures
     } finally {
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
       setToken(null);
       setUser(null);
       setError(null);
@@ -103,6 +129,7 @@ export const AuthProvider = ({ children }) => {
         error,
         login,
         signup,
+        updateUser,
         logout,
         isAuthenticated: !!user,
         role: user?.role || 'guest',

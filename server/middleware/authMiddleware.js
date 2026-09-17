@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { errorResponse } from '../utils/apiResponse.js';
+import { env } from '../config/env.js';
 
 /**
  * JWT Authentication Middleware
@@ -20,10 +21,8 @@ export const protect = async (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || 'hackverse_super_secret_dev_key_987654321'
-    );
+    const secret = env.jwtSecret || process.env.JWT_SECRET || 'hackverse_super_secret_dev_key_987654321';
+    const decoded = jwt.verify(token, secret);
 
     // Verify user still exists in database
     const user = await User.findById(decoded.id).select('-password');

@@ -16,7 +16,7 @@ const BASE_ROLE_OPTIONS = [
 ];
 
 export const Profile = () => {
-  const { user, login } = useAuth();
+  const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
 
   const roleOptions = user?.role === 'admin'
@@ -57,8 +57,7 @@ export const Profile = () => {
 
       if (res && res.data) {
         setCurrentProfile(res.data);
-        const token = localStorage.getItem('token');
-        login(res.data, token);
+        updateUser(res.data);
         setSuccessMsg('Profile updated successfully!');
       }
     } catch (err) {
@@ -71,8 +70,7 @@ export const Profile = () => {
   const handleAvatarUpdated = (newAvatarUrl, updatedUser) => {
     const nextUser = updatedUser || { ...currentProfile, avatar: newAvatarUrl };
     setCurrentProfile(nextUser);
-    const token = localStorage.getItem('token');
-    login(nextUser, token);
+    updateUser(nextUser);
   };
 
   const displayAvatar = currentProfile?.avatar;
