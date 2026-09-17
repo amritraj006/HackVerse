@@ -71,7 +71,7 @@ function App() {
               <Route path="login" element={<Login />} />
               <Route path="register" element={<Register />} />
             </Route>
-            <Route path='hh' element={<div>Hiiiii</div>} />
+
           </Routes>
         </BrowserRouter>
       </AuthProvider>
