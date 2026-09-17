@@ -40,7 +40,7 @@ HackVerse is an end-to-end hackathon management and project evaluation platform 
 
 ### Platform Automation & Infrastructure
 * **Automated Lifecycle Scheduler**: A background scheduler checks competition dates periodically (every 60 seconds by default), transitioning events from `upcoming` to `ongoing` to `ended` and initializing result states.
-* **Tiered API Rate Limiting**: Guards against brute-force attacks and volumetric traffic with distinct limiters for global endpoints (150 req/15 min), authentication routes (10 req/15 min), and file uploads (20 req/15 min).
+* **Production-Ready Hybrid Rate Limiting**: Guards against brute-force attacks and volumetric traffic with a dual-key strategy: limits authenticated users by user ID (`user:<id>`) and unauthenticated requests by client IP (`ip:<ip>`), with dedicated limiters for global endpoints (150 req/15 min), strict IP-based authentication routes (10 req/15 min), and file uploads (20 req/15 min).
 * **Circuit Breaker Pattern**: Wraps external Cloudinary media interactions with a 3-state (`CLOSED`, `OPEN`, `HALF_OPEN`) circuit breaker, failing fast and routing to local `/uploads` storage when the cloud provider degrades.
 * **Process-Level Load Balancer**: Multi-worker process clustering using Node.js `node:cluster` to balance incoming HTTP requests across CPU cores via round-robin distribution with automatic worker revival.
 * **Docker Containerization**: Multi-stage Dockerfiles for client (Nginx) and server (Node.js Alpine) orchestrated via `docker-compose.yml` with MongoDB health checks and persistent volume mounts.
@@ -187,12 +187,53 @@ When an organizer assigns judges to an event, notifications are dispatched. Upon
 ### 5. Dual File Storage Strategy
 File uploads (user avatars, presentation decks, project screenshots) pass through Multer with file type filtering (`.jpeg`, `.jpg`, `.png`, `.gif`, `.pdf`, `.zip`) and size limits. If Cloudinary environment variables are present, files are streamed to cloud storage and local temp copies are pruned. If credentials are not configured, the system writes to `/uploads` with a static URL path fallback.
 
-### 6. Tiered Rate Limiting Architecture
-Configured via `express-rate-limit` to mitigate DoS, brute-force attacks, and abusive file uploads:
-* **Global API Limiter**: Enforces a threshold of 150 requests per 15-minute window across `/api/v1`.
-* **Auth Rate Limiter**: Restricts `/api/v1/auth/login`, `/signup`, and `/register` to 10 attempts per 15 minutes, returning HTTP 429 and `RateLimit-*` headers.
-* **Upload Rate Limiter**: Caps multipart file upload endpoints to 20 requests per 15 minutes.
-* Reverse-proxy awareness configured via `app.set('trust proxy', 1)` to ensure accurate client IP identification through Nginx or Docker networks.
+### 6. Production-Ready Hybrid Rate Limiting Architecture
+Configured via `express-rate-limit` using an intelligent hybrid key strategy (`server/middleware/rateLimiter.js`) that isolates authenticated users from unauthenticated traffic while strictly guarding public authentication endpoints:
+
+```text
+                 HackVerse API
+                      │
+          ┌───────────┴───────────┐
+          │                       │
+   Authentication APIs       Other APIs
+          │                       │
+     IP-based limit       ┌───────┴────────┐
+     10 / 15 min          │                │
+                         Authenticated   Unauthenticated
+                              │                │
+                           User ID             IP
+                              │                │
+                       150 / 15 min       150 / 15 min
+
+For uploads:
+Authenticated → User ID → 20 / 15 min
+Unauthenticated → IP → 20 / 15 min
+```
+
+* **Global API Limiter (`globalApiLimiter`)**:
+  * Enforces 150 requests per 15-minute window across `/api/v1` (configurable via `RATE_LIMIT_MAX_REQUESTS` and `RATE_LIMIT_WINDOW_MS`).
+  * **Hybrid Keying**: Uses `user:${req.user.id}` when authenticated by middleware, and safely falls back to client IP (`ip:${ipKeyGenerator(clientIp)}`) for public/unauthenticated requests.
+  * Health check route (`/api/v1/health`) is exempted to prevent synthetic monitoring and uptime checks from exhausting API quotas.
+* **Strict Authentication Limiter (`authRateLimiter`)**:
+  * Caps login and registration attempts at 10 requests per 15 minutes per IP (`AUTH_RATE_LIMIT_MAX`).
+  * **Strictly IP-Based**: Protects `/api/v1/auth/login`, `/signup`, and `/register` against brute-force and credential-stuffing attacks without relying on unverified user input.
+* **Media & File Upload Limiter (`uploadRateLimiter`)**:
+  * Caps multipart upload requests at 20 submissions per 15 minutes (`UPLOAD_RATE_LIMIT_MAX`).
+  * **Quota Isolation**: Keyed by `user:${req.user.id}` (with IP fallback) so that one authenticated account uploading files cannot exhaust quotas for others sharing the same NAT or campus IP.
+* **Security & IP Integrity**:
+  * **Untrusted Header Rejection**: Rejects arbitrary headers like `X-User-ID` or `User-ID`. User identity is exclusively sourced from verified JWT authentication middleware (`req.user.id`).
+  * **IPv6 Subnet Normalization**: Employs `express-rate-limit`'s `ipKeyGenerator` to normalize IPv6 addresses to `/56` subnets, preventing attackers from cycling IPv6 addresses to circumvent limits.
+  * **Safe Reverse-Proxy Configuration**: Configured with `app.set('trust proxy', 1)` to trust only the front-facing reverse proxy (Nginx, Render, Docker bridge) without opening spoofing vulnerabilities.
+* **Standardized 429 Response & Headers**:
+  * Violations return HTTP `429 Too Many Requests` in the unified API error format:
+    ```json
+    {
+      "success": false,
+      "message": "Too many requests to the HackVerse API. Please wait a few minutes before trying again.",
+      "errors": null
+    }
+    ```
+  * Emits standard RFC `RateLimit-*` headers (`RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`) with legacy `X-RateLimit-*` headers disabled.
 
 ### 7. Circuit Breaker Pattern for External Services
 External dependencies (Cloudinary API) are wrapped in a 3-state state machine (`server/utils/CircuitBreaker.js`):
