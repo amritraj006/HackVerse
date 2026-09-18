@@ -156,10 +156,9 @@ export const HackathonDetail = () => {
     ? leaderId?.toString() === currentUserId?.toString()
     : false;
   // User can cancel: either solo-registered (no team) or is the team creator,
-  // AND only while the hackathon hasn't started yet
-  const hackathonHasStarted = isHackathonEnded(hackathon) ||
-    (hackathon.startDate && new Date() >= new Date(hackathon.startDate));
-  const canCancelRegistration = isRegistered && (!regStatusData?.team || isTeamCreator) && !hackathonHasStarted;
+  // AND only while registrations are still open (before registration deadline)
+  const isRegOpen = isRegistrationEffectivelyOpen(hackathon);
+  const canCancelRegistration = isRegistered && (!regStatusData?.team || isTeamCreator) && isRegOpen;
 
 
   return (
@@ -301,6 +300,10 @@ export const HackathonDetail = () => {
                 >
                   {regStatusData?.team ? 'Cancel Team Registration' : 'Cancel Registration'}
                 </Button>
+              ) : !isRegOpen ? (
+                <span className="text-[11px] text-slate-400 font-medium italic">
+                  Registration closed (cancellation unavailable)
+                </span>
               ) : (
                 <span className="text-[11px] text-slate-400 font-medium italic">
                   Only the team creator can cancel the team registration

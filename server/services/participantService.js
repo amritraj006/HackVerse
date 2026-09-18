@@ -108,7 +108,7 @@ class ParticipantService {
    * Cancel participant registration for a hackathon
    */
   async cancelRegistration(hackathonId, participantId) {
-    // Fetch hackathon to check if it has started
+    // Fetch hackathon to check registration deadline
     const hackathon = await Hackathon.findById(hackathonId);
     if (!hackathon) {
       const error = new Error('Hackathon not found');
@@ -116,11 +116,13 @@ class ParticipantService {
       throw error;
     }
 
-    const hasStarted = isHackathonEnded(hackathon) ||
-      (hackathon.startDate && new Date() >= new Date(hackathon.startDate));
+    // Block cancellation once the registration deadline has passed
+    const deadlinePassed =
+      isHackathonEnded(hackathon) ||
+      !isRegistrationEffectivelyOpen(hackathon);
 
-    if (hasStarted) {
-      const error = new Error('You cannot cancel your registration after the hackathon has started.');
+    if (deadlinePassed) {
+      const error = new Error('You cannot cancel your registration after the registration deadline has passed.');
       error.statusCode = 400;
       throw error;
     }
@@ -264,8 +266,13 @@ class ParticipantService {
       const hackId = (reg.hackathon?._id || reg.hackathon)?.toString();
       const teamInfo = teamMap[hackId] || null;
       regObj.team = teamInfo;
-      // User can cancel if they are solo registered (no team) OR if they are the team leader
-      regObj.canCancel = !teamInfo || teamInfo.isLeader;
+      // Cancellation is only allowed before the registration deadline
+      const hackathonData = reg.hackathon && typeof reg.hackathon === 'object' ? reg.hackathon : null;
+      const regDeadlineOpen = hackathonData
+        ? isRegistrationEffectivelyOpen(hackathonData)
+        : true; // default permissive if no hackathon data available
+      // User can cancel if: deadline is open AND (no team OR they are the team leader)
+      regObj.canCancel = regDeadlineOpen && (!teamInfo || teamInfo.isLeader);
       return regObj;
     });
 

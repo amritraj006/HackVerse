@@ -313,6 +313,18 @@ class HackathonService {
     }
 
     Object.assign(hackathon, data);
+
+    // If registration deadline is extended into the future and hackathon hasn't ended,
+    // ensure isRegistrationOpen is re-opened (in case it was closed when past deadline lapsed)
+    if (
+      hackathon.registrationDeadline &&
+      new Date(hackathon.registrationDeadline) > new Date() &&
+      !isHackathonEnded(hackathon) &&
+      data.isRegistrationOpen === undefined
+    ) {
+      hackathon.isRegistrationOpen = true;
+    }
+
     await hackathon.save();
     return await this.getHackathonById(id);
   }

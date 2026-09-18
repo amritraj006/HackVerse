@@ -11,7 +11,9 @@ import {
   Copy,
   Check,
   ArrowRightLeft,
+  Lock,
 } from 'lucide-react';
+import { isRegistrationEffectivelyOpen } from '../utils/hackathonStatus';
 
 export const TeamCard = ({
   team,
@@ -31,6 +33,7 @@ export const TeamCard = ({
   const isLeader = currentUserId && leaderId === currentUserId;
   const isMember = currentUserId && members.some((m) => (typeof m === 'object' ? m._id : m) === currentUserId);
   const maxTeamSize = hackathon?.maxTeamSize || 4;
+  const isRegOpen = hackathon && typeof hackathon === 'object' ? isRegistrationEffectivelyOpen(hackathon) : true;
 
   const handleCopyCode = () => {
     if (!joinCode) return;
@@ -75,7 +78,7 @@ export const TeamCard = ({
         )}
 
         {/* Join Code block (for leader & members) */}
-        {!readOnly && (isLeader || isMember) && joinCode && (
+        {!readOnly && (isLeader || isMember) && joinCode && isRegOpen && (
           <div className="flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-md p-2 text-xs">
             <span className="text-slate-500 font-mono text-[11px]">
               Join Code: <strong className="text-slate-800 tracking-wider select-all">{joinCode}</strong>
@@ -143,13 +146,15 @@ export const TeamCard = ({
                     >
                       <ArrowRightLeft className="w-3.5 h-3.5" />
                     </button>
-                    <button
-                      onClick={() => onRemoveMember && onRemoveMember(_id, mId, mName)}
-                      className="p-1 text-slate-400 hover:text-rose-600 transition-colors"
-                      title="Remove Member"
-                    >
-                      <UserMinus className="w-3.5 h-3.5" />
-                    </button>
+                    {isRegOpen && (
+                      <button
+                        onClick={() => onRemoveMember && onRemoveMember(_id, mId, mName)}
+                        className="p-1 text-slate-400 hover:text-rose-600 transition-colors"
+                        title="Remove Member"
+                      >
+                        <UserMinus className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -163,29 +168,43 @@ export const TeamCard = ({
         <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
           {isLeader ? (
             <div className="flex items-center gap-1.5 w-full sm:w-auto">
-              {members.length < maxTeamSize && (
-                <Button size="sm" variant="outline" onClick={() => onInvite && onInvite(team)}>
-                  <UserPlus className="w-3.5 h-3.5" /> Invite
-                </Button>
+              {isRegOpen ? (
+                <>
+                  {members.length < maxTeamSize && (
+                    <Button size="sm" variant="outline" onClick={() => onInvite && onInvite(team)}>
+                      <UserPlus className="w-3.5 h-3.5" /> Invite
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-rose-600 hover:bg-rose-50"
+                    onClick={() => onDelete && onDelete(_id, name)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete Team
+                  </Button>
+                </>
+              ) : (
+                <span className="flex items-center gap-1 text-[11px] text-slate-400 font-medium italic">
+                  <Lock className="w-3 h-3 text-slate-400" /> Team roster locked (Registration ended)
+                </span>
               )}
+            </div>
+          ) : (
+            isRegOpen ? (
               <Button
                 size="sm"
                 variant="ghost"
                 className="text-rose-600 hover:bg-rose-50"
-                onClick={() => onDelete && onDelete(_id, name)}
+                onClick={() => onLeave && onLeave(_id, name)}
               >
-                <Trash2 className="w-3.5 h-3.5" /> Delete Team
+                <LogOut className="w-3.5 h-3.5" /> Leave Team
               </Button>
-            </div>
-          ) : (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-rose-600 hover:bg-rose-50"
-              onClick={() => onLeave && onLeave(_id, name)}
-            >
-              <LogOut className="w-3.5 h-3.5" /> Leave Team
-            </Button>
+            ) : (
+              <span className="flex items-center gap-1 text-[11px] text-slate-400 font-medium italic">
+                <Lock className="w-3 h-3 text-slate-400" /> Team roster locked (Registration ended)
+              </span>
+            )
           )}
         </div>
       )}

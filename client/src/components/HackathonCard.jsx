@@ -147,7 +147,7 @@ export const HackathonCard = ({
 
             {(() => {
               if (isRegistered) {
-                if (!hasStarted) {
+                if (regOpen) {
                   return (
                     <Button
                       size="sm"

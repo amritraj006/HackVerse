@@ -247,8 +247,8 @@ export const ParticipantDashboard = ({ user }) => {
                           <Button size="sm" variant="outline">View</Button>
                         </Link>
                         {(() => {
-                          const hasStarted = ['ongoing', 'ended'].includes(effectiveStatus) || (h.startDate && new Date() >= new Date(h.startDate));
-                          return !hasStarted ? (
+                          const isRegOpen = isRegistrationEffectivelyOpen(h);
+                          return isRegOpen && reg.canCancel !== false ? (
                             <Button
                               size="sm"
                               variant="ghost"

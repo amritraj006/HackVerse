@@ -4,6 +4,7 @@ import { Input } from './Input';
 import { Alert } from './Alert';
 import { hackathonService } from '../services/hackathonService';
 import { X, Users } from 'lucide-react';
+import { isRegistrationEffectivelyOpen } from '../utils/hackathonStatus';
 
 export const CreateTeamModal = ({ isOpen, onClose, onSuccess }) => {
   const [name, setName] = useState('');
@@ -19,7 +20,7 @@ export const CreateTeamModal = ({ isOpen, onClose, onSuccess }) => {
     hackathonService.getAll({ status: 'upcoming', limit: 50 })
       .then((res) => {
         if (!isMounted) return;
-        const list = res?.data?.hackathons || res?.data || [];
+        const list = (res?.data?.hackathons || res?.data || []).filter(isRegistrationEffectivelyOpen);
         setHackathons(list);
         if (list.length > 0) setHackathonId(list[0]._id);
       })

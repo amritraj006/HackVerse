@@ -45,11 +45,20 @@ export const isHackathonEnded = (hackathon, now = new Date()) => {
 export const isRegistrationEffectivelyOpen = (hackathon, now = new Date()) => {
   if (!hackathon) return false;
   if (isHackathonEnded(hackathon, now)) return false;
-  if (!hackathon.isRegistrationOpen) return false;
   const regDeadline = hackathon.registrationDeadline
     ? new Date(hackathon.registrationDeadline)
     : null;
   if (regDeadline && now > regDeadline) return false;
+
+  // If hackathon is not ended and registration deadline is in the future,
+  // registration is open (even if DB isRegistrationOpen was stale from a past deadline).
+  if (hackathon.isRegistrationOpen === false) {
+    if (regDeadline && now <= regDeadline) {
+      return true;
+    }
+    return false;
+  }
+
   return true;
 };
 

@@ -9,6 +9,7 @@ import { formatDate } from '../utils/helpers';
 import {
   getEffectiveStatus,
   isHackathonEnded,
+  isRegistrationEffectivelyOpen,
   STATUS_BADGE_CLASS,
   STATUS_LABEL,
 } from '../utils/hackathonStatus';
@@ -165,6 +166,7 @@ export const RegistrationHistory = () => {
               const isActive = reg.status === 'active';
               const effectiveStatus = getEffectiveStatus(h);
               const isEnded = isHackathonEnded(h);
+              const isRegOpen = isRegistrationEffectivelyOpen(h);
 
               return (
                 <div key={reg._id} className="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 first:pt-0 last:pb-0">
@@ -232,7 +234,7 @@ export const RegistrationHistory = () => {
                     <Link to={`/hackathons/${h._id}`}>
                       <Button size="sm" variant="outline">View Details</Button>
                     </Link>
-                    {isActive && !(['ongoing', 'ended'].includes(effectiveStatus) || (h.startDate && new Date() >= new Date(h.startDate))) && (reg.canCancel !== false ? (
+                    {isActive && isRegOpen && (reg.canCancel !== false ? (
                       <Button
                         size="sm"
                         variant="ghost"

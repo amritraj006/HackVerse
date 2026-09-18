@@ -37,7 +37,8 @@ export const updateHackathonStatuses = async () => {
       }
     );
 
-    // 3. Close registrations on hackathons whose registrationDeadline has passed
+    // 3. Sync registrations based on registrationDeadline
+    // 3a. Close registrations on hackathons whose registrationDeadline has passed
     await Hackathon.updateMany(
       {
         status: { $ne: 'ended' },
@@ -46,6 +47,18 @@ export const updateHackathonStatuses = async () => {
       },
       {
         $set: { isRegistrationOpen: false },
+      }
+    );
+
+    // 3b. Re-open registrations on upcoming hackathons whose registrationDeadline is in the future
+    await Hackathon.updateMany(
+      {
+        status: 'upcoming',
+        isRegistrationOpen: false,
+        registrationDeadline: { $gt: now },
+      },
+      {
+        $set: { isRegistrationOpen: true },
       }
     );
 

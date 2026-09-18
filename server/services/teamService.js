@@ -5,6 +5,7 @@ import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import Registration from '../models/Registration.js';
 import hackathonService from './hackathonService.js';
+import { isHackathonEnded, isRegistrationEffectivelyOpen } from '../utils/hackathonLifecycle.js';
 
 class TeamService {
   /**
@@ -79,7 +80,7 @@ class TeamService {
     );
 
     return await Team.findById(team._id)
-      .populate('hackathon', 'title maxTeamSize status startDate endDate')
+      .populate('hackathon', 'title maxTeamSize status startDate endDate registrationDeadline isRegistrationOpen')
       .populate('leader', 'name email avatar')
       .populate('members', 'name email avatar skills');
   }
@@ -146,7 +147,7 @@ class TeamService {
     );
 
     return await Team.findById(team._id)
-      .populate('hackathon', 'title maxTeamSize status startDate endDate')
+      .populate('hackathon', 'title maxTeamSize status startDate endDate registrationDeadline isRegistrationOpen')
       .populate('leader', 'name email avatar')
       .populate('members', 'name email avatar skills');
   }
@@ -181,7 +182,7 @@ class TeamService {
       const skip = (pageNum - 1) * limitNum;
 
       const teams = await Team.find(query)
-        .populate('hackathon', 'title maxTeamSize status startDate endDate prizePool')
+        .populate('hackathon', 'title maxTeamSize status startDate endDate registrationDeadline isRegistrationOpen prizePool')
         .populate('leader', 'name email avatar')
         .populate('members', 'name email avatar skills')
         .sort(sortObj)
@@ -198,7 +199,7 @@ class TeamService {
     }
 
     const teams = await Team.find(query)
-      .populate('hackathon', 'title maxTeamSize status startDate endDate prizePool')
+      .populate('hackathon', 'title maxTeamSize status startDate endDate registrationDeadline isRegistrationOpen prizePool')
       .populate('leader', 'name email avatar')
       .populate('members', 'name email avatar skills')
       .sort(sortObj);
@@ -236,7 +237,7 @@ class TeamService {
       const skip = (pageNum - 1) * limitNum;
 
       const teams = await Team.find(query)
-        .populate('hackathon', 'title maxTeamSize status')
+        .populate('hackathon', 'title maxTeamSize status startDate endDate registrationDeadline isRegistrationOpen')
         .populate('leader', 'name email avatar')
         .populate('members', 'name email avatar skills')
         .sort(sortObj)
@@ -253,7 +254,7 @@ class TeamService {
     }
 
     const teams = await Team.find(query)
-      .populate('hackathon', 'title maxTeamSize status')
+      .populate('hackathon', 'title maxTeamSize status startDate endDate registrationDeadline isRegistrationOpen')
       .populate('leader', 'name email avatar')
       .populate('members', 'name email avatar skills')
       .sort(sortObj);
@@ -267,7 +268,7 @@ class TeamService {
    */
   async getTeamById(teamId) {
     const team = await Team.findById(teamId)
-      .populate('hackathon', 'title maxTeamSize status startDate endDate prizePool')
+      .populate('hackathon', 'title maxTeamSize status startDate endDate registrationDeadline isRegistrationOpen prizePool')
       .populate('leader', 'name email avatar')
       .populate('members', 'name email avatar skills');
 
@@ -297,6 +298,12 @@ class TeamService {
     if (team.leader.toString() !== leaderId.toString()) {
       const error = new Error('Only the team leader can invite members');
       error.statusCode = 403;
+      throw error;
+    }
+
+    if (team.hackathon && (!isRegistrationEffectivelyOpen(team.hackathon) || isHackathonEnded(team.hackathon))) {
+      const error = new Error('Registration has closed. You cannot invite new members.');
+      error.statusCode = 400;
       throw error;
     }
 
@@ -375,7 +382,7 @@ class TeamService {
     });
 
     return await Team.findById(team._id)
-      .populate('hackathon', 'title maxTeamSize status')
+      .populate('hackathon', 'title maxTeamSize status startDate endDate registrationDeadline isRegistrationOpen')
       .populate('leader', 'name email avatar')
       .populate('members', 'name email avatar skills');
   }
@@ -406,6 +413,12 @@ class TeamService {
     if (!team) {
       const error = new Error('Team no longer exists');
       error.statusCode = 404;
+      throw error;
+    }
+
+    if (team.hackathon && (!isRegistrationEffectivelyOpen(team.hackathon) || isHackathonEnded(team.hackathon))) {
+      const error = new Error('Registration has closed. You cannot accept team invitations.');
+      error.statusCode = 400;
       throw error;
     }
 
@@ -508,6 +521,12 @@ class TeamService {
       throw error;
     }
 
+    if (team.hackathon && (!isRegistrationEffectivelyOpen(team.hackathon) || isHackathonEnded(team.hackathon))) {
+      const error = new Error('Cannot remove team members after the registration deadline has passed.');
+      error.statusCode = 400;
+      throw error;
+    }
+
     if (memberId.toString() === leaderId.toString()) {
       const error = new Error('Team leader cannot remove themselves. Transfer leadership or delete the team.');
       error.statusCode = 400;
@@ -540,7 +559,7 @@ class TeamService {
     });
 
     return await Team.findById(team._id)
-      .populate('hackathon', 'title maxTeamSize status')
+      .populate('hackathon', 'title maxTeamSize status startDate endDate registrationDeadline isRegistrationOpen')
       .populate('leader', 'name email avatar')
       .populate('members', 'name email avatar skills');
   }
@@ -573,7 +592,7 @@ class TeamService {
     await team.save();
 
     return await Team.findById(team._id)
-      .populate('hackathon', 'title maxTeamSize status')
+      .populate('hackathon', 'title maxTeamSize status startDate endDate registrationDeadline isRegistrationOpen')
       .populate('leader', 'name email avatar')
       .populate('members', 'name email avatar skills');
   }
@@ -582,10 +601,16 @@ class TeamService {
    * Leave team (Member action)
    */
   async leaveTeam(teamId, userId) {
-    const team = await Team.findById(teamId);
+    const team = await Team.findById(teamId).populate('hackathon');
     if (!team) {
       const error = new Error('Team not found');
       error.statusCode = 404;
+      throw error;
+    }
+
+    if (team.hackathon && (!isRegistrationEffectivelyOpen(team.hackathon) || isHackathonEnded(team.hackathon))) {
+      const error = new Error('You cannot leave a team after the registration deadline has passed.');
+      error.statusCode = 400;
       throw error;
     }
 
@@ -596,6 +621,8 @@ class TeamService {
       throw error;
     }
 
+    const hackathonId = team.hackathon?._id || team.hackathon;
+
     if (team.leader.toString() === userId.toString()) {
       if (team.members.length > 1) {
         const error = new Error('Team leader must transfer leadership before leaving');
@@ -604,7 +631,7 @@ class TeamService {
       }
       // Sole leader leaving -> disestablish team and cancel registration for leader
       await Registration.findOneAndUpdate(
-        { hackathon: team.hackathon, participant: userId },
+        { hackathon: hackathonId, participant: userId },
         { status: 'cancelled' }
       );
       await Team.findByIdAndDelete(teamId);
@@ -616,12 +643,12 @@ class TeamService {
 
     // Cancel registration for the leaving member
     await Registration.findOneAndUpdate(
-      { hackathon: team.hackathon, participant: userId },
+      { hackathon: hackathonId, participant: userId },
       { status: 'cancelled' }
     );
 
     return await Team.findById(team._id)
-      .populate('hackathon', 'title maxTeamSize status')
+      .populate('hackathon', 'title maxTeamSize status startDate endDate registrationDeadline isRegistrationOpen')
       .populate('leader', 'name email avatar')
       .populate('members', 'name email avatar skills');
   }
@@ -640,6 +667,12 @@ class TeamService {
     if (team.leader.toString() !== userId.toString() && userRole !== 'admin') {
       const error = new Error('Only team leader or admin can delete the team');
       error.statusCode = 403;
+      throw error;
+    }
+
+    if (team.hackathon && userRole !== 'admin' && (!isRegistrationEffectivelyOpen(team.hackathon) || isHackathonEnded(team.hackathon))) {
+      const error = new Error('You cannot delete a team after the registration deadline has passed.');
+      error.statusCode = 400;
       throw error;
     }
 
