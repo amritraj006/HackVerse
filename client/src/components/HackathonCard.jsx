@@ -97,11 +97,10 @@ export const HackathonCard = ({
               <Users className="w-3 h-3 text-indigo-600" />
               {hackathon.totalRegisteredUsers || 0}/{hackathon.maxParticipants} Users
               <span
-                className={`px-1.5 py-0.2 text-[9px] font-bold rounded border ${
-                  (hackathon.availableSlots ?? 0) > 0
+                className={`px-1.5 py-0.2 text-[9px] font-bold rounded border ${(hackathon.availableSlots ?? 0) > 0
                     ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                     : 'bg-rose-50 text-rose-700 border-rose-200'
-                }`}
+                  }`}
               >
                 {(hackathon.availableSlots ?? 0) > 0 ? `${hackathon.availableSlots} left` : 'Full'}
               </span>
