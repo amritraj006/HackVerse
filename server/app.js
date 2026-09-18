@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import morgan from 'morgan';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import apiRoutes from './routes/index.js';
@@ -13,6 +14,9 @@ const app = express();
 
 // Trust reverse proxy (Nginx, Docker bridge) for accurate client IP identification in rate limiters
 app.set('trust proxy', 1);
+
+// HTTP request logger
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // Allowed origins (environment variable + fallback localhost ports)
 const allowedOrigins = [
