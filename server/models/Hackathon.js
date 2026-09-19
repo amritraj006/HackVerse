@@ -95,6 +95,26 @@ const hackathonSchema = new mongoose.Schema(
         prize: String,
       },
     ],
+    // Judges who failed to declare the winner within the 12-hour window after hackathon ended
+    missedJudgeDeadlines: [
+      {
+        judge: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'User',
+        },
+        missedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    // Judges assigned by host after 12h deadline to handle winner declaration
+    reassignedJudges: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
   {
     timestamps: true,

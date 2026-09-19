@@ -7,9 +7,10 @@ import { DataTable } from '../../components/DataTable';
 import { ConfirmModal } from '../../components/ConfirmModal';
 import { HackathonForm } from '../../components/HackathonForm';
 import { hackathonService } from '../../services/hackathonService';
+import { submissionService } from '../../services/submissionService';
 import { userService } from '../../services/userService';
 import { formatDate, formatDateTime } from '../../utils/helpers';
-import { getEffectiveStatus, isHackathonEnded, STATUS_BADGE_CLASS } from '../../utils/hackathonStatus';
+import { getEffectiveStatus, isHackathonEnded, getWinnerDeclarationState, STATUS_BADGE_CLASS } from '../../utils/hackathonStatus';
 import {
   ArrowLeft,
   Edit,
@@ -23,6 +24,7 @@ import {
   Mail,
   Search,
   Clock,
+  Trophy,
 } from 'lucide-react';
 
 export const ManageHackathon = () => {
@@ -346,6 +348,34 @@ export const ManageHackathon = () => {
     }
   };
 
+  // Host Winner Declaration (available when 12h window has elapsed or no judge assigned)
+  const [declaringWinnerId, setDeclaringWinnerId] = useState(null);
+  const handleHostDeclareWinner = async (submissionId, projectTitle, teamOrSoloName) => {
+    if (
+      !window.confirm(
+        `As the host, are you sure you want to declare "${projectTitle}" (${teamOrSoloName}) as the Official Winner?\n\nThis will update all team members' user profiles with the victory badge!`
+      )
+    ) {
+      return;
+    }
+
+    setDeclaringWinnerId(submissionId);
+    try {
+      await submissionService.declareWinner(submissionId);
+      setAlert({
+        type: 'success',
+        message: `🏆 "${projectTitle}" has been declared the WINNER by host!`,
+      });
+      refreshHackathonData();
+      const res = await hackathonService.getLeaderboardPreview(id);
+      if (res?.data) setLeaderboard(res.data.rankings || []);
+    } catch (err) {
+      setAlert({ type: 'error', message: err.message || 'Failed to declare winner.' });
+    } finally {
+      setDeclaringWinnerId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[300px] text-xs text-slate-500 gap-2">
@@ -369,6 +399,11 @@ export const ManageHackathon = () => {
   // Compute effective state from dates — more accurate than stored status
   const effectiveStatus = getEffectiveStatus(hackathon);
   const isEnded = isHackathonEnded(hackathon);
+  const winnerDeclState = getWinnerDeclarationState(hackathon);
+  const canHostDeclare =
+    isEnded &&
+    (winnerDeclState.isJudgeWindowExpired || !(hackathon.assignedJudges || []).length) &&
+    !hackathon.isResultsPublished;
   // Has the hackathon started = either ongoing or ended
   const hasStarted = isEnded ||
     (hackathon.startDate && new Date() >= new Date(hackathon.startDate));
@@ -459,6 +494,36 @@ export const ManageHackathon = () => {
       header: 'Winner',
       accessor: (row) => row.isWinner ? <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 rounded-full">🏆 Winner</span> : '—',
     },
+    ...(canHostDeclare
+      ? [
+          {
+            header: 'Host Action',
+            accessor: (row) =>
+              row.isWinner ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">
+                  <Trophy className="w-3 h-3 text-amber-600" /> Declared
+                </span>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  disabled={declaringWinnerId === row.submissionId}
+                  onClick={() =>
+                    handleHostDeclareWinner(row.submissionId, row.projectName, row.teamName)
+                  }
+                  className="bg-amber-600 hover:bg-amber-700 text-white border-amber-600 text-[11px] py-1 px-2.5"
+                >
+                  {declaringWinnerId === row.submissionId ? (
+                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                  ) : (
+                    <Trophy className="w-3 h-3" />
+                  )}
+                  Declare Winner 🏆
+                </Button>
+              ),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -702,6 +767,32 @@ export const ManageHackathon = () => {
               <span className="font-bold">⚠️ Notice:</span> Each hackathon can only have <strong>1 judge</strong> assigned. When you assign a judge, an invitation will be sent to them. Once they accept, they gain access to view hackathon details, teams, participants, and review submissions.
             </div>
 
+            {/* Active 12-hour Judge Declaration Window Notice */}
+            {isEnded && winnerDeclState.isWithinJudgeWindow && (hackathon.assignedJudges || []).length > 0 && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-start gap-2">
+                <Clock className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">Winner Declaration Window Active (Assigned Judge)</p>
+                  <p className="text-[11px] text-blue-800 mt-0.5">
+                    The assigned judge has an exclusive 12-hour window starting from hackathon end time ({formatDateTime(winnerDeclState.judgeDeadline)}) to declare the winner. Judge reassignment is locked during this active window.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Missed 12-hour Deadline Warning */}
+            {isEnded && winnerDeclState.isJudgeWindowExpired && (!hackathon.winners || hackathon.winners.length === 0) && (
+              <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-900 flex items-start gap-2">
+                <XCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">Assigned Judge Missed 12-Hour Winner Declaration Deadline</p>
+                  <p className="text-[11px] text-rose-800 mt-0.5">
+                    The assigned judge failed to declare the winner within the required 12-hour period. As host, you can now assign someone else below to handle winner declaration, or declare the winner directly in the Submissions &amp; Results tab.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {availableJudges.length === 0 ? (
               <div className="p-6 text-center bg-slate-50 rounded-lg border border-dashed border-slate-200 space-y-1">
                 <p className="text-xs font-semibold text-slate-700">No Judges Found</p>
@@ -715,6 +806,9 @@ export const ManageHackathon = () => {
                   const isSelected = selectedJudgeIds.includes(j._id);
                   const isPending = (hackathon.pendingJudges || []).some((pj) => (pj._id || pj) === j._id);
                   const isAccepted = (hackathon.assignedJudges || []).some((aj) => (aj._id || aj) === j._id);
+                  const hasMissed = (hackathon.missedJudgeDeadlines || []).some(
+                    (m) => (m.judge?._id || m.judge || m) === j._id
+                  );
 
                   return (
                     <div
@@ -734,7 +828,7 @@ export const ManageHackathon = () => {
                           {j.name?.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <p className="font-semibold">{j.name}</p>
                             {isAccepted && (
                               <span className="px-1.5 py-0.2 text-[9px] font-bold uppercase bg-emerald-100 text-emerald-800 rounded">
@@ -744,6 +838,11 @@ export const ManageHackathon = () => {
                             {isPending && (
                               <span className="px-1.5 py-0.2 text-[9px] font-bold uppercase bg-amber-100 text-amber-800 rounded">
                                 Invite Pending
+                              </span>
+                            )}
+                            {hasMissed && (
+                              <span className="px-1.5 py-0.2 text-[9px] font-bold uppercase bg-rose-100 text-rose-800 rounded border border-rose-200">
+                                Missed Winner Deadline
                               </span>
                             )}
                           </div>
@@ -767,7 +866,24 @@ export const ManageHackathon = () => {
             )}
 
             <div className="flex items-center gap-2">
-              <Button size="sm" variant="primary" onClick={handleSaveJudges} disabled={isAssigningJudges}>
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={handleSaveJudges}
+                disabled={
+                  isAssigningJudges ||
+                  (isEnded &&
+                    winnerDeclState.isWithinJudgeWindow &&
+                    (hackathon.assignedJudges || []).length > 0)
+                }
+                title={
+                  isEnded &&
+                  winnerDeclState.isWithinJudgeWindow &&
+                  (hackathon.assignedJudges || []).length > 0
+                    ? 'Judge reassignment is locked during the active 12-hour declaration window'
+                    : ''
+                }
+              >
                 {isAssigningJudges ? 'Saving Judge...' : 'Save Assigned Judge'}
               </Button>
               {selectedJudgeIds.length > 0 && (
@@ -878,6 +994,20 @@ export const ManageHackathon = () => {
       {/* Tab: Submissions & Results */}
       {activeTab === 'submissions' && (
         <div className="space-y-4">
+          {isEnded &&
+            winnerDeclState.isJudgeWindowExpired &&
+            (!hackathon.winners || hackathon.winners.length === 0) && (
+              <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-start gap-2.5">
+                <Trophy className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div className="space-y-0.5">
+                  <p className="font-bold">Host Winner Declaration Active</p>
+                  <p className="text-[11px] text-amber-800">
+                    The assigned judge did not declare a winner within the 12-hour window after the hackathon ended. As the host, you can now declare the official winner using the &apos;Declare Winner 🏆&apos; button in the leaderboard table below.
+                  </p>
+                </div>
+              </div>
+            )}
+
           <Card header={<span className="font-semibold text-xs text-slate-800">Calculated Leaderboard</span>}>
             <div className="space-y-3 text-xs">
               <p className="text-slate-500">

@@ -5,7 +5,12 @@ import Registration from '../models/Registration.js';
 import Notification from '../models/Notification.js';
 import User from '../models/User.js';
 import { updateHackathonStatuses } from '../utils/hackathonScheduler.js';
-import { getEffectiveStatus, isHackathonEnded } from '../utils/hackathonLifecycle.js';
+import {
+  getEffectiveStatus,
+  isHackathonEnded,
+  getWinnerDeclarationState,
+  recordMissedJudgeDeadlines,
+} from '../utils/hackathonLifecycle.js';
 
 class HackathonService {
   /**
@@ -161,9 +166,12 @@ class HackathonService {
    */
   async getHackathonById(id) {
     await updateHackathonStatuses();
+    await recordMissedJudgeDeadlines(id);
     const hackathon = await Hackathon.findById(id)
       .populate('organizer', 'name email avatar')
       .populate('assignedJudges', 'name email avatar skills')
+      .populate('pendingJudges', 'name email avatar skills')
+      .populate('missedJudgeDeadlines.judge', 'name email avatar')
       .populate({
         path: 'winners.submission',
         populate: { path: 'submittedBy', select: 'name email' },
@@ -526,9 +534,40 @@ class HackathonService {
       throw error;
     }
 
+    const now = new Date();
+    const { isEnded, isJudgeWindowExpired } = getWinnerDeclarationState(hackathon, now);
+
+    // If hackathon has ended and 12-hour window has not expired, the assigned judge is in their active window
+    if (isEnded && !isJudgeWindowExpired && (hackathon.assignedJudges || []).length > 0) {
+      const currentAssigned = hackathon.assignedJudges.map((j) => j.toString());
+      const isTryingToChange =
+        judgeIds.some((jid) => !currentAssigned.includes(jid)) ||
+        currentAssigned.some((jid) => !judgeIds.includes(jid));
+      if (isTryingToChange && user.role !== 'admin') {
+        const error = new Error(
+          'The assigned judge has a 12-hour window to declare the winner. You can assign someone else after the 12-hour deadline has passed.'
+        );
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
     // Verify all IDs belong to judge/admin accounts
     const validJudges = await User.find({ _id: { $in: judgeIds }, role: { $in: ['judge', 'admin'] } });
     const validJudgeIds = validJudges.map((j) => j._id.toString());
+
+    // If 12 hours have passed, record any previous judge who missed the deadline
+    if (isJudgeWindowExpired) {
+      await recordMissedJudgeDeadlines(hackathon, now);
+      if (!hackathon.reassignedJudges) {
+        hackathon.reassignedJudges = [];
+      }
+      for (const jid of validJudgeIds) {
+        if (!hackathon.reassignedJudges.some((rj) => rj.toString() === jid)) {
+          hackathon.reassignedJudges.push(jid);
+        }
+      }
+    }
 
     // Determine which judges are newly invited (not already pending or accepted)
     const alreadyAssigned = new Set(hackathon.assignedJudges.map((j) => j.toString()));
@@ -563,7 +602,8 @@ class HackathonService {
 
     return await Hackathon.findById(id)
       .populate('assignedJudges', 'name email avatar skills')
-      .populate('pendingJudges', 'name email avatar skills');
+      .populate('pendingJudges', 'name email avatar skills')
+      .populate('missedJudgeDeadlines.judge', 'name email avatar skills');
   }
 
   /**
@@ -821,8 +861,8 @@ class HackathonService {
         projectName: submission.title,
         totalScore,
         maxScore: 40,
-        position: winner?.prize || null,
-        isWinner: Boolean(winner),
+        position: winner?.prize || submission.winnerPosition || null,
+        isWinner: Boolean(winner) || Boolean(submission.isWinner),
         submissionId: submission._id,
       };
     });

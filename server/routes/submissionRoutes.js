@@ -23,7 +23,7 @@ router.get('/', getAllSubmissions);
 // Judge evaluation workspace. These must precede the dynamic /:id route.
 router.get('/assigned', protect, authorize('judge', 'admin'), getAssignedSubmissions);
 router.post('/:id/evaluations', protect, authorize('judge', 'admin'), submitEvaluation);
-router.put('/:id/winner', protect, authorize('judge', 'admin'), declareWinner);
+router.put('/:id/winner', protect, authorize('judge', 'organizer', 'admin'), declareWinner);
 router.get('/my-submissions', protect, getMySubmissions);
 router.get('/hackathon/:hackathonId', protect, getHackathonSubmissions);
 

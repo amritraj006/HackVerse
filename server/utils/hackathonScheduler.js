@@ -1,4 +1,8 @@
 import Hackathon from '../models/Hackathon.js';
+import {
+  WINNER_DECLARATION_WINDOW_MS,
+  recordMissedJudgeDeadlines,
+} from './hackathonLifecycle.js';
 
 /**
  * Periodically syncs hackathon `status` and `isRegistrationOpen` in the DB
@@ -96,6 +100,18 @@ export const updateHackathonStatuses = async () => {
         $set: { resultStatus: 'pending' },
       }
     );
+
+    // 5. Check and record missed winner declaration deadlines for ended hackathons past 12h
+    const twelveHoursAgo = new Date(now.getTime() - WINNER_DECLARATION_WINDOW_MS);
+    const expiredHackathons = await Hackathon.find({
+      status: 'ended',
+      endDate: { $lte: twelveHoursAgo },
+      'assignedJudges.0': { $exists: true },
+    });
+
+    for (const h of expiredHackathons) {
+      await recordMissedJudgeDeadlines(h, now);
+    }
 
     if (toEndedResult.modifiedCount > 0) {
       console.log(`[Scheduler] Ended ${toEndedResult.modifiedCount} hackathon(s) past their submission deadline`);

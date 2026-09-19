@@ -6,7 +6,12 @@ import { Alert } from '../../components/Alert';
 import { submissionService } from '../../services/submissionService';
 import { hackathonService } from '../../services/hackathonService';
 import { notificationService } from '../../services/notificationService';
-import { getEffectiveStatus, STATUS_BADGE_CLASS } from '../../utils/hackathonStatus';
+import {
+  getEffectiveStatus,
+  STATUS_BADGE_CLASS,
+  getWinnerDeclarationState,
+  isHackathonEnded,
+} from '../../utils/hackathonStatus';
 import {
   CheckCircle2,
   Clock,
@@ -316,6 +321,15 @@ export const JudgeDashboard = ({ user }) => {
       {/* Tab 1: Project Evaluations */}
       {activeTab === 'evaluations' && (
         <Card header={<span className="font-semibold text-xs text-slate-800">Assigned Project Queue</span>}>
+          {/* Inform the judge when evaluations are not yet open */}
+          {submissions.some((s) => !isHackathonEnded(s.hackathon)) && (
+            <div className="mb-3 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-[11px] text-amber-800">
+              <Clock className="mt-0.5 w-3.5 h-3.5 shrink-0 text-amber-600" />
+              <span>
+                <strong>Evaluations not yet open.</strong> You can only score projects after the hackathon has ended.
+              </span>
+            </div>
+          )}
           {loading ? (
             <div className="py-8 text-center text-xs text-slate-500">Loading your assigned projects...</div>
           ) : submissions.length === 0 ? (
@@ -325,6 +339,8 @@ export const JudgeDashboard = ({ user }) => {
               {submissions.map((submission) => {
                 const reviewed = Boolean(submission.myEvaluation);
                 const isWinner = submission.isWinner;
+                const hackathonFinished = isHackathonEnded(submission.hackathon);
+                const canEvaluate = hackathonFinished && !reviewed;
                 return (
                   <div key={submission._id} className={`p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${isWinner ? 'bg-amber-50/60 border-amber-200 ring-1 ring-amber-300' : 'bg-slate-50 border-slate-200/80'}`}>
                     <div className="space-y-1 min-w-0">
@@ -350,8 +366,14 @@ export const JudgeDashboard = ({ user }) => {
                           <Button size="sm" variant="outline"><ExternalLink className="w-3.5 h-3.5" /> View Demo</Button>
                         </a>
                       )}
-                      <Button size="sm" variant={reviewed ? 'secondary' : 'primary'} disabled={reviewed} onClick={() => openEvaluation(submission)}>
-                        {reviewed ? 'Evaluation Submitted' : 'Evaluate Project'}
+                      <Button
+                        size="sm"
+                        variant={reviewed ? 'secondary' : 'primary'}
+                        disabled={!canEvaluate}
+                        onClick={() => canEvaluate && openEvaluation(submission)}
+                        title={!hackathonFinished ? 'Evaluations open after the hackathon ends' : reviewed ? 'Already evaluated' : undefined}
+                      >
+                        {reviewed ? 'Evaluation Submitted' : !hackathonFinished ? 'Hackathon Ongoing' : 'Evaluate Project'}
                       </Button>
                     </div>
                   </div>
@@ -490,63 +512,178 @@ export const JudgeDashboard = ({ user }) => {
               Declaring a winner will instantly propagate victory badges to <strong>all members of the team</strong> (or the solo participant) across the entire platform.
             </p>
 
+            {/* Hackathon Selector if multiple */}
+            {judgeHackathons.length > 1 && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="font-semibold text-slate-700">Select Hackathon:</span>
+                <select
+                  value={selectedHackathonId}
+                  onChange={(e) => setSelectedHackathonId(e.target.value)}
+                  className="px-3 py-1.5 border border-slate-200 rounded-lg bg-white font-medium text-slate-800"
+                >
+                  <option value="">All Assigned Hackathons</option>
+                  {judgeHackathons.map((h) => (
+                    <option key={h._id} value={h._id}>{h.title}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Status Notice Banner based on active hackathon */}
+            {(() => {
+              const activeHackathon =
+                judgeHackathons.find((h) => h._id === selectedHackathonId) ||
+                judgeHackathons[0] ||
+                submissions[0]?.hackathon;
+              if (!activeHackathon) return null;
+
+              const decl = getWinnerDeclarationState(activeHackathon);
+              const remainingHours = Math.floor(decl.remainingWindowMs / (1000 * 60 * 60));
+              const remainingMins = Math.floor((decl.remainingWindowMs % (1000 * 60 * 60)) / (1000 * 60));
+              const hasMissed = (activeHackathon.missedJudgeDeadlines || []).some(
+                (m) => (m.judge?._id || m.judge || m) === user?._id
+              );
+
+              if (!decl.isEnded) {
+                return (
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>
+                      <strong>Hackathon Ongoing:</strong> Winners cannot be declared while the hackathon is ongoing. You will have a <strong>12-hour window</strong> to declare the winner once the hackathon officially ends.
+                    </span>
+                  </div>
+                );
+              }
+
+              if (decl.isWithinJudgeWindow) {
+                return (
+                  <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900 flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>
+                      <strong>12-Hour Window Active:</strong> You have <strong>{remainingHours}h {remainingMins}m</strong> remaining to declare the official winner.
+                    </span>
+                  </div>
+                );
+              }
+
+              if (decl.isJudgeWindowExpired && hasMissed) {
+                return (
+                  <div className="p-3 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-900 flex items-center gap-2">
+                    <XCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>
+                      <strong>12-Hour Deadline Expired:</strong> You did not declare a winner within the 12-hour period after the hackathon ended. The host can now declare the winner or assign a replacement judge.
+                    </span>
+                  </div>
+                );
+              }
+
+              if (decl.isJudgeWindowExpired && !hasMissed) {
+                return (
+                  <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-xs text-indigo-900 flex items-center gap-2">
+                    <Trophy className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span>
+                      <strong>Assigned to Declare Winner:</strong> You have been assigned by the host to handle winner declaration for this hackathon.
+                    </span>
+                  </div>
+                );
+              }
+
+              return null;
+            })()}
+
             {submissions.length === 0 ? (
               <div className="py-8 text-center text-xs text-slate-500">No project submissions available to declare as winner.</div>
             ) : (
               <div className="space-y-3">
-                {submissions.map((submission) => {
-                  const isWinner = submission.isWinner;
-                  const isActing = declaringWinnerId === submission._id;
-                  const teamOrSoloName = submission.team ? `Team: ${submission.team.name}` : `Solo: ${submission.submittedBy?.name || 'Participant'}`;
+                {submissions
+                  .filter((sub) => !selectedHackathonId || (sub.hackathon?._id || sub.hackathon) === selectedHackathonId)
+                  .map((submission) => {
+                    const isWinner = submission.isWinner;
+                    const isActing = declaringWinnerId === submission._id;
+                    const teamOrSoloName = submission.team ? `Team: ${submission.team.name}` : `Solo: ${submission.submittedBy?.name || 'Participant'}`;
 
-                  return (
-                    <div
-                      key={submission._id}
-                      className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
-                        isWinner ? 'bg-amber-50 border-amber-300 ring-2 ring-amber-400/40' : 'bg-slate-50 border-slate-200'
-                      }`}
-                    >
-                      <div className="space-y-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          {isWinner && (
-                            <span className="px-2.5 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded-full flex items-center gap-1 shadow-xs">
-                              <Trophy className="w-3 h-3" /> OFFICIAL WINNER
-                            </span>
-                          )}
-                          <h3 className="text-xs font-bold text-slate-900">{submission.title}</h3>
-                        </div>
-                        <p className="text-[11px] font-medium text-slate-600">{teamOrSoloName}</p>
-                        <p className="text-[11px] text-slate-500">
-                          Average Score: <span className="font-bold text-indigo-700">{submission.score || 0} / 40</span>
-                          {submission.myEvaluation && <span className="ml-2 text-emerald-600 font-semibold">(Your Grade: {submission.myEvaluation.score}/40)</span>}
-                        </p>
-                      </div>
+                    const hackathon =
+                      judgeHackathons.find((h) => h._id === (submission.hackathon?._id || submission.hackathon)) ||
+                      submission.hackathon;
+                    const decl = getWinnerDeclarationState(hackathon);
+                    const isOngoing = !decl.isEnded;
+                    const isExpired = decl.isJudgeWindowExpired;
+                    const hasMissed = (hackathon?.missedJudgeDeadlines || []).some(
+                      (m) => (m.judge?._id || m.judge || m) === user?._id
+                    );
+                    const canDeclare = decl.isWithinJudgeWindow || (isExpired && !hasMissed);
 
-                      <div className="shrink-0">
-                        {isWinner ? (
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-900 text-xs font-bold rounded-lg border border-amber-300">
-                            <Trophy className="w-3.5 h-3.5 text-amber-600" /> Declared Winner
-                          </span>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="primary"
-                            disabled={isActing}
-                            onClick={() => handleDeclareWinner(submission._id, submission.title, teamOrSoloName)}
-                            className="bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
-                          >
-                            {isActing ? (
-                              <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
-                            ) : (
-                              <Trophy className="w-3.5 h-3.5" />
+                    return (
+                      <div
+                        key={submission._id}
+                        className={`p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${
+                          isWinner ? 'bg-amber-50 border-amber-300 ring-2 ring-amber-400/40' : 'bg-slate-50 border-slate-200'
+                        }`}
+                      >
+                        <div className="space-y-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {isWinner && (
+                              <span className="px-2.5 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded-full flex items-center gap-1 shadow-xs">
+                                <Trophy className="w-3 h-3" /> OFFICIAL WINNER
+                              </span>
                             )}
-                            Declare Winner 🏆
-                          </Button>
-                        )}
+                            <h3 className="text-xs font-bold text-slate-900">{submission.title}</h3>
+                          </div>
+                          <p className="text-[11px] font-medium text-slate-600">
+                            {submission.hackathon?.title && <span className="font-semibold text-slate-800">{submission.hackathon.title} • </span>}
+                            {teamOrSoloName}
+                          </p>
+                          <p className="text-[11px] text-slate-500">
+                            Average Score: <span className="font-bold text-indigo-700">{submission.score || 0} / 40</span>
+                            {submission.myEvaluation && <span className="ml-2 text-emerald-600 font-semibold">(Your Grade: {submission.myEvaluation.score}/40)</span>}
+                          </p>
+                        </div>
+
+                        <div className="shrink-0">
+                          {isWinner ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 text-amber-900 text-xs font-bold rounded-lg border border-amber-300">
+                              <Trophy className="w-3.5 h-3.5 text-amber-600" /> Declared Winner
+                            </span>
+                          ) : isOngoing ? (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={true}
+                              title="Cannot declare winner while the hackathon is ongoing"
+                              className="opacity-70 cursor-not-allowed"
+                            >
+                              <Clock className="w-3.5 h-3.5" /> Hackathon Ongoing
+                            </Button>
+                          ) : isExpired && hasMissed ? (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              disabled={true}
+                              title="Your 12-hour window to declare the winner has expired"
+                              className="opacity-70 cursor-not-allowed text-rose-700"
+                            >
+                              <XCircle className="w-3.5 h-3.5" /> 12h Window Expired
+                            </Button>
+                          ) : canDeclare ? (
+                            <Button
+                              size="sm"
+                              variant="primary"
+                              disabled={isActing}
+                              onClick={() => handleDeclareWinner(submission._id, submission.title, teamOrSoloName)}
+                              className="bg-amber-600 hover:bg-amber-700 text-white border-amber-600"
+                            >
+                              {isActing ? (
+                                <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                              ) : (
+                                <Trophy className="w-3.5 h-3.5" />
+                              )}
+                              Declare Winner 🏆
+                            </Button>
+                          ) : null}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
             )}
           </div>

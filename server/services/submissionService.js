@@ -4,7 +4,11 @@ import Hackathon from '../models/Hackathon.js';
 import Team from '../models/Team.js';
 import Registration from '../models/Registration.js';
 import User from '../models/User.js';
-import { isHackathonEnded } from '../utils/hackathonLifecycle.js';
+import {
+  isHackathonEnded,
+  getWinnerDeclarationState,
+  recordMissedJudgeDeadlines,
+} from '../utils/hackathonLifecycle.js';
 
 const JUDGING_CRITERIA = [
   { criterion: 'Innovation', maxScore: 10 },
@@ -270,6 +274,7 @@ class SubmissionService {
 
     const assignedHackathons = await Hackathon.find(hackathonQuery)
       .populate('organizer', 'name email avatar')
+      .populate('missedJudgeDeadlines.judge', 'name email')
       .sort({ createdAt: -1 })
       .lean();
 
@@ -279,7 +284,7 @@ class SubmissionService {
       hackathon: { $in: hackathonIds },
       status: 'submitted',
     })
-      .populate('hackathon', 'title status endDate')
+      .populate('hackathon', 'title status endDate organizer assignedJudges missedJudgeDeadlines')
       .populate('submittedBy', 'name email avatar')
       .populate('team', 'name')
       .populate('teamMembers', 'name email avatar')
@@ -313,6 +318,19 @@ class SubmissionService {
     const isAssigned = isAdmin || await Hackathon.exists({ _id: submission.hackathon, assignedJudges: user.id });
     if (!isAssigned) {
       const error = new Error('You are not assigned to evaluate this project');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Judges may only evaluate after the hackathon has ended.
+    const evalHackathon = await Hackathon.findById(submission.hackathon).select('endDate submissionDeadline status');
+    if (!evalHackathon) {
+      const error = new Error('Hackathon not found');
+      error.statusCode = 404;
+      throw error;
+    }
+    if (!isHackathonEnded(evalHackathon, new Date())) {
+      const error = new Error('Evaluations can only be submitted after the hackathon has ended');
       error.statusCode = 403;
       throw error;
     }
@@ -510,13 +528,67 @@ class SubmissionService {
       throw error;
     }
 
-    // Only the assigned judge (or admin) may declare a winner
+    const hackathon = await Hackathon.findById(submission.hackathon);
+    if (!hackathon) {
+      const error = new Error('Hackathon not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    const now = new Date();
+    const { isEnded, isJudgeWindowExpired } = getWinnerDeclarationState(hackathon, now);
+
+    // Rule 1: While hackathon is ongoing, judge cannot declare winner
+    if (!isEnded) {
+      const error = new Error('Cannot declare winner while the hackathon is ongoing. Winner declaration is only allowed after the hackathon has ended.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // If 12-hour window has expired and no winner is declared yet, record missed deadlines
+    if (isJudgeWindowExpired) {
+      await recordMissedJudgeDeadlines(hackathon, now);
+      const refreshedHackathon = await Hackathon.findById(hackathon._id);
+      if (refreshedHackathon) {
+        hackathon.missedJudgeDeadlines = refreshedHackathon.missedJudgeDeadlines;
+      }
+    }
+
     const isAdmin = userRole === 'admin';
-    const isAssigned = isAdmin || await Hackathon.exists({ _id: submission.hackathon, assignedJudges: userId });
-    if (!isAssigned) {
-      const error = new Error('Only the assigned judge can declare a winner');
+    const isHost = hackathon.organizer.toString() === userId.toString();
+    const isAssignedJudge = (hackathon.assignedJudges || []).some(
+      (j) => (j._id || j).toString() === userId.toString()
+    );
+
+    if (!isAdmin && !isHost && !isAssignedJudge) {
+      const error = new Error('Only the assigned judge or the hackathon host can declare a winner');
       error.statusCode = 403;
       throw error;
+    }
+
+    // Role-specific time validation
+    if (isHost && !isAdmin) {
+      const hasAssignedJudge = (hackathon.assignedJudges || []).length > 0;
+      if (!isJudgeWindowExpired && hasAssignedJudge) {
+        const error = new Error(
+          'The assigned judge has a 12-hour window to declare the winner. The host can only declare the winner if the judge fails to do so within 12 hours after the hackathon ends.'
+        );
+        error.statusCode = 403;
+        throw error;
+      }
+    } else if (isAssignedJudge && !isAdmin) {
+      if (isJudgeWindowExpired) {
+        const hasMissed = (hackathon.missedJudgeDeadlines || []).some(
+          (m) => (m.judge?._id || m.judge || m).toString() === userId.toString()
+        );
+        if (hasMissed) {
+          const error = new Error(
+            'Your 12-hour window to declare the winner has expired. The host has been authorized to declare the winner or assign someone else.'
+          );
+          error.statusCode = 403;
+          throw error;
+        }
+      }
     }
 
     // Clear previous winner flag for this hackathon (one winner per hackathon)
@@ -529,6 +601,16 @@ class SubmissionService {
     submission.isWinner = true;
     submission.winnerPosition = '1st Place Winner';
     await submission.save();
+
+    // Synchronize hackathon.winners
+    hackathon.winners = [
+      {
+        rank: 1,
+        submission: submission._id,
+        prize: '1st Place Winner',
+      },
+    ];
+    await hackathon.save();
 
     // Collect all user IDs affected by this win
     const winnerUserIds = new Set();
@@ -562,7 +644,7 @@ class SubmissionService {
     );
 
     return await Submission.findById(submissionId)
-      .populate('hackathon', 'title status')
+      .populate('hackathon', 'title status endDate winners missedJudgeDeadlines')
       .populate('submittedBy', 'name email avatar')
       .populate('team', 'name')
       .populate('teamMembers', 'name email avatar');

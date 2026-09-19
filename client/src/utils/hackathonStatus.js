@@ -74,6 +74,53 @@ export const STATUS_BADGE_CLASS = {
   draft:    'bg-amber-50 text-amber-700 border-amber-200',
 };
 
+export const WINNER_DECLARATION_WINDOW_MS = 12 * 60 * 60 * 1000; // 12 hours
+
+/**
+ * Returns the winner declaration window state for a hackathon.
+ * @param {Object} hackathon
+ * @param {Date} [now]
+ * @returns {{
+ *   isEnded: boolean,
+ *   endDate: Date|null,
+ *   judgeDeadline: Date|null,
+ *   isWithinJudgeWindow: boolean,
+ *   isJudgeWindowExpired: boolean,
+ *   remainingWindowMs: number
+ * }}
+ */
+export const getWinnerDeclarationState = (hackathon, now = new Date()) => {
+  if (!hackathon) {
+    return {
+      isEnded: false,
+      endDate: null,
+      judgeDeadline: null,
+      isWithinJudgeWindow: false,
+      isJudgeWindowExpired: false,
+      remainingWindowMs: 0,
+    };
+  }
+
+  const isEnded = isHackathonEnded(hackathon, now);
+  const endDate = hackathon.endDate ? new Date(hackathon.endDate) : null;
+  const judgeDeadline = endDate
+    ? new Date(endDate.getTime() + WINNER_DECLARATION_WINDOW_MS)
+    : null;
+
+  const isWithinJudgeWindow = Boolean(isEnded && judgeDeadline && now <= judgeDeadline);
+  const isJudgeWindowExpired = Boolean(isEnded && judgeDeadline && now > judgeDeadline);
+  const remainingWindowMs = judgeDeadline ? Math.max(0, judgeDeadline.getTime() - now.getTime()) : 0;
+
+  return {
+    isEnded,
+    endDate,
+    judgeDeadline,
+    isWithinJudgeWindow,
+    isJudgeWindowExpired,
+    remainingWindowMs,
+  };
+};
+
 /**
  * Human-readable label for each status.
  */
@@ -83,3 +130,4 @@ export const STATUS_LABEL = {
   ended:    'Ended',
   draft:    'Draft',
 };
+

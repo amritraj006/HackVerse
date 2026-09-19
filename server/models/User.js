@@ -58,6 +58,19 @@ const userSchema = new mongoose.Schema(
         },
       },
     ],
+    // Record of hackathons where judge failed to declare winner within 12h window
+    missedWinnerDeadlines: [
+      {
+        hackathon: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Hackathon',
+        },
+        missedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   {
     timestamps: true,
