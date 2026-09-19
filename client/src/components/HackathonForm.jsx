@@ -355,6 +355,11 @@ export const HackathonForm = ({
     (initialData.startDate && new Date() >= new Date(initialData.startDate))
   );
 
+  // Check if current submission deadline has passed (Rules 2 & 6: host cannot increase once reached)
+  const isSubmissionDeadlinePassed = Boolean(
+    initialData?.endDate && new Date() >= new Date(initialData.endDate)
+  );
+
   const handleChange = (e) => {
     const { id, value } = e.target;
     setFormData((prev) => ({ ...prev, [id]: value }));
@@ -429,6 +434,25 @@ export const HackathonForm = ({
       );
       if (new Date(endIso) <= new Date(startIso)) {
         newErrors.endDate = 'End date & time must be after the start date & time';
+      }
+    }
+
+    if (initialData?.endDate && formData.endDate) {
+      const currentEnd = new Date(initialData.endDate);
+      const newEndIso = combineToIso(
+        formData.endDate,
+        formData.endHour,
+        formData.endMinute,
+        formData.endPeriod
+      );
+      const newEnd = new Date(newEndIso);
+
+      if (newEnd.getTime() !== currentEnd.getTime()) {
+        if (new Date() >= currentEnd) {
+          newErrors.endDate = 'Once the current submission deadline has been reached, it cannot be extended.';
+        } else if (newEnd <= currentEnd) {
+          newErrors.endDate = 'The submission deadline can only be increased and cannot be decreased.';
+        }
       }
     }
 
@@ -767,8 +791,14 @@ export const HackathonForm = ({
                   { label: '05:00 PM', hour: '05', minute: '00', period: 'PM' },
                 ]}
                 error={errors.endDate}
+                disabled={isSubmissionDeadlinePassed}
                 required
               />
+              {isSubmissionDeadlinePassed && (
+                <p className="text-[11px] text-slate-500 font-medium bg-slate-100 px-3 py-2 rounded-lg border border-slate-200">
+                  🔒 The submission deadline has passed and cannot be extended.
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">

@@ -31,9 +31,11 @@ export const getEffectiveStatus = (hackathon, now = new Date()) => {
  */
 export const isHackathonEnded = (hackathon, now = new Date()) => {
   if (!hackathon) return false;
-  if (hackathon.status === 'ended') return true;
   const endDate = hackathon.endDate ? new Date(hackathon.endDate) : null;
-  return Boolean(endDate && now >= endDate);
+  if (endDate) {
+    return now >= endDate;
+  }
+  return hackathon.status === 'ended';
 };
 
 /**

@@ -22,6 +22,7 @@ import {
   Users,
   Mail,
   Search,
+  Clock,
 } from 'lucide-react';
 
 export const ManageHackathon = () => {
@@ -60,6 +61,12 @@ export const ManageHackathon = () => {
   const [isLimitModalOpen, setIsLimitModalOpen] = useState(false);
   const [newLimitValue, setNewLimitValue] = useState('');
   const [isSubmittingLimit, setIsSubmittingLimit] = useState(false);
+
+  // Extend Submission Deadline Modal
+  const [isDeadlineModalOpen, setIsDeadlineModalOpen] = useState(false);
+  const [newDeadlineValue, setNewDeadlineValue] = useState('');
+  const [isSubmittingDeadline, setIsSubmittingDeadline] = useState(false);
+  const [deadlineError, setDeadlineError] = useState('');
 
   // Load Hackathon Event Details
   useEffect(() => {
@@ -228,6 +235,67 @@ export const ManageHackathon = () => {
       setAlert({ type: 'error', message: err.message || 'Failed to update participant limit.' });
     } finally {
       setIsSubmittingLimit(false);
+    }
+  };
+
+  // Convert Date or ISO string to datetime-local input value (YYYY-MM-DDTHH:mm)
+  const toDateTimeLocalValue = (date) => {
+    if (!date) return '';
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const openExtendDeadlineModal = () => {
+    if (!hackathon || isEnded) return;
+    const currentEnd = new Date(hackathon.endDate);
+    const suggested = new Date(Math.max(currentEnd.getTime() + 2 * 60 * 60 * 1000, Date.now() + 2 * 60 * 60 * 1000));
+    setNewDeadlineValue(toDateTimeLocalValue(suggested));
+    setDeadlineError('');
+    setIsDeadlineModalOpen(true);
+  };
+
+  const handleExtendDeadlineSubmit = async (e) => {
+    e.preventDefault();
+    if (!newDeadlineValue) return;
+
+    const currentDeadline = new Date(hackathon.endDate);
+    const newDeadline = new Date(newDeadlineValue);
+
+    if (isNaN(newDeadline.getTime())) {
+      setDeadlineError('Please enter a valid date and time.');
+      return;
+    }
+
+    if (new Date() >= currentDeadline) {
+      setDeadlineError('Once the current submission deadline has been reached, the host cannot increase it anymore.');
+      return;
+    }
+
+    if (newDeadline <= currentDeadline) {
+      setDeadlineError('The submission deadline can only be increased and cannot be decreased.');
+      return;
+    }
+
+    setIsSubmittingDeadline(true);
+    setDeadlineError('');
+    try {
+      const res = await hackathonService.update(id, {
+        endDate: newDeadline.toISOString(),
+      });
+      if (res && res.data) {
+        setHackathon(res.data);
+        setIsDeadlineModalOpen(false);
+        setAlert({
+          type: 'success',
+          message: `Submission deadline extended to ${formatDateTime(res.data.endDate)}! Submissions are now open.`,
+        });
+      }
+    } catch (err) {
+      setDeadlineError(err.message || 'Failed to extend submission deadline.');
+    } finally {
+      setIsSubmittingDeadline(false);
     }
   };
 
@@ -431,6 +499,21 @@ export const ManageHackathon = () => {
                     <span>Close Registrations</span>
                   </Button>
                 )}
+                {/* Extend submission deadline: Rules 2 & 6 */}
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={isEnded}
+                  title={isEnded ? 'Once the current submission deadline has been reached, the host cannot increase it anymore.' : 'Extend Submission Deadline'}
+                  onClick={() => {
+                    if (!isEnded) {
+                      openExtendDeadlineModal();
+                    }
+                  }}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  {isEnded ? 'Deadline Passed' : 'Extend Deadline'}
+                </Button>
                 {/* Extend limit: only allowed while still active */}
                 <Button
                   size="sm"
@@ -447,6 +530,9 @@ export const ManageHackathon = () => {
                   <Users className="w-3.5 h-3.5" />
                   {isEnded ? 'Limit Locked' : 'Increase Limit'}
                 </Button>
+                <Button size="sm" variant="outline" onClick={() => setIsEditModalOpen(true)}>
+                  <Edit className="w-3.5 h-3.5" /> Edit Event
+                </Button>
                 {!isEnded && (
                   <Button size="sm" variant="ghost" className="text-rose-600 hover:bg-rose-50" onClick={() => setIsDeleteModalOpen(true)}>
                     <Trash2 className="w-3.5 h-3.5" />
@@ -458,6 +544,18 @@ export const ManageHackathon = () => {
                 <Button size="sm" variant="outline" onClick={handleToggleRegistration}>
                   {hackathon.isRegistrationOpen ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
                   <span>{hackathon.isRegistrationOpen ? 'Close Registrations' : 'Open Registrations'}</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  disabled={isEnded}
+                  onClick={() => {
+                    if (!isEnded) {
+                      openExtendDeadlineModal();
+                    }
+                  }}
+                >
+                  <Clock className="w-3.5 h-3.5" /> Extend Deadline
                 </Button>
                 <Button size="sm" variant="secondary" onClick={() => setIsEditModalOpen(true)}>
                   <Edit className="w-3.5 h-3.5" /> Edit Event
@@ -861,6 +959,70 @@ export const ManageHackathon = () => {
                 </Button>
                 <Button type="submit" size="sm" variant="primary" disabled={isSubmittingLimit}>
                   {isSubmittingLimit ? 'Saving...' : 'Increase Limit'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      {/* Extend Submission Deadline Modal */}
+      {isDeadlineModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-md bg-white rounded-xl shadow-2xl border border-slate-200">
+            <div className="px-6 py-5 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-indigo-600" />
+                  Extend Submission Deadline
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Current deadline: <strong>{formatDateTime(hackathon.endDate)}</strong>
+                </p>
+              </div>
+              <button
+                onClick={() => { setIsDeadlineModalOpen(false); setDeadlineError(''); }}
+                className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+            <form onSubmit={handleExtendDeadlineSubmit} className="px-6 py-5 space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="newDeadline" className="text-xs font-semibold text-slate-700 block">
+                  New Submission Deadline Date & Time
+                </label>
+                <input
+                  id="newDeadline"
+                  type="datetime-local"
+                  min={toDateTimeLocalValue(new Date(Math.max(Date.now(), new Date(hackathon.endDate).getTime())))}
+                  value={newDeadlineValue}
+                  onChange={(e) => {
+                    setNewDeadlineValue(e.target.value);
+                    if (deadlineError) setDeadlineError('');
+                  }}
+                  required
+                  className="w-full px-3 py-2 text-xs border border-slate-200 rounded-lg bg-slate-50 text-slate-900 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                />
+                <div className="p-2.5 bg-blue-50 border border-blue-200 rounded-lg text-[11px] text-blue-800 space-y-1">
+                  <p className="font-semibold">⚠️ Deadline Extension Rules:</p>
+                  <ul className="list-disc list-inside space-y-0.5 text-blue-700">
+                    <li>You can only <strong>increase</strong> the deadline to a later date/time.</li>
+                    <li>You <strong>cannot decrease</strong> the deadline.</li>
+                    <li>Once the current deadline is reached, extensions are locked.</li>
+                  </ul>
+                </div>
+                {deadlineError && (
+                  <p className="text-[11px] text-rose-600 font-medium bg-rose-50 border border-rose-200 rounded-lg px-2.5 py-1.5">
+                    {deadlineError}
+                  </p>
+                )}
+              </div>
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <Button type="button" size="sm" variant="outline" onClick={() => { setIsDeadlineModalOpen(false); setDeadlineError(''); }}>
+                  Cancel
+                </Button>
+                <Button type="submit" size="sm" variant="primary" disabled={isSubmittingDeadline}>
+                  {isSubmittingDeadline ? 'Extending...' : 'Confirm Extension'}
                 </Button>
               </div>
             </form>

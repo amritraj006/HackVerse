@@ -281,8 +281,48 @@ class HackathonService {
       throw error;
     }
 
-    // Block ALL edits (including deadline extension) on ended hackathons
-    if (isHackathonEnded(hackathon)) {
+    const now = new Date();
+    const currentSubmissionDeadline = new Date(hackathon.endDate);
+    let isDeadlineExtended = false;
+
+    // Validate submission deadline modifications (Rules 2, 4, 5, 6)
+    if (data.endDate !== undefined) {
+      const newSubmissionDeadline = new Date(data.endDate);
+      if (isNaN(newSubmissionDeadline.getTime())) {
+        const error = new Error('Valid submission deadline is required.');
+        error.statusCode = 400;
+        throw error;
+      }
+
+      if (newSubmissionDeadline.getTime() !== currentSubmissionDeadline.getTime()) {
+        // Rule 6 & Rule 2: Once current submission deadline has been reached, host cannot increase it anymore
+        if (now >= currentSubmissionDeadline) {
+          const error = new Error('Once the current submission deadline has been reached, the host cannot increase it anymore.');
+          error.statusCode = 400;
+          throw error;
+        }
+
+        // Rule 4 & Rule 5: Host can ONLY increase the submission deadline; cannot decrease it
+        if (newSubmissionDeadline <= currentSubmissionDeadline) {
+          const error = new Error('The submission deadline can only be increased and cannot be decreased.');
+          error.statusCode = 400;
+          throw error;
+        }
+
+        // Must also be after hackathon start date
+        const effectiveStartDate = data.startDate ? new Date(data.startDate) : new Date(hackathon.startDate);
+        if (newSubmissionDeadline <= effectiveStartDate) {
+          const error = new Error('Submission deadline must be after the hackathon start date.');
+          error.statusCode = 400;
+          throw error;
+        }
+
+        isDeadlineExtended = true;
+      }
+    }
+
+    // Block ALL edits (including deadline extension) on hackathons whose submission deadline has already passed
+    if (now >= currentSubmissionDeadline && !isDeadlineExtended) {
       const error = new Error('Hackathon has already ended. The submission deadline cannot be extended.');
       error.statusCode = 400;
       throw error;
@@ -313,6 +353,12 @@ class HackathonService {
     }
 
     Object.assign(hackathon, data);
+
+    // Rule 3: If the host increases the submission deadline after the hackathon was ended,
+    // restore the hackathon status to 'ongoing' (or 'upcoming' if before startDate) so participants regain access
+    if (isDeadlineExtended) {
+      hackathon.status = (now >= new Date(hackathon.startDate)) ? 'ongoing' : 'upcoming';
+    }
 
     // If registration deadline is extended into the future and hackathon hasn't ended,
     // ensure isRegistrationOpen is re-opened (in case it was closed when past deadline lapsed)

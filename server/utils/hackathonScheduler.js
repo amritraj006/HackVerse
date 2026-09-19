@@ -37,6 +37,30 @@ export const updateHackathonStatuses = async () => {
       }
     );
 
+    // 2b. Transition ended → ongoing if submission deadline (endDate) was extended into the future
+    await Hackathon.updateMany(
+      {
+        status: 'ended',
+        startDate: { $lte: now },
+        endDate: { $gt: now },
+      },
+      {
+        $set: { status: 'ongoing' },
+      }
+    );
+
+    // 2c. Transition ended → upcoming if startDate is also still in the future
+    await Hackathon.updateMany(
+      {
+        status: 'ended',
+        startDate: { $gt: now },
+        endDate: { $gt: now },
+      },
+      {
+        $set: { status: 'upcoming' },
+      }
+    );
+
     // 3. Sync registrations based on registrationDeadline
     // 3a. Close registrations on hackathons whose registrationDeadline has passed
     await Hackathon.updateMany(

@@ -46,12 +46,14 @@ export const getEffectiveStatus = (hackathon, now = new Date()) => {
 export const isHackathonEnded = (hackathon, now = new Date()) => {
   if (!hackathon) return false;
 
-  // If the DB status is already 'ended', trust it
-  if (hackathon.status === 'ended') return true;
-
-  // Otherwise compute from endDate
+  // If endDate is defined, compute strictly from the submission deadline
   const endDate = hackathon.endDate ? new Date(hackathon.endDate) : null;
-  return Boolean(endDate && now >= endDate);
+  if (endDate) {
+    return now >= endDate;
+  }
+
+  // Fallback if no endDate is present
+  return hackathon.status === 'ended';
 };
 
 /**
