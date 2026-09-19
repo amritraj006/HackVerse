@@ -13,7 +13,17 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['team_invite', 'team_removed', 'system', 'hackathon', 'judge_invite'],
+      enum: [
+        'team_invite',
+        'team_removed',
+        'system',
+        'hackathon',
+        'judge_invite',
+        'winner',             // sent to winning participants when winner is declared / results published
+        'hackathon_started',  // broadcast when hackathon transitions upcoming → ongoing
+        'hackathon_ended',    // broadcast when hackathon transitions → ended
+        'registration_closed', // broadcast when registration deadline passes
+      ],
       default: 'system',
     },
     title: {

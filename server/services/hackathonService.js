@@ -805,10 +805,14 @@ class HackathonService {
       { $pull: { wins: { hackathon: id } } }
     );
 
-    // 2. Mark winning submissions and update User.wins
+    // 2. Mark winning submissions, update User.wins, and send personalized winner notifications
+    const positionEmojis = ['🥇', '🥈', '🥉'];
+    const winnerUserIdsSentSet = new Set(); // track already-notified users across placements
+
     for (let index = 0; index < topEntries.length; index++) {
       const entry = topEntries[index];
       const positionLabel = positionLabels[index];
+      const positionEmoji = positionEmojis[index] || '🏅';
 
       const sub = await Submission.findById(entry.submissionId).populate('team');
       if (sub) {
@@ -837,24 +841,51 @@ class HackathonService {
               },
             }
           );
+
+          // Send personalized winner notification to each winner
+          try {
+            const winnerNotifs = [...winnerUserIds]
+              .filter((uid) => !winnerUserIdsSentSet.has(uid))
+              .map((uid) => {
+                winnerUserIdsSentSet.add(uid);
+                return {
+                  user: uid,
+                  sender: user?.id,
+                  type: 'winner',
+                  title: `${positionEmoji} ${positionLabel} \u2014 ${hackathon.title}`,
+                  message: `Congratulations! Your submission "${sub.title}" secured ${positionLabel} in "${hackathon.title}"! The official leaderboard is now live. Well done! 🎉`,
+                  hackathon: hackathon._id,
+                  status: 'pending',
+                };
+              });
+            if (winnerNotifs.length > 0) {
+              await Notification.insertMany(winnerNotifs);
+            }
+          } catch (notifErr) {
+            console.error('[HackathonService] Failed to send winner notifications:', notifErr.message);
+          }
         }
       }
     }
 
-    // 3. Broadcast notification to all participants
+    // 3. Broadcast notification to all registered participants (unread so it appears in notification bell)
     try {
       const registrations = await Registration.find({ hackathon: id, status: 'active' }).select('participant');
       if (registrations.length > 0) {
-        const notifs = registrations.map((r) => ({
-          user: r.participant,
-          sender: user?.id,
-          type: 'hackathon',
-          title: `Results Published: ${hackathon.title}`,
-          message: `The official winners and leaderboard for "${hackathon.title}" are now published! Check the hackathon page to see the winners.`,
-          hackathon: hackathon._id,
-          status: 'read',
-        }));
-        await Notification.insertMany(notifs);
+        const notifs = registrations
+          .filter((r) => !winnerUserIdsSentSet.has(r.participant.toString()))
+          .map((r) => ({
+            user: r.participant,
+            sender: user?.id,
+            type: 'hackathon',
+            title: `Results Published: ${hackathon.title}`,
+            message: `The official winners and leaderboard for "${hackathon.title}" are now live! Check the hackathon page to see the results.`,
+            hackathon: hackathon._id,
+            status: 'pending',
+          }));
+        if (notifs.length > 0) {
+          await Notification.insertMany(notifs);
+        }
       }
     } catch (notifErr) {
       console.error('[HackathonService] Failed to send publish notifications:', notifErr.message);
@@ -862,6 +893,7 @@ class HackathonService {
 
     return await this.getHackathonById(id);
   }
+
 
   /**
    * Build rankings from the average score stored after judge evaluations.

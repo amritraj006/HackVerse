@@ -299,6 +299,10 @@ class ParticipantService {
       participant: participantId,
     }).populate('participant', 'name email avatar role');
 
+    const hackathon = await Hackathon.findById(hackathonId).select(
+      'startDate endDate registrationDeadline status isRegistrationOpen isResultsPublished'
+    );
+
     const userTeam = await Team.findOne({
       hackathon: hackathonId,
       $or: [{ leader: participantId }, { members: participantId }],
@@ -322,9 +326,23 @@ class ParticipantService {
 
     const isRegistered = (!!registration && registration.status === 'active') || !!userTeam;
 
+    // Compute a richer registration status without mutating the DB
+    let effectiveRegistrationStatus = isRegistered ? 'active' : (registration ? registration.status : null);
+    if (hackathon) {
+      const now = new Date();
+      const ended = hackathon.endDate && now >= new Date(hackathon.endDate);
+      const regDeadlinePassed = hackathon.registrationDeadline && now > new Date(hackathon.registrationDeadline);
+      if (ended) {
+        effectiveRegistrationStatus = 'ended';
+      } else if (regDeadlinePassed) {
+        effectiveRegistrationStatus = 'registration_closed';
+      }
+    }
+
     return {
       isRegistered,
       status: isRegistered ? 'active' : (registration ? registration.status : null),
+      effectiveRegistrationStatus,
       registration: registration || null,
       team: userTeam || null,
       submission: submission || null,

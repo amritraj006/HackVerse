@@ -4,6 +4,7 @@ import Hackathon from '../models/Hackathon.js';
 import Team from '../models/Team.js';
 import Registration from '../models/Registration.js';
 import User from '../models/User.js';
+import Notification from '../models/Notification.js';
 import {
   isHackathonEnded,
   getWinnerDeclarationState,
@@ -642,6 +643,24 @@ class SubmissionService {
         },
       }
     );
+
+    // Notify every winner about their win
+    try {
+      const winnerNotifs = [...winnerUserIds].map((uid) => ({
+        user: uid,
+        sender: userId,
+        type: 'winner',
+        title: `🏆 You Won 1st Place! — ${hackathon.title}`,
+        message: `Congratulations! Your submission "${submission.title}" has been declared the 1st Place Winner of "${hackathon.title}". Well done! 🎉`,
+        hackathon: hackathon._id,
+        status: 'pending',
+      }));
+      if (winnerNotifs.length > 0) {
+        await Notification.insertMany(winnerNotifs);
+      }
+    } catch (notifErr) {
+      console.error('[SubmissionService] Failed to send winner notifications:', notifErr.message);
+    }
 
     return await Submission.findById(submissionId)
       .populate('hackathon', 'title status endDate winners missedJudgeDeadlines')
