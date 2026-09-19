@@ -754,6 +754,26 @@ class HackathonService {
    * Publish results & winners
    */
   async publishResults(id, winners, user) {
+    const hackathon = await Hackathon.findById(id);
+    if (!hackathon) {
+      const error = new Error('Hackathon not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (hackathon.organizer.toString() !== user.id && user.role !== 'admin') {
+      const error = new Error('Not authorized to publish results for this hackathon');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    const now = new Date();
+    if (!isHackathonEnded(hackathon, now)) {
+      const error = new Error('Official results can only be published after the hackathon has ended.');
+      error.statusCode = 400;
+      throw error;
+    }
+
     const leaderboard = await this.getLeaderboard(id, true, user);
     if (!leaderboard.rankings.length) {
       const error = new Error('At least one judge evaluation is required before publishing results');
@@ -761,7 +781,6 @@ class HackathonService {
       throw error;
     }
 
-    const hackathon = await Hackathon.findById(id);
     const positionLabels = ['1st Place Winner', '2nd Place Runner Up', '3rd Place Bronze'];
     hackathon.isResultsPublished = true;
     hackathon.resultStatus = 'published';

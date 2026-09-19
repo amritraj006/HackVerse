@@ -1064,14 +1064,40 @@ export const ManageHackathon = () => {
               </div>
             )}
 
+          {!isEnded && (
+            <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-start gap-2">
+              <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold">Results Publishing Locked</p>
+                <p className="text-[11px] text-amber-800 mt-0.5">
+                  Official results can only be published after the hackathon has ended.
+                </p>
+              </div>
+            </div>
+          )}
+
           <Card header={<span className="font-semibold text-xs text-slate-800">Calculated Leaderboard</span>}>
             <div className="space-y-3 text-xs">
               <p className="text-slate-500">
                 Rankings use each project&apos;s average score from all submitted judge evaluations. Publishing awards the top three ranked projects automatically.
               </p>
               <DataTable columns={leaderboardColumns} data={leaderboard} searchPlaceholder="Search rankings..." />
-              <Button size="sm" variant="primary" onClick={handlePublishResults} disabled={!leaderboard.length || hackathon.isResultsPublished}>
-                <Award className="w-3.5 h-3.5" /> Publish Official Results
+              <Button
+                size="sm"
+                variant="primary"
+                onClick={handlePublishResults}
+                disabled={!isEnded || !leaderboard.length || hackathon.isResultsPublished}
+                title={
+                  !isEnded
+                    ? 'Official results can only be published after the hackathon has ended'
+                    : hackathon.isResultsPublished
+                    ? 'Results have already been published'
+                    : !leaderboard.length
+                    ? 'At least one judge evaluation is required to calculate results'
+                    : ''
+                }
+              >
+                <Award className="w-3.5 h-3.5" /> {hackathon.isResultsPublished ? 'Results Published' : 'Publish Official Results'}
               </Button>
             </div>
           </Card>
