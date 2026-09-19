@@ -65,6 +65,7 @@ export const ManageHackathon = () => {
   // Extend Submission Deadline Modal
   const [isDeadlineModalOpen, setIsDeadlineModalOpen] = useState(false);
   const [newDeadlineValue, setNewDeadlineValue] = useState('');
+  const [minDeadlineValue, setMinDeadlineValue] = useState('');
   const [isSubmittingDeadline, setIsSubmittingDeadline] = useState(false);
   const [deadlineError, setDeadlineError] = useState('');
 
@@ -249,8 +250,11 @@ export const ManageHackathon = () => {
 
   const openExtendDeadlineModal = () => {
     if (!hackathon || isEnded) return;
+    const nowTimestamp = Date.now();
     const currentEnd = new Date(hackathon.endDate);
-    const suggested = new Date(Math.max(currentEnd.getTime() + 2 * 60 * 60 * 1000, Date.now() + 2 * 60 * 60 * 1000));
+    const minTimestamp = Math.max(nowTimestamp, currentEnd.getTime());
+    setMinDeadlineValue(toDateTimeLocalValue(new Date(minTimestamp)));
+    const suggested = new Date(Math.max(currentEnd.getTime() + 2 * 60 * 60 * 1000, nowTimestamp + 2 * 60 * 60 * 1000));
     setNewDeadlineValue(toDateTimeLocalValue(suggested));
     setDeadlineError('');
     setIsDeadlineModalOpen(true);
@@ -287,6 +291,8 @@ export const ManageHackathon = () => {
       if (res && res.data) {
         setHackathon(res.data);
         setIsDeadlineModalOpen(false);
+        setNewDeadlineValue('');
+        setMinDeadlineValue('');
         setAlert({
           type: 'success',
           message: `Submission deadline extended to ${formatDateTime(res.data.endDate)}! Submissions are now open.`,
@@ -980,7 +986,7 @@ export const ManageHackathon = () => {
                 </p>
               </div>
               <button
-                onClick={() => { setIsDeadlineModalOpen(false); setDeadlineError(''); }}
+                onClick={() => { setIsDeadlineModalOpen(false); setDeadlineError(''); setNewDeadlineValue(''); setMinDeadlineValue(''); }}
                 className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 cursor-pointer"
               >
                 ✕
@@ -994,7 +1000,7 @@ export const ManageHackathon = () => {
                 <input
                   id="newDeadline"
                   type="datetime-local"
-                  min={toDateTimeLocalValue(new Date(Math.max(Date.now(), new Date(hackathon.endDate).getTime())))}
+                  min={minDeadlineValue}
                   value={newDeadlineValue}
                   onChange={(e) => {
                     setNewDeadlineValue(e.target.value);
@@ -1018,7 +1024,7 @@ export const ManageHackathon = () => {
                 )}
               </div>
               <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                <Button type="button" size="sm" variant="outline" onClick={() => { setIsDeadlineModalOpen(false); setDeadlineError(''); }}>
+                <Button type="button" size="sm" variant="outline" onClick={() => { setIsDeadlineModalOpen(false); setDeadlineError(''); setNewDeadlineValue(''); setMinDeadlineValue(''); }}>
                   Cancel
                 </Button>
                 <Button type="submit" size="sm" variant="primary" disabled={isSubmittingDeadline}>
