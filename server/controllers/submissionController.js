@@ -63,6 +63,16 @@ const deleteSubmission = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Update an existing submission
+ * @route   PUT /api/v1/submissions/:id
+ * @access  Private (Owner/Admin)
+ */
+const updateSubmission = asyncHandler(async (req, res) => {
+  const submission = await submissionService.updateSubmission(req.params.id, req.body, req.files, req.user.id, req.user.role);
+  return successResponse(res, 200, 'Project updated successfully!', submission);
+});
+
+/**
  * @desc    Get submissions assigned to the logged-in judge
  * @route   GET /api/v1/submissions/assigned
  * @access  Private (Judge/Admin)
@@ -94,6 +104,7 @@ const declareWinner = asyncHandler(async (req, res) => {
 
 export {
   submitProject,
+  updateSubmission,
   getMySubmissions,
   getAllSubmissions,
   getHackathonSubmissions,
@@ -106,6 +117,7 @@ export {
 
 export default {
   submitProject,
+  updateSubmission,
   getMySubmissions,
   getAllSubmissions,
   getHackathonSubmissions,

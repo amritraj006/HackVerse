@@ -96,46 +96,32 @@ class SubmissionService {
     let teamId = userTeam ? userTeam._id : null;
     let membersList = userTeam ? userTeam.members : [userId];
 
-    // Check existing submission by team or user
+    // Check existing submission by team or user — reject if one already exists
     let existingSubmission = null;
     if (teamId) {
       existingSubmission = await Submission.findOne({ hackathon: hackathonId, team: teamId });
     } else {
-      existingSubmission = await Submission.findOne({ hackathon: hackathonId, submittedBy: userId });
+      existingSubmission = await Submission.findOne({ hackathon: hackathonId, submittedBy: userId, team: null });
     }
 
-    // File processing
-    let presentationFilePath = existingSubmission ? existingSubmission.presentationFile : '';
+    if (existingSubmission) {
+      const error = new Error(
+        'You already have a submission for this hackathon. Please edit or delete your existing submission before creating a new one.'
+      );
+      error.statusCode = 409;
+      error.existingSubmissionId = existingSubmission._id.toString();
+      throw error;
+    }
+
+    // File processing for new submission
+    let presentationFilePath = '';
     if (files && files.presentationFile && files.presentationFile[0]) {
       presentationFilePath = `/uploads/${files.presentationFile[0].filename}`;
     }
 
-    let screenshotPaths = existingSubmission ? [...(existingSubmission.screenshots || [])] : [];
+    let screenshotPaths = [];
     if (files && files.screenshots && files.screenshots.length > 0) {
-      const newScreenshots = files.screenshots.map((file) => `/uploads/${file.filename}`);
-      screenshotPaths = [...screenshotPaths, ...newScreenshots];
-    }
-
-    if (existingSubmission) {
-      // Update existing submission
-      existingSubmission.title = title !== undefined ? title : existingSubmission.title;
-      existingSubmission.tagline = tagline !== undefined ? tagline : existingSubmission.tagline;
-      existingSubmission.description = description !== undefined ? description : existingSubmission.description;
-      existingSubmission.repositoryUrl = repositoryUrl !== undefined ? repositoryUrl : existingSubmission.repositoryUrl;
-      existingSubmission.demoUrl = demoUrl !== undefined ? demoUrl : existingSubmission.demoUrl;
-      existingSubmission.videoUrl = videoUrl !== undefined ? videoUrl : existingSubmission.videoUrl;
-      existingSubmission.status = status || existingSubmission.status;
-      existingSubmission.presentationFile = presentationFilePath;
-      existingSubmission.screenshots = screenshotPaths;
-      existingSubmission.teamMembers = membersList;
-
-      await existingSubmission.save();
-
-      return await Submission.findById(existingSubmission._id)
-        .populate('hackathon', 'title status endDate')
-        .populate('submittedBy', 'name email avatar')
-        .populate('team', 'name joinCode')
-        .populate('teamMembers', 'name email avatar');
+      screenshotPaths = files.screenshots.map((file) => `/uploads/${file.filename}`);
     }
 
     // Create new submission
@@ -156,6 +142,74 @@ class SubmissionService {
     });
 
     return await Submission.findById(newSubmission._id)
+      .populate('hackathon', 'title status endDate')
+      .populate('submittedBy', 'name email avatar')
+      .populate('team', 'name joinCode')
+      .populate('teamMembers', 'name email avatar');
+  }
+
+  /**
+   * Update an existing submission (owner or team leader only)
+   */
+  async updateSubmission(id, data, files, userId, userRole) {
+    const submission = await Submission.findById(id).populate('team').populate('hackathon');
+    if (!submission) {
+      const error = new Error('Submission not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    // Only the original submitter or team leader can update
+    const isOwner = submission.submittedBy.toString() === userId.toString();
+    const isTeamLeader = submission.team ? submission.team.leader?.toString() === userId.toString() : false;
+    if (!isOwner && !isTeamLeader && userRole !== 'admin') {
+      const error = new Error('Only the original submitter or team leader can edit this submission.');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // Enforce submission window (same rules as create)
+    const now = new Date();
+    if (userRole !== 'admin') {
+      if (isHackathonEnded(submission.hackathon, now)) {
+        const error = new Error('Submissions are closed. The hackathon submission deadline has passed.');
+        error.statusCode = 400;
+        throw error;
+      }
+      if (submission.hackathon.status !== 'ongoing') {
+        const error = new Error('Submissions are closed for this hackathon.');
+        error.statusCode = 400;
+        throw error;
+      }
+    }
+
+    const { title, tagline, description, repositoryUrl, demoUrl, videoUrl, status } = data;
+
+    // File processing — preserve existing if no new files uploaded
+    let presentationFilePath = submission.presentationFile;
+    if (files && files.presentationFile && files.presentationFile[0]) {
+      presentationFilePath = `/uploads/${files.presentationFile[0].filename}`;
+    }
+
+    let screenshotPaths = [...(submission.screenshots || [])];
+    if (files && files.screenshots && files.screenshots.length > 0) {
+      const newScreenshots = files.screenshots.map((file) => `/uploads/${file.filename}`);
+      screenshotPaths = [...screenshotPaths, ...newScreenshots];
+    }
+
+    submission.title = title !== undefined ? title : submission.title;
+    submission.tagline = tagline !== undefined ? tagline : submission.tagline;
+    submission.description = description !== undefined ? description : submission.description;
+    submission.repositoryUrl = repositoryUrl !== undefined ? repositoryUrl : submission.repositoryUrl;
+    submission.demoUrl = demoUrl !== undefined ? demoUrl : submission.demoUrl;
+    submission.videoUrl = videoUrl !== undefined ? videoUrl : submission.videoUrl;
+    submission.status = status || submission.status;
+    submission.presentationFile = presentationFilePath;
+    submission.screenshots = screenshotPaths;
+
+    await submission.save();
+
+    return await Submission.findById(submission._id)
       .populate('hackathon', 'title status endDate')
       .populate('submittedBy', 'name email avatar')
       .populate('team', 'name joinCode')

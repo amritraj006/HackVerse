@@ -13,6 +13,17 @@ export const submissionService = {
   },
 
   /**
+   * Update an existing submission by ID
+   */
+  update: async (id, formData) => {
+    return await api.put(`/submissions/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  /**
    * Get public showcase list of submissions
    */
   getAll: async (params = {}) => {

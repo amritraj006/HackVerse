@@ -5,9 +5,16 @@ import { Alert } from './Alert';
 import { hackathonService } from '../services/hackathonService';
 import { registrationService } from '../services/registrationService';
 import { isHackathonEnded, getEffectiveStatus } from '../utils/hackathonStatus';
-import { X, FolderGit2, Upload, FileText, Image as ImageIcon, Lock } from 'lucide-react';
+import { X, FolderGit2, Upload, FileText, Image as ImageIcon, Lock, AlertTriangle, Edit } from 'lucide-react';
 
-export const SubmissionModal = ({ isOpen, submission = null, onClose, onSuccess }) => {
+export const SubmissionModal = ({
+  isOpen,
+  submission = null,
+  mySubmissions = [],
+  onClose,
+  onSuccess,
+  onEditExisting,
+}) => {
   const [hackathonId, setHackathonId] = useState('');
   const [title, setTitle] = useState('');
   const [tagline, setTagline] = useState('');
@@ -89,6 +96,16 @@ export const SubmissionModal = ({ isOpen, submission = null, onClose, onSuccess 
   const isNotStarted = selectedHackathon && (getEffectiveStatus(selectedHackathon, now) === 'upcoming' || (selectedHackathon.startDate && now < new Date(selectedHackathon.startDate)));
   const isDeadlinePassed = selectedHackathon && isHackathonEnded(selectedHackathon, now);
 
+  // ─── One-submission-per-hackathon guard ──────────────────────────────────
+  // Only applies when creating a new submission (submission prop is null)
+  const existingForHackathon = !submission && hackathonId
+    ? mySubmissions.find((s) => {
+        const sHackId = s.hackathon?._id || s.hackathon;
+        return sHackId && sHackId.toString() === hackathonId.toString();
+      })
+    : null;
+  // ─────────────────────────────────────────────────────────────────────────
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -168,172 +185,210 @@ export const SubmissionModal = ({ isOpen, submission = null, onClose, onSuccess 
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-3 text-xs">
-          {/* Hackathon Selector */}
-          {!submission && (
-            <div className="space-y-1">
-              <label className="block font-semibold text-slate-700">Hackathon Event</label>
-              {hackathons.length === 0 ? (
-                <p className="text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
-                  You are not registered for any active hackathons. Only registered participants (or team leaders) can submit a project.
+        {/* ── Duplicate-submission guard ── */}
+        {existingForHackathon && (
+          <div className="p-4 bg-amber-50 border border-amber-300 rounded-lg space-y-3">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="text-xs font-bold text-amber-900">
+                  You already have a submission for this hackathon.
                 </p>
-              ) : (
-                <select
-                  value={hackathonId}
-                  onChange={(e) => setHackathonId(e.target.value)}
-                  className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500"
-                >
-                  {hackathons.map((h) => (
-                    <option key={h._id} value={h._id}>
-                      {h.title} (Deadline: {new Date(h.endDate).toLocaleDateString()})
-                    </option>
-                  ))}
-                </select>
-              )}
+                <p className="text-[11px] text-amber-800">
+                  Only one submission per hackathon is allowed. You can edit or delete your existing submission.
+                </p>
+                <p className="text-[11px] font-semibold text-amber-900 mt-1">
+                  &ldquo;{existingForHackathon.title}&rdquo;
+                </p>
+              </div>
             </div>
-          )}
+            <div className="flex items-center gap-2">
+              {onEditExisting && (
+                <Button
+                  size="sm"
+                  variant="primary"
+                  type="button"
+                  onClick={() => onEditExisting(existingForHackathon)}
+                >
+                  <Edit className="w-3.5 h-3.5" /> Edit Existing Submission
+                </Button>
+              )}
+              <Button size="sm" variant="outline" type="button" onClick={onClose}>
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
 
-          <Input
-            label="Project Title"
-            placeholder="e.g. SmartDoc Synthesizer"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            disabled={isDeadlinePassed}
-            required
-          />
+        {/* ── Form (hidden when duplicate guard is active for a new submission) ── */}
+        {!existingForHackathon && (
+          <form onSubmit={handleSubmit} className="space-y-3 text-xs">
+            {/* Hackathon Selector */}
+            {!submission && (
+              <div className="space-y-1">
+                <label className="block font-semibold text-slate-700">Hackathon Event</label>
+                {hackathons.length === 0 ? (
+                  <p className="text-amber-600 bg-amber-50 p-2 rounded border border-amber-200">
+                    You are not registered for any active hackathons. Only registered participants (or team leaders) can submit a project.
+                  </p>
+                ) : (
+                  <select
+                    value={hackathonId}
+                    onChange={(e) => setHackathonId(e.target.value)}
+                    className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500"
+                  >
+                    {hackathons.map((h) => (
+                      <option key={h._id} value={h._id}>
+                        {h.title} (Deadline: {new Date(h.endDate).toLocaleDateString()})
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            )}
 
-          <Input
-            label="Tagline / Short Summary"
-            placeholder="e.g. AI-powered document vector search agent"
-            value={tagline}
-            onChange={(e) => setTagline(e.target.value)}
-            disabled={isDeadlinePassed}
-          />
-
-          <div className="space-y-1">
-            <label className="block font-semibold text-slate-700">Detailed Description</label>
-            <textarea
-              rows={4}
-              placeholder="Explain the problem, technology stack, features, and how to run..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+            <Input
+              label="Project Title"
+              placeholder="e.g. SmartDoc Synthesizer"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
               disabled={isDeadlinePassed}
-              className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500"
               required
             />
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
-              label="GitHub Repository URL"
-              placeholder="https://github.com/org/repo"
-              value={repositoryUrl}
-              onChange={(e) => setRepositoryUrl(e.target.value)}
+              label="Tagline / Short Summary"
+              placeholder="e.g. AI-powered document vector search agent"
+              value={tagline}
+              onChange={(e) => setTagline(e.target.value)}
               disabled={isDeadlinePassed}
             />
+
+            <div className="space-y-1">
+              <label className="block font-semibold text-slate-700">Detailed Description</label>
+              <textarea
+                rows={4}
+                placeholder="Explain the problem, technology stack, features, and how to run..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={isDeadlinePassed}
+                className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <Input
+                label="GitHub Repository URL"
+                placeholder="https://github.com/org/repo"
+                value={repositoryUrl}
+                onChange={(e) => setRepositoryUrl(e.target.value)}
+                disabled={isDeadlinePassed}
+              />
+              <Input
+                label="Live Demo Link"
+                placeholder="https://myproject.vercel.app"
+                value={demoUrl}
+                onChange={(e) => setDemoUrl(e.target.value)}
+                disabled={isDeadlinePassed}
+              />
+            </div>
+
             <Input
-              label="Live Demo Link"
-              placeholder="https://myproject.vercel.app"
-              value={demoUrl}
-              onChange={(e) => setDemoUrl(e.target.value)}
+              label="Demo Video Link (YouTube / Loom / Vimeo)"
+              placeholder="https://www.youtube.com/watch?v=..."
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
               disabled={isDeadlinePassed}
             />
-          </div>
 
-          <Input
-            label="Demo Video Link (YouTube / Loom / Vimeo)"
-            placeholder="https://www.youtube.com/watch?v=..."
-            value={videoUrl}
-            onChange={(e) => setVideoUrl(e.target.value)}
-            disabled={isDeadlinePassed}
-          />
-
-          {/* File Uploads */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
-            <div className="space-y-1">
-              <label className="block font-semibold text-slate-700 flex items-center gap-1">
-                <FileText className="w-3.5 h-3.5 text-amber-500" /> Presentation PDF
-              </label>
-              <input
-                type="file"
-                accept=".pdf"
-                onChange={(e) => setPresentationFile(e.target.files[0])}
-                disabled={isDeadlinePassed}
-                className="w-full text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-              />
-              {submission?.presentationFile && !presentationFile && (
-                <p className="text-[10px] text-emerald-600 font-medium">✓ Current presentation attached</p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className="block font-semibold text-slate-700 flex items-center gap-1">
-                <ImageIcon className="w-3.5 h-3.5 text-indigo-500" /> Screenshots (Max 5)
-              </label>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => setScreenshots(e.target.files)}
-                disabled={isDeadlinePassed}
-                className="w-full text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-              />
-              {submission?.screenshots?.length > 0 && screenshots.length === 0 && (
-                <p className="text-[10px] text-emerald-600 font-medium">✓ {submission.screenshots.length} screenshots uploaded</p>
-              )}
-            </div>
-          </div>
-
-          {/* Submission Status Toggle */}
-          <div className="space-y-1 pt-2 border-t border-slate-100">
-            <label className="block font-semibold text-slate-700">Submission Mode</label>
-            <div className="flex items-center gap-3">
-              <label className="flex items-center gap-1.5 cursor-pointer">
+            {/* File Uploads */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-100">
+              <div className="space-y-1">
+                <label className="block font-semibold text-slate-700 flex items-center gap-1">
+                  <FileText className="w-3.5 h-3.5 text-amber-500" /> Presentation PDF
+                </label>
                 <input
-                  type="radio"
-                  name="status"
-                  value="submitted"
-                  checked={status === 'submitted'}
-                  onChange={(e) => setStatus(e.target.value)}
+                  type="file"
+                  accept=".pdf"
+                  onChange={(e) => setPresentationFile(e.target.files[0])}
                   disabled={isDeadlinePassed}
-                  className="text-indigo-600 focus:ring-indigo-500"
+                  className="w-full text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
                 />
-                <span className="font-medium text-slate-800">Publish / Submit Project</span>
-              </label>
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input
-                  type="radio"
-                  name="status"
-                  value="draft"
-                  checked={status === 'draft'}
-                  onChange={(e) => setStatus(e.target.value)}
-                  disabled={isDeadlinePassed}
-                  className="text-indigo-600 focus:ring-indigo-500"
-                />
-                <span className="font-medium text-slate-600">Save as Draft</span>
-              </label>
-            </div>
-          </div>
+                {submission?.presentationFile && !presentationFile && (
+                  <p className="text-[10px] text-emerald-600 font-medium">✓ Current presentation attached</p>
+                )}
+              </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-            <Button size="sm" variant="outline" type="button" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button size="sm" variant="primary" type="submit" disabled={loading || isDeadlinePassed}>
-              {loading ? (
-                <span className="inline-flex items-center gap-1">
-                  <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                  Uploading...
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1">
-                  <Upload className="w-3.5 h-3.5" />
-                  {submission ? 'Save Changes' : status === 'draft' ? 'Save Draft' : 'Submit Project'}
-                </span>
-              )}
-            </Button>
-          </div>
-        </form>
+              <div className="space-y-1">
+                <label className="block font-semibold text-slate-700 flex items-center gap-1">
+                  <ImageIcon className="w-3.5 h-3.5 text-indigo-500" /> Screenshots (Max 5)
+                </label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => setScreenshots(e.target.files)}
+                  disabled={isDeadlinePassed}
+                  className="w-full text-[11px] text-slate-500 file:mr-2 file:py-1 file:px-2.5 file:rounded file:border-0 file:text-[11px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+                />
+                {submission?.screenshots?.length > 0 && screenshots.length === 0 && (
+                  <p className="text-[10px] text-emerald-600 font-medium">✓ {submission.screenshots.length} screenshots uploaded</p>
+                )}
+              </div>
+            </div>
+
+            {/* Submission Status Toggle */}
+            <div className="space-y-1 pt-2 border-t border-slate-100">
+              <label className="block font-semibold text-slate-700">Submission Mode</label>
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status"
+                    value="submitted"
+                    checked={status === 'submitted'}
+                    onChange={(e) => setStatus(e.target.value)}
+                    disabled={isDeadlinePassed}
+                    className="text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="font-medium text-slate-800">Publish / Submit Project</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status"
+                    value="draft"
+                    checked={status === 'draft'}
+                    onChange={(e) => setStatus(e.target.value)}
+                    disabled={isDeadlinePassed}
+                    className="text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="font-medium text-slate-600">Save as Draft</span>
+                </label>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
+              <Button size="sm" variant="outline" type="button" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button size="sm" variant="primary" type="submit" disabled={loading || isDeadlinePassed}>
+                {loading ? (
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    Uploading...
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1">
+                    <Upload className="w-3.5 h-3.5" />
+                    {submission ? 'Save Changes' : status === 'draft' ? 'Save Draft' : 'Submit Project'}
+                  </span>
+                )}
+              </Button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

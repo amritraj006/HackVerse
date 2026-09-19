@@ -132,12 +132,25 @@ export const Projects = () => {
     }
   }, [activeTab, loadAllSubmissions, loadMySubmissions, user]);
 
+  // Always keep mySubmissions fresh for the duplicate-submission guard in the modal
+  useEffect(() => {
+    if (user) loadMySubmissions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
   // Handlers
   const handleSubmitSuccess = async (formData) => {
-    await submissionService.submit(formData);
-    setAlert({ type: 'success', message: 'Project submitted successfully! 🎉' });
+    if (editingSubmission) {
+      await submissionService.update(editingSubmission._id, formData);
+      setAlert({ type: 'success', message: 'Project updated successfully! ✏️' });
+    } else {
+      await submissionService.submit(formData);
+      setAlert({ type: 'success', message: 'Project submitted successfully! 🎉' });
+    }
     if (activeTab === 'all') loadAllSubmissions();
     else loadMySubmissions();
+    // Always refresh mySubmissions so the duplicate guard stays current
+    if (user && activeTab === 'all') loadMySubmissions();
   };
 
   const handleOpenEdit = (sub) => {
@@ -157,6 +170,8 @@ export const Projects = () => {
       setDeleteModal({ open: false, id: null, title: '' });
       if (activeTab === 'all') loadAllSubmissions();
       else loadMySubmissions();
+      // Always refresh mySubmissions so the duplicate guard stays current
+      if (user && activeTab === 'all') loadMySubmissions();
     } catch (err) {
       setAlert({ type: 'error', message: err.message || 'Failed to delete submission.' });
     } finally {
@@ -356,11 +371,19 @@ export const Projects = () => {
       <SubmissionModal
         isOpen={isSubmitModalOpen}
         submission={editingSubmission}
+        mySubmissions={mySubmissions}
         onClose={() => {
           setIsSubmitModalOpen(false);
           setEditingSubmission(null);
         }}
         onSuccess={handleSubmitSuccess}
+        onEditExisting={(sub) => {
+          setIsSubmitModalOpen(false);
+          setTimeout(() => {
+            setEditingSubmission(sub);
+            setIsSubmitModalOpen(true);
+          }, 50);
+        }}
       />
 
       <SubmissionDetailModal

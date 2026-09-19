@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   submitProject,
+  updateSubmission,
   getMySubmissions,
   getAllSubmissions,
   getHackathonSubmissions,
@@ -39,6 +40,18 @@ router.post(
 );
 
 router.delete('/:id', protect, deleteSubmission);
+
+// Update an existing submission
+router.put(
+  '/:id',
+  protect,
+  uploadRateLimiter,
+  upload.fields([
+    { name: 'presentationFile', maxCount: 1 },
+    { name: 'screenshots', maxCount: 5 },
+  ]),
+  updateSubmission
+);
 
 // Keep the project detail publicly accessible, but after all named routes.
 router.get('/:id', getSubmissionById);
