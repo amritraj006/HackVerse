@@ -536,10 +536,35 @@ class HackathonService {
 
     const now = new Date();
     const { isEnded, isJudgeWindowExpired } = getWinnerDeclarationState(hackathon, now);
+    const effectiveStatus = getEffectiveStatus(hackathon, now);
+    const isOngoing = effectiveStatus === 'ongoing' || (hackathon.status === 'ongoing' && !isEnded);
+    const currentAssigned = (hackathon.assignedJudges || []).map((j) => (j._id || j).toString());
+    const hasAcceptedJudge = currentAssigned.length > 0;
+
+    // Rule 1: Once the hackathon is ongoing:
+    // Host cannot assign a new judge and cannot change the judge assignment.
+    if (isOngoing && user.role !== 'admin') {
+      const error = new Error('Judges cannot be assigned or changed while the hackathon is ongoing.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    // Rule 2: If a judge has accepted the invitation:
+    // Host cannot remove that judge through normal assignment controls.
+    // Host cannot replace that accepted judge through normal assignment controls.
+    // (Preserves emergency reassignment after the 12-hour winner declaration window expires post-hackathon)
+    if (hasAcceptedJudge && !isJudgeWindowExpired && user.role !== 'admin') {
+      const isRemoving = currentAssigned.some((ajId) => !judgeIds.map(String).includes(ajId));
+      const isReplacing = judgeIds.map(String).some((jid) => !currentAssigned.includes(jid));
+      if (isRemoving || isReplacing) {
+        const error = new Error('An accepted judge cannot be removed or replaced.');
+        error.statusCode = 400;
+        throw error;
+      }
+    }
 
     // If hackathon has ended and 12-hour window has not expired, the assigned judge is in their active window
-    if (isEnded && !isJudgeWindowExpired && (hackathon.assignedJudges || []).length > 0) {
-      const currentAssigned = hackathon.assignedJudges.map((j) => j.toString());
+    if (isEnded && !isJudgeWindowExpired && hasAcceptedJudge) {
       const isTryingToChange =
         judgeIds.some((jid) => !currentAssigned.includes(jid)) ||
         currentAssigned.some((jid) => !judgeIds.includes(jid));
@@ -550,6 +575,13 @@ class HackathonService {
         error.statusCode = 400;
         throw error;
       }
+    }
+
+    // If hackathon has ended and no judge was ever assigned, host cannot assign a new judge
+    if (isEnded && !isJudgeWindowExpired && !hasAcceptedJudge && user.role !== 'admin') {
+      const error = new Error('Judges cannot be assigned after the hackathon has ended.');
+      error.statusCode = 400;
+      throw error;
     }
 
     // Verify all IDs belong to judge/admin accounts

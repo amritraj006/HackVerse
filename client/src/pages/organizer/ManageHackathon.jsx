@@ -78,8 +78,10 @@ export const ManageHackathon = () => {
       .then((res) => {
         if (isMounted && res && res.data) {
           setHackathon(res.data);
-          if (res.data.assignedJudges) {
+          if (res.data.assignedJudges && res.data.assignedJudges.length > 0) {
             setSelectedJudgeIds(res.data.assignedJudges.map((j) => j._id || j));
+          } else if (res.data.pendingJudges && res.data.pendingJudges.length > 0) {
+            setSelectedJudgeIds(res.data.pendingJudges.map((j) => j._id || j));
           }
         }
       })
@@ -163,8 +165,10 @@ export const ManageHackathon = () => {
     hackathonService.getById(id).then((res) => {
       if (res && res.data) {
         setHackathon(res.data);
-        if (res.data.assignedJudges) {
+        if (res.data.assignedJudges && res.data.assignedJudges.length > 0) {
           setSelectedJudgeIds(res.data.assignedJudges.map((j) => j._id || j));
+        } else if (res.data.pendingJudges && res.data.pendingJudges.length > 0) {
+          setSelectedJudgeIds(res.data.pendingJudges.map((j) => j._id || j));
         }
       }
     });
@@ -314,6 +318,11 @@ export const ManageHackathon = () => {
       const res = await hackathonService.assignJudges(id, selectedJudgeIds);
       if (res && res.data) {
         setHackathon(res.data);
+        if (res.data.assignedJudges && res.data.assignedJudges.length > 0) {
+          setSelectedJudgeIds(res.data.assignedJudges.map((j) => j._id || j));
+        } else if (res.data.pendingJudges && res.data.pendingJudges.length > 0) {
+          setSelectedJudgeIds(res.data.pendingJudges.map((j) => j._id || j));
+        }
         setAlert({ type: 'success', message: 'Judges assigned successfully!' });
       }
     } catch (err) {
@@ -407,6 +416,23 @@ export const ManageHackathon = () => {
   // Has the hackathon started = either ongoing or ended
   const hasStarted = isEnded ||
     (hackathon.startDate && new Date() >= new Date(hackathon.startDate));
+
+  const isOngoing = effectiveStatus === 'ongoing' || (hackathon.status === 'ongoing' && !isEnded);
+  const hasAcceptedJudge = (hackathon.assignedJudges || []).length > 0;
+  const isPost12hReassignment = isEnded && winnerDeclState.isJudgeWindowExpired;
+  const isWithin12hJudgeWindow = isEnded && winnerDeclState.isWithinJudgeWindow && hasAcceptedJudge;
+
+  // Normal controls restriction: cannot remove or replace accepted judge unless post-12h expired
+  const isAcceptedJudgeLocked = hasAcceptedJudge && !isPost12hReassignment;
+
+  // Ongoing restriction: cannot assign a new judge or change judge assignment
+  const isOngoingLocked = isOngoing;
+
+  // 12-hour window restriction: locked during active window post-hackathon
+  const isWindowLocked = isWithin12hJudgeWindow;
+
+  // Overall judge modification disabled
+  const isJudgeAssignmentLocked = isOngoingLocked || isAcceptedJudgeLocked || isWindowLocked;
 
   // Columns for Teams table
   const teamColumns = [
@@ -767,6 +793,32 @@ export const ManageHackathon = () => {
               <span className="font-bold">⚠️ Notice:</span> Each hackathon can only have <strong>1 judge</strong> assigned. When you assign a judge, an invitation will be sent to them. Once they accept, they gain access to view hackathon details, teams, participants, and review submissions.
             </div>
 
+            {/* Ongoing Hackathon Notice - Judge Assignment Locked */}
+            {isOngoing && (
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-start gap-2">
+                <Clock className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">Judge Assignment Locked (Hackathon Ongoing)</p>
+                  <p className="text-[11px] text-amber-800 mt-0.5">
+                    Judges cannot be assigned or changed while the hackathon is ongoing.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Accepted Judge Notice - Cannot Remove or Replace */}
+            {hasAcceptedJudge && !isOngoing && !isPost12hReassignment && !isEnded && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-900 flex items-start gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold">Judge Invitation Accepted</p>
+                  <p className="text-[11px] text-emerald-800 mt-0.5">
+                    The assigned judge has accepted the invitation. Accepted judges cannot be removed or replaced.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Active 12-hour Judge Declaration Window Notice */}
             {isEnded && winnerDeclState.isWithinJudgeWindow && (hackathon.assignedJudges || []).length > 0 && (
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-start gap-2">
@@ -814,10 +866,13 @@ export const ManageHackathon = () => {
                     <div
                       key={j._id}
                       onClick={() => {
+                        if (isJudgeAssignmentLocked) return;
                         // Radio behavior: selecting a new judge replaces any previous selection
                         setSelectedJudgeIds(isSelected ? [] : [j._id]);
                       }}
-                      className={`p-3 rounded-lg border cursor-pointer transition-all flex items-center justify-between ${
+                      className={`p-3 rounded-lg border transition-all flex items-center justify-between ${
+                        isJudgeAssignmentLocked ? 'cursor-not-allowed opacity-80 ' : 'cursor-pointer '
+                      }${
                         isSelected
                           ? 'bg-indigo-50 border-indigo-300 text-indigo-900 ring-2 ring-indigo-500/20'
                           : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
@@ -856,8 +911,9 @@ export const ManageHackathon = () => {
                         type="radio"
                         name="hackathonJudge"
                         checked={isSelected}
+                        disabled={isJudgeAssignmentLocked}
                         readOnly
-                        className="text-indigo-600 focus:ring-indigo-500"
+                        className="text-indigo-600 focus:ring-indigo-500 disabled:opacity-50"
                       />
                     </div>
                   );
@@ -872,21 +928,21 @@ export const ManageHackathon = () => {
                 onClick={handleSaveJudges}
                 disabled={
                   isAssigningJudges ||
-                  (isEnded &&
-                    winnerDeclState.isWithinJudgeWindow &&
-                    (hackathon.assignedJudges || []).length > 0)
+                  isJudgeAssignmentLocked
                 }
                 title={
-                  isEnded &&
-                  winnerDeclState.isWithinJudgeWindow &&
-                  (hackathon.assignedJudges || []).length > 0
+                  isOngoingLocked
+                    ? 'Judges cannot be assigned or changed while the hackathon is ongoing'
+                    : isAcceptedJudgeLocked
+                    ? 'Accepted judges cannot be removed or replaced'
+                    : isWindowLocked
                     ? 'Judge reassignment is locked during the active 12-hour declaration window'
                     : ''
                 }
               >
                 {isAssigningJudges ? 'Saving Judge...' : 'Save Assigned Judge'}
               </Button>
-              {selectedJudgeIds.length > 0 && (
+              {selectedJudgeIds.length > 0 && !isJudgeAssignmentLocked && (
                 <Button size="sm" variant="outline" onClick={() => setSelectedJudgeIds([])}>
                   Clear Selection
                 </Button>
