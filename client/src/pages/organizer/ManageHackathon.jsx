@@ -520,22 +520,19 @@ export const ManageHackathon = () => {
                   <Clock className="w-3.5 h-3.5" />
                   {isEnded ? 'Deadline Passed' : 'Extend Deadline'}
                 </Button>
-                {/* Extend limit: only allowed while still active */}
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  disabled={isEnded}
-                  title={isEnded ? 'Cannot extend participant limit on an ended hackathon' : ''}
-                  onClick={() => {
-                    if (!isEnded) {
+                {/* Extend limit: only allowed while registration is still open */}
+                {hackathon.isRegistrationOpen && !isEnded && (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => {
                       setNewLimitValue(hackathon.maxParticipants > 0 ? String(hackathon.maxParticipants) : '');
                       setIsLimitModalOpen(true);
-                    }
-                  }}
-                >
-                  <Users className="w-3.5 h-3.5" />
-                  {isEnded ? 'Limit Locked' : 'Increase Limit'}
-                </Button>
+                    }}
+                  >
+                    <Users className="w-3.5 h-3.5" /> Increase Limit
+                  </Button>
+                )}
                 <Button size="sm" variant="outline" onClick={() => setIsEditModalOpen(true)}>
                   <Edit className="w-3.5 h-3.5" /> Edit Event
                 </Button>
