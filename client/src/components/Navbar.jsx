@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Bell, Menu, Code2, Plus, CheckCheck,
+  Bell, Menu, Plus, CheckCheck,
   Sparkles, Trophy, Info, Check, XCircle, UserCheck, Scale,
 } from 'lucide-react';
 import { Button } from './Button';
+import { Logo } from './Logo';
 import { useAuth } from '../hooks/useAuth';
 import { notificationService } from '../services/notificationService';
 import { notify } from '../utils/toast';
@@ -142,17 +143,7 @@ export const Navbar = ({ onToggleSidebar }) => {
           <Menu className="w-4 h-4" />
         </button>
 
-        <Link to="/" className="flex items-center gap-2 group">
-          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-xs group-hover:bg-indigo-700 transition-colors">
-            <Code2 className="w-4 h-4" />
-          </div>
-          <span className="font-bold text-sm tracking-tight text-slate-900 group-hover:text-indigo-600 transition-colors">
-            HackVerse
-          </span>
-          <span className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider bg-indigo-50 text-indigo-700 rounded border border-indigo-200">
-            Platform
-          </span>
-        </Link>
+        <Logo to="/" size="md" showBadge={true} badgeText="Platform" />
       </div>
 
       {/* Right section: Actions & Profile */}

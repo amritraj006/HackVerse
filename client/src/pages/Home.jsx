@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
+import { Logo, LogoIcon } from '../components/Logo';
 import { HackathonCard } from '../components/HackathonCard';
 import {
   Trophy,
@@ -86,9 +87,18 @@ export const Home = () => {
         {/* Decorative blobs */}
         <div className="pointer-events-none absolute -top-10 -right-10 w-64 h-64 rounded-full bg-indigo-500/10 blur-3xl" />
         <div className="pointer-events-none absolute bottom-0 right-1/3 w-40 h-40 rounded-full bg-purple-500/10 blur-2xl" />
+
+        {/* Decorative hero brand emblem */}
+        <div className="hidden md:flex absolute right-12 top-1/2 -translate-y-1/2 items-center justify-center pointer-events-none opacity-85">
+          <div className="relative">
+            <div className="absolute -inset-6 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 opacity-25 blur-2xl animate-pulse" />
+            <LogoIcon size="xl" className="w-28 h-28 drop-shadow-2xl" />
+          </div>
+        </div>
+
         <div className="relative z-10 max-w-xl space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/10 text-indigo-200 text-[11px] font-medium backdrop-blur-xs border border-white/10">
-            <Sparkles className="w-3 h-3 text-indigo-400" />
+          <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-white/10 text-indigo-200 text-[11px] font-medium backdrop-blur-xs border border-white/10">
+            <LogoIcon size="xs" />
             <span>HackVerse · Global Hackathon Network</span>
           </div>
           <h1 className="text-xl md:text-2xl font-bold tracking-tight text-white leading-snug">

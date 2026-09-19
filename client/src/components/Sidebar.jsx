@@ -1,6 +1,8 @@
 import { NavLink } from 'react-router-dom';
+import { X } from 'lucide-react';
 import { ALL_NAV_ITEMS, SECONDARY_NAV_ITEMS } from '../utils/constants';
 import { useAuth } from '../hooks/useAuth';
+import { Logo } from './Logo';
 
 export const Sidebar = ({ isOpen, onClose }) => {
   const { user, isAuthenticated } = useAuth();
@@ -28,6 +30,18 @@ export const Sidebar = ({ isOpen, onClose }) => {
         }`}
       >
         <div className="space-y-4">
+          {/* Mobile header with Logo */}
+          <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 md:hidden">
+            <Logo to="/" size="sm" />
+            <button
+              onClick={onClose}
+              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+              aria-label="Close menu"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
           {/* Section: Main Menu */}
           <div>
             <p className="px-2 pb-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">

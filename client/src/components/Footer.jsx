@@ -1,8 +1,11 @@
+import { Logo } from './Logo';
+
 export const Footer = () => {
   return (
     <footer className="bg-white border-t border-slate-200/80 py-3 px-6 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
-      <div className="flex items-center gap-2">
-        <span className="font-semibold text-slate-700">HackVerse</span>
+      <div className="flex items-center gap-3">
+        <Logo to="/" size="xs" />
+        <span className="text-slate-400">|</span>
         <span>© {new Date().getFullYear()} All rights reserved.</span>
       </div>
       <div className="flex items-center gap-4 text-[11px]">
