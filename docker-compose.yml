@@ -1,4 +1,5 @@
 services:
+
   # ==========================================
   # Database Service: MongoDB
   # ==========================================
@@ -6,20 +7,26 @@ services:
     image: mongo:7.0
     container_name: hackverse-mongodb
     restart: unless-stopped
+
     ports:
-      - '${MONGO_PORT:-27018}:27017'
+      - "${MONGO_PORT:-27018}:27017"
+
     environment:
       MONGO_INITDB_DATABASE: hackverse
+
     volumes:
       - mongo_data:/data/db
+
     networks:
       - hackverse-network
+
     healthcheck:
-      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 5s
+
 
   # ==========================================
   # Backend API Service: Node.js / Express
@@ -28,40 +35,60 @@ services:
     build:
       context: ./server
       dockerfile: Dockerfile
+
     container_name: hackverse-server
     restart: unless-stopped
+
     ports:
-      - '8341:8341'
+      - "8341:8341"
+
     environment:
       NODE_ENV: production
       PORT: 8341
-      MONGO_URI: mongodb://mongodb:27017/hackverse
-      JWT_SECRET: ${JWT_SECRET:-hackverse_production_jwt_secret_key_change_me_in_prod}
+
+      # MongoDB connection
+      MONGO_URI: ${MONGO_URI}
+
+      JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRES_IN: 7d
-      CLIENT_URL: http://localhost:5173
+
+      # Frontend URL
+      CLIENT_URL: ${CLIENT_URL:-http://localhost:5173}
+
       # Rate Limiting Configuration
       RATE_LIMIT_WINDOW_MS: 900000
       RATE_LIMIT_MAX_REQUESTS: 150
       AUTH_RATE_LIMIT_MAX: 10
       UPLOAD_RATE_LIMIT_MAX: 20
+
       # Circuit Breaker Configuration
       CIRCUIT_BREAKER_FAILURES: 3
       CIRCUIT_BREAKER_RECOVERY_MS: 30000
       CIRCUIT_BREAKER_TIMEOUT_MS: 8000
+
       # Cloudinary credentials (optional)
       CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-}
       CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-}
       CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-}
+
       # Admin seeder (optional)
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@hackverse.io}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123456}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+
+      # Gemini
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-}
+
     volumes:
       - server_uploads:/app/uploads
+
     depends_on:
       mongodb:
         condition: service_healthy
+
     networks:
       - hackverse-network
+
 
   # ==========================================
   # Frontend Client Service: React / Nginx
@@ -70,24 +97,40 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
+
       args:
-        VITE_API_BASE_URL: http://localhost:8341/api/v1
-        VITE_APP_NAME: HackVerse
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8341/api/v1}
+        VITE_APP_NAME: ${VITE_APP_NAME:-HackVerse}
+
     container_name: hackverse-client
     restart: unless-stopped
+
     ports:
-      - '5173:80'
+      - "5173:80"
+      - "5174:80"
+
     depends_on:
       - server
+
     networks:
       - hackverse-network
 
+
+# ==========================================
+# Volumes
+# ==========================================
 volumes:
   mongo_data:
     driver: local
+
   server_uploads:
     driver: local
 
+
+# ==========================================
+# Network
+# ==========================================
 networks:
   hackverse-network:
     driver: bridge
+
