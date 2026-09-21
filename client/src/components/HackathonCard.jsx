@@ -41,7 +41,8 @@ export const HackathonCard = ({
   const hasStarted = effectiveStatus !== 'upcoming';
 
   return (
-    <div className="bg-white border border-slate-200/80 rounded-xl p-4 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between gap-4">
+    <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between gap-5 relative overflow-hidden">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-400" />
       {/* Top Section */}
       <div className="space-y-2.5">
         <div className="flex items-start justify-between gap-2">
@@ -54,7 +55,7 @@ export const HackathonCard = ({
         </div>
 
         <div>
-          <h2 className="text-sm font-bold text-slate-900 line-clamp-1">{title}</h2>
+          <h2 className="text-base font-bold text-slate-900 line-clamp-1">{title}</h2>
           <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mt-0.5">
             {tagline || 'No description available'}
           </p>

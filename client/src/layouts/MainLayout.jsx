@@ -12,7 +12,7 @@ export const MainLayout = () => {
       <Navbar onToggleSidebar={() => setSidebarOpen((prev) => !prev)} />
       <div className="flex-1 flex w-full">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main className="flex-1 p-4 md:p-6 min-w-0 flex flex-col justify-between">
+        <main className="flex-1 p-5 md:p-8 min-w-0 flex flex-col justify-between">
           <div className="animate-fade-in">
             <Outlet />
           </div>

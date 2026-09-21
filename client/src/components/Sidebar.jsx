@@ -25,7 +25,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
 
       {/* Sidebar navigation drawer */}
       <aside
-        className={`fixed md:sticky top-0 md:top-[49px] left-0 z-40 h-[calc(100vh)] md:h-[calc(100vh-49px)] w-56 bg-white border-r border-slate-200/80 flex flex-col justify-between p-3 transition-transform duration-200 ease-in-out ${
+        className={`fixed md:sticky top-0 md:top-[64px] left-0 z-40 h-[calc(100vh)] md:h-[calc(100vh-64px)] w-56 bg-white border-r border-slate-200/80 flex flex-col justify-between p-3 transition-transform duration-200 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >

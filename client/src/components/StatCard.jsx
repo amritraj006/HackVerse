@@ -19,13 +19,13 @@ export const StatCard = ({
   className = '',
 }) => {
   return (
-    <Card className={`hover:shadow-xs transition-shadow ${className}`}>
+    <Card className={`hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ${className}`}>
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[.12em]">
             {title}
           </p>
-          <p className="text-xl font-bold text-slate-900 tracking-tight">{value}</p>
+          <p className="text-2xl font-bold text-slate-900 tracking-tight">{value}</p>
           {subtitle && <p className="text-[11px] text-slate-500">{subtitle}</p>}
         </div>
 
