@@ -5,7 +5,7 @@ import User from './models/User.js';
 const users = [];
 
 // Participants
-for (let i = 1; i <= 6; i++) {
+for (let i = 1; i <= 15; i++) {
   users.push({
     name: `User${i}`,
     email: `user${i}@gmail.com`,
@@ -47,7 +47,7 @@ const insertUsers = async () => {
       await user.save();
     }
 
-    console.log('✅ 18 users inserted successfully.');
+    console.log(`✅ ${users.length} users inserted successfully.`);
     process.exit(0);
   } catch (error) {
     console.error('❌ Error inserting users:', error);
