@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from './Button';
 import {
   X,
@@ -16,6 +17,22 @@ import { getAssetUrl } from '../utils/helpers';
 
 export const SubmissionDetailModal = ({ isOpen, submission, onClose }) => {
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  useEffect(() => {
+    if (!isOpen || !submission) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, submission, onClose]);
 
   if (!isOpen || !submission) return null;
 
@@ -40,11 +57,19 @@ export const SubmissionDetailModal = ({ isOpen, submission, onClose }) => {
 
   const getFullUrl = (url) => getAssetUrl(url);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-2xl p-5 space-y-4 my-8 animate-in fade-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3 pb-3 border-b border-slate-100">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-2xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden my-auto animate-fade-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header - Fixed & shrink-0 */}
+        <div className="px-5 py-4 border-b border-slate-100 flex items-start justify-between gap-3 bg-white shrink-0">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="px-2 py-0.5 text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full">
@@ -65,13 +90,20 @@ export const SubmissionDetailModal = ({ isOpen, submission, onClose }) => {
             {tagline && <p className="text-xs font-medium text-slate-500">{tagline}</p>}
           </div>
 
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded-md">
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label="Close dialog"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Screenshots Gallery / Carousel */}
-        {screenshots.length > 0 && (
+        {/* Scrollable Body - flex-1 min-h-0 */}
+        <div className="p-5 overflow-y-auto space-y-4 flex-1 min-h-0">
+          {/* Screenshots Gallery / Carousel */}
+          {screenshots.length > 0 && (
           <div className="space-y-2">
             <div className="relative aspect-video w-full rounded-lg overflow-hidden bg-slate-900 border border-slate-200 flex items-center justify-center group">
               <img
@@ -214,12 +246,16 @@ export const SubmissionDetailModal = ({ isOpen, submission, onClose }) => {
           </div>
         )}
 
-        <div className="pt-3 border-t border-slate-100 flex items-center justify-end">
+        </div>
+
+        {/* Fixed Sticky Footer */}
+        <div className="px-5 py-3.5 border-t border-slate-100 flex items-center justify-end bg-slate-50/80 shrink-0">
           <Button size="sm" variant="outline" onClick={onClose}>
             Close
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

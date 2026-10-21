@@ -13,7 +13,7 @@ export const MainLayout = () => {
       <div className="flex-1 flex w-full">
         <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <main className="flex-1 p-5 md:p-8 min-w-0 flex flex-col justify-between">
-          <div className="animate-fade-in">
+          <div className="w-full flex-1 min-w-0">
             <Outlet />
           </div>
           <div className="mt-8">

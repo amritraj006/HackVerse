@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, User, Users, ArrowRight, UserPlus, KeyRound, Sparkles, AlertCircle } from 'lucide-react';
 import { Button } from './Button';
 import { registrationService } from '../services/registrationService';
@@ -98,14 +99,37 @@ export const RegisterHackathonModal = ({
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in duration-200">
+  useEffect(() => {
+    if (!isOpen || !hackathon) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !loading) {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, hackathon, loading]);
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !loading) handleClose();
+      }}
+    >
       <div
-        className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-md overflow-hidden flex flex-col"
+        className="bg-white rounded-2xl shadow-2xl border border-slate-200/90 w-full max-w-md max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] overflow-hidden flex flex-col my-auto animate-fade-in"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between">
+        <div className="p-4 bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-indigo-400" />
             <div>
@@ -135,7 +159,7 @@ export const RegisterHackathonModal = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-5 space-y-4 text-xs text-slate-700">
+        <div className="p-5 space-y-4 text-xs text-slate-700 flex-1 min-h-0 overflow-y-auto">
           {error && (
             <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 font-medium text-[11px]">
               <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -341,6 +365,7 @@ export const RegisterHackathonModal = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

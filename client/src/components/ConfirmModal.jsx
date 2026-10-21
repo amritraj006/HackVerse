@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from './Button';
 import { AlertTriangle, X } from 'lucide-react';
 
@@ -11,11 +13,37 @@ export const ConfirmModal = ({
   confirmVariant = 'danger',
   loading = false,
 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !loading) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, loading, onClose]);
+
   if (!isOpen) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fade-in">
-      <div className="bg-white border border-slate-200/80 rounded-xl shadow-lg w-full max-w-sm overflow-hidden p-5 space-y-4">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !loading) onClose();
+      }}
+    >
+      <div
+        className="bg-white border border-slate-200/90 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden p-5 space-y-4 my-auto animate-fade-in"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header with Warning Icon & Close */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2 text-rose-600 font-bold text-sm">
@@ -25,9 +53,11 @@ export const ConfirmModal = ({
             <span>{title}</span>
           </div>
           <button
+            type="button"
             onClick={onClose}
             disabled={loading}
-            className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            className="p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
+            aria-label="Close dialog"
           >
             <X className="w-4 h-4" />
           </button>
@@ -63,6 +93,7 @@ export const ConfirmModal = ({
           </Button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

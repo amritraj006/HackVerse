@@ -24,7 +24,7 @@
 ::-webkit-scrollbar-track { background: #eef0f5; }
 ::-webkit-scrollbar-thumb { background: #c8ceda; border-radius: 99px; }
 ::-webkit-scrollbar-thumb:hover { background: #aab3c4; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .animate-fade-in { animation: fadeIn .28s ease-out both; }
 
 /* Shared product surfaces */
