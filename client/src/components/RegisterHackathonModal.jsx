@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { X, User, Users, ArrowRight, UserPlus, KeyRound, Sparkles, AlertCircle } from 'lucide-react';
 import { Button } from './Button';
@@ -19,21 +19,39 @@ export const RegisterHackathonModal = ({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  if (!isOpen || !hackathon) return null;
-
-  const isEnded = isHackathonEnded(hackathon);
-  const isRegOpen = isRegistrationEffectivelyOpen(hackathon);
-  const isFull = hackathon.maxParticipants > 0 && (hackathon.availableSlots ?? 0) <= 0;
-  const canRegister = isRegOpen && !isEnded && !isFull;
-
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     setStep('choice');
     setGroupTab('create');
     setTeamName('');
     setJoinCode('');
     setError('');
     onClose();
-  };
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!isOpen || !hackathon) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !loading) {
+        handleClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, hackathon, loading, handleClose]);
+
+  if (!isOpen || !hackathon) return null;
+
+  const isEnded = isHackathonEnded(hackathon);
+  const isRegOpen = isRegistrationEffectivelyOpen(hackathon);
+  const isFull = hackathon.maxParticipants > 0 && (hackathon.availableSlots ?? 0) <= 0;
+  const canRegister = isRegOpen && !isEnded && !isFull;
 
   // Solo Registration Handler
   const handleSoloRegister = async () => {
@@ -99,23 +117,6 @@ export const RegisterHackathonModal = ({
     }
   };
 
-  useEffect(() => {
-    if (!isOpen || !hackathon) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && !loading) {
-        handleClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, hackathon, loading]);
 
   return createPortal(
     <div
