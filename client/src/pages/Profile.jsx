@@ -8,6 +8,7 @@ import { Alert } from '../components/Alert';
 import { AvatarUpload } from '../components/AvatarUpload';
 import { userService } from '../services/userService';
 import { User, Mail, Sparkles, Save, Check, UserCheck } from 'lucide-react';
+import { notify } from '../utils/toast';
 
 const BASE_ROLE_OPTIONS = [
   { value: 'participant', label: 'Participant (Build & Compete)' },
@@ -59,9 +60,12 @@ export const Profile = () => {
         setCurrentProfile(res.data);
         updateUser(res.data);
         setSuccessMsg('Profile updated successfully!');
+        notify.success('Profile updated successfully! ✨', 'Your changes have been saved to your developer profile.');
       }
     } catch (err) {
-      setErrorMsg(err.message || 'Failed to update profile.');
+      const msg = err.message || 'Failed to update profile.';
+      setErrorMsg(msg);
+      notify.error('Profile Update Failed', msg);
     } finally {
       setIsSubmitting(false);
     }
@@ -78,10 +82,10 @@ export const Profile = () => {
   return (
     <div className="space-y-5">
       {/* Profile Header Banner */}
-      <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-xs space-y-4">
+      <div className="border border-[var(--line)] rounded-2xl p-5 shadow-xs bg-[var(--surface-card)] backdrop-blur-md space-y-4">
         <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
           {/* Avatar Circle */}
-          <div className="w-16 h-16 rounded-full bg-indigo-600 text-white font-bold text-xl flex items-center justify-center border-2 border-white shadow-xs shrink-0 overflow-hidden">
+          <div className="w-16 h-16 rounded-full bg-indigo-600 text-white font-bold text-xl flex items-center justify-center border-2 border-[var(--line)] shadow-xs shrink-0 overflow-hidden">
             {displayAvatar ? (
               <img
                 src={
@@ -103,17 +107,17 @@ export const Profile = () => {
           {/* User Details */}
           <div className="space-y-1 text-center sm:text-left flex-1 min-w-0">
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
-              <h1 className="text-base font-bold text-slate-900">{currentProfile?.name || 'Developer User'}</h1>
-              <span className="px-2 py-0.5 text-[10px] font-semibold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full">
+              <h1 className="text-base font-bold text-[var(--ink-heading)]">{currentProfile?.name || 'Developer User'}</h1>
+              <span className="px-2 py-0.5 text-[10px] font-semibold uppercase bg-indigo-500/15 text-indigo-400 border border-indigo-500/30 rounded-full">
                 {currentProfile?.role || 'participant'}
               </span>
             </div>
 
-            <p className="text-xs text-slate-500 flex items-center justify-center sm:justify-start gap-1">
-              <Mail className="w-3.5 h-3.5 text-slate-400" /> {currentProfile?.email || 'dev@hackverse.io'}
+            <p className="text-xs text-[var(--muted)] flex items-center justify-center sm:justify-start gap-1">
+              <Mail className="w-3.5 h-3.5" /> {currentProfile?.email || 'dev@hackverse.io'}
             </p>
 
-            <p className="text-xs text-slate-600 pt-1 max-w-xl">
+            <p className="text-xs text-[var(--muted)] pt-1 max-w-xl">
               {currentProfile?.bio || 'No bio added yet. Click "Edit Profile" to customize your profile summary.'}
             </p>
           </div>
@@ -121,12 +125,12 @@ export const Profile = () => {
 
         {/* Skills Pills */}
         {currentProfile?.skills && currentProfile.skills.length > 0 && (
-          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-semibold text-slate-400 mr-1">Skills:</span>
+          <div className="pt-2 border-t border-[var(--line)] flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-mono font-semibold text-[var(--muted)] mr-1">Skills:</span>
             {currentProfile.skills.map((skill, idx) => (
               <span
                 key={idx}
-                className="px-2 py-0.5 text-[11px] bg-slate-100 text-slate-700 rounded-md border border-slate-200"
+                className="px-2 py-0.5 text-[11px] bg-indigo-500/10 text-indigo-400 rounded-md border border-indigo-500/25"
               >
                 {skill}
               </span>
@@ -136,33 +140,33 @@ export const Profile = () => {
       </div>
 
       {/* Tabs Bar */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
+      <div className="flex items-center gap-1 border-b border-[var(--line)] pb-1 overflow-x-auto whitespace-nowrap min-w-0">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer shrink-0 ${
             activeTab === 'overview'
-              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30'
+              : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
           }`}
         >
           Overview
         </button>
         <button
           onClick={() => setActiveTab('edit')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer shrink-0 ${
             activeTab === 'edit'
-              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30'
+              : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
           }`}
         >
           Edit Profile
         </button>
         <button
           onClick={() => setActiveTab('avatar')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer shrink-0 ${
             activeTab === 'avatar'
-              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-              : 'text-slate-600 hover:bg-slate-100'
+              ? 'bg-indigo-500/15 text-indigo-400 border border-indigo-500/30'
+              : 'text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--ink)]'
           }`}
         >
           Avatar Image
@@ -171,28 +175,28 @@ export const Profile = () => {
 
       {/* Tab Contents */}
       {activeTab === 'overview' && (
-        <Card header={<span className="font-semibold text-xs text-slate-800">Account Details & Summary</span>}>
-          <div className="space-y-3 text-xs text-slate-600">
+        <Card header={<span className="font-semibold text-xs text-[var(--ink-heading)]">Account Details &amp; Summary</span>}>
+          <div className="space-y-3 text-xs text-[var(--ink)]">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60 space-y-1">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase">Full Name</span>
-                <p className="font-semibold text-slate-800">{currentProfile?.name}</p>
+              <div className="p-3 bg-[var(--surface-subtle)] rounded-xl border border-[var(--line)] space-y-1">
+                <span className="text-[11px] font-mono font-semibold text-[var(--muted)] uppercase tracking-wider">Full Name</span>
+                <p className="font-semibold text-[var(--ink-heading)]">{currentProfile?.name}</p>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60 space-y-1">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase">Email Address</span>
-                <p className="font-semibold text-slate-800">{currentProfile?.email}</p>
+              <div className="p-3 bg-[var(--surface-subtle)] rounded-xl border border-[var(--line)] space-y-1">
+                <span className="text-[11px] font-mono font-semibold text-[var(--muted)] uppercase tracking-wider">Email Address</span>
+                <p className="font-semibold text-[var(--ink-heading)]">{currentProfile?.email}</p>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60 space-y-1">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase">Assigned System Role</span>
-                <p className="font-semibold text-indigo-600 uppercase">{currentProfile?.role}</p>
+              <div className="p-3 bg-[var(--surface-subtle)] rounded-xl border border-[var(--line)] space-y-1">
+                <span className="text-[11px] font-mono font-semibold text-[var(--muted)] uppercase tracking-wider">Assigned System Role</span>
+                <p className="font-semibold text-indigo-400 uppercase">{currentProfile?.role}</p>
               </div>
 
-              <div className="p-3 bg-slate-50 rounded-lg border border-slate-200/60 space-y-1">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase">Account Status</span>
-                <p className="font-semibold text-emerald-600 flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> Active & Verified
+              <div className="p-3 bg-[var(--surface-subtle)] rounded-xl border border-[var(--line)] space-y-1">
+                <span className="text-[11px] font-mono font-semibold text-[var(--muted)] uppercase tracking-wider">Account Status</span>
+                <p className="font-semibold text-emerald-500 flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" /> Active &amp; Verified
                 </p>
               </div>
             </div>

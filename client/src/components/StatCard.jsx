@@ -1,12 +1,12 @@
 import { Card } from './Card';
 
 const colorThemes = {
-  indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-  emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-  amber: 'bg-amber-50 text-amber-600 border-amber-100',
-  rose: 'bg-rose-50 text-rose-600 border-rose-100',
-  blue: 'bg-blue-50 text-blue-600 border-blue-100',
-  purple: 'bg-purple-50 text-purple-600 border-purple-100',
+  indigo: 'bg-indigo-500/15 text-indigo-400 border-indigo-500/30 shadow-[0_0_15px_rgba(99,102,241,0.25)]',
+  emerald: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 shadow-[0_0_15px_rgba(16,185,129,0.25)]',
+  amber: 'bg-amber-500/15 text-amber-400 border-amber-500/30 shadow-[0_0_15px_rgba(245,158,11,0.25)]',
+  rose: 'bg-rose-500/15 text-rose-400 border-rose-500/30 shadow-[0_0_15px_rgba(244,63,94,0.25)]',
+  blue: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.25)]',
+  purple: 'bg-purple-500/15 text-purple-400 border-purple-500/30 shadow-[0_0_15px_rgba(168,85,247,0.25)]',
 };
 
 export const StatCard = ({
@@ -19,28 +19,28 @@ export const StatCard = ({
   className = '',
 }) => {
   return (
-    <Card className={`hover:-translate-y-0.5 hover:shadow-md transition-all duration-200 ${className}`}>
+    <Card className={`hover:-translate-y-1 hover:shadow-xl transition-all duration-200 border-slate-200/80 dark:border-white/10 ${className}`}>
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-[.12em]">
+          <p className="text-[10px] font-mono font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
             {title}
           </p>
-          <p className="text-2xl font-bold text-slate-900 tracking-tight">{value}</p>
-          {subtitle && <p className="text-[11px] text-slate-500">{subtitle}</p>}
+          <p className="text-2xl font-display font-bold text-slate-900 dark:text-white tracking-tight">{value}</p>
+          {subtitle && <p className="text-[11px] text-slate-500 dark:text-slate-400">{subtitle}</p>}
         </div>
 
         <div
-          className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 border ${colorThemes[color] || colorThemes.indigo}`}
+          className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${colorThemes[color] || colorThemes.indigo}`}
         >
-          {Icon && <Icon className="w-4 h-4" />}
+          {Icon && <Icon className="w-5 h-5" />}
         </div>
       </div>
 
       {trend && (
-        <div className="mt-3 pt-2 border-t border-slate-100 flex items-center gap-1 text-[11px]">
+        <div className="mt-3 pt-2.5 border-t border-slate-100 dark:border-white/10 flex items-center gap-1.5 text-[11px]">
           <span
-            className={`font-semibold ${
-              trend.positive ? 'text-emerald-600' : 'text-rose-600'
+            className={`font-semibold font-mono ${
+              trend.positive ? 'text-emerald-500' : 'text-rose-500'
             }`}
           >
             {trend.positive ? '↑' : '↓'} {trend.value}

@@ -5,6 +5,7 @@ import { Button } from '../components/Button';
 import { Alert } from '../components/Alert';
 import { useAuth } from '../hooks/useAuth';
 import { Mail, Lock, LogIn } from 'lucide-react';
+import { notify } from '../utils/toast';
 
 export const Login = () => {
   const [formData, setFormData] = useState({
@@ -56,9 +57,11 @@ export const Login = () => {
     setIsSubmitting(false);
 
     if (result.success) {
+      notify.success(`Welcome back, ${result.user?.name || 'Developer'}!`, 'Successfully authenticated to HackVerse');
       navigate(from, { replace: true });
     } else {
       setFormError(result.error);
+      notify.error('Authentication Failed', result.error);
     }
   };
 

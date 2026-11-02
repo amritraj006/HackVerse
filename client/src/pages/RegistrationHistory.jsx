@@ -94,17 +94,17 @@ export const RegistrationHistory = () => {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--line)]">
         <div>
-          <h1 className="text-base font-bold text-slate-900">Registration History</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-base font-bold text-[var(--ink-heading)]">Registration History</h1>
+          <p className="text-xs text-[var(--muted)]">
             All your hackathon registrations — active and cancelled.
             {pagination.total > 0 && (
-              <span className="ml-1 font-semibold text-slate-700">{pagination.total} total.</span>
+              <span className="ml-1 font-semibold text-[var(--ink)]">{pagination.total} total.</span>
             )}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             size="sm"
             variant="outline"
@@ -123,16 +123,16 @@ export const RegistrationHistory = () => {
       <Alert type={alert.type} message={alert.message} onClose={() => setAlert({ type: 'info', message: '' })} />
 
       {/* Filters */}
-      <div className="flex items-center gap-2">
-        <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+      <div className="flex flex-wrap items-center gap-2">
+        <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--muted)] shrink-0" />
         {STATUS_FILTERS.map((f) => (
           <button
             key={f.value}
             onClick={() => handleFilterChange(f.value)}
             className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-colors cursor-pointer ${
               statusFilter === f.value
-                ? 'bg-indigo-50 text-indigo-700 border-indigo-300'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                ? 'bg-indigo-500/15 text-indigo-400 border-indigo-500/40'
+                : 'bg-[var(--surface-subtle)] text-[var(--muted)] border-[var(--line)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)]'
             }`}
           >
             {f.label}

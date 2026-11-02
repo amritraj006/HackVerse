@@ -12,6 +12,8 @@ import { submissionService } from '../services/submissionService';
 import { hackathonService } from '../services/hackathonService';
 import { useAuth } from '../hooks/useAuth';
 import { useQueryParams } from '../hooks/useQueryParams';
+import { notify } from '../utils/toast';
+import { EmptyState } from '../components/EmptyState';
 import {
   FolderGit2,
   Plus,
@@ -142,10 +144,14 @@ export const Projects = () => {
   const handleSubmitSuccess = async (formData) => {
     if (editingSubmission) {
       await submissionService.update(editingSubmission._id, formData);
-      setAlert({ type: 'success', message: 'Project updated successfully! ✏️' });
+      const msg = 'Project updated successfully! ✏️';
+      setAlert({ type: 'success', message: msg });
+      notify.success('Project Updated! 🚀', 'Your project changes have been saved.');
     } else {
       await submissionService.submit(formData);
-      setAlert({ type: 'success', message: 'Project submitted successfully! 🎉' });
+      const msg = 'Project submitted successfully! 🎉';
+      setAlert({ type: 'success', message: msg });
+      notify.success('Project Submitted! 🚀', 'Your hackathon entry has been registered.');
     }
     if (activeTab === 'all') loadAllSubmissions();
     else loadMySubmissions();
@@ -166,14 +172,18 @@ export const Projects = () => {
     setIsDeleting(true);
     try {
       await submissionService.deleteSubmission(deleteModal.id);
-      setAlert({ type: 'success', message: `Submission "${deleteModal.title}" deleted.` });
+      const msg = `Submission "${deleteModal.title}" deleted.`;
+      setAlert({ type: 'success', message: msg });
+      notify.info('Submission Removed', msg);
       setDeleteModal({ open: false, id: null, title: '' });
       if (activeTab === 'all') loadAllSubmissions();
       else loadMySubmissions();
       // Always refresh mySubmissions so the duplicate guard stays current
       if (user && activeTab === 'all') loadMySubmissions();
     } catch (err) {
-      setAlert({ type: 'error', message: err.message || 'Failed to delete submission.' });
+      const errText = err.message || 'Failed to delete submission.';
+      setAlert({ type: 'error', message: errText });
+      notify.error('Delete Failed', errText);
     } finally {
       setIsDeleting(false);
     }
@@ -204,15 +214,15 @@ export const Projects = () => {
   return (
     <div className="space-y-5">
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--line)]">
         <div>
-          <h1 className="text-base font-bold text-slate-900">Projects Showcase</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-base font-bold text-[var(--ink-heading)]">Projects Showcase</h1>
+          <p className="text-xs text-[var(--muted)]">
             Explore hackathon submissions from builders around the world, or submit your team's project.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {user && user.role === 'participant' && (
             <Button
               size="sm"
@@ -239,7 +249,7 @@ export const Projects = () => {
 
       {/* Tabs & Search/Filter Controls Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-1 border-b border-slate-200 w-full md:w-auto">
+        <div className="flex items-center gap-1 border-b border-[var(--line)] w-full md:w-auto">
           {!isParticipantOnly && (
             <button
               onClick={() => {
@@ -247,8 +257,8 @@ export const Projects = () => {
               }}
               className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
                 activeTab === 'all'
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
+                  ? 'border-indigo-500 text-indigo-500'
+                  : 'border-transparent text-[var(--muted)] hover:text-[var(--ink)]'
               }`}
             >
               All Submissions
@@ -261,8 +271,8 @@ export const Projects = () => {
               }}
               className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
                 activeTab === 'my'
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
+                  ? 'border-indigo-500 text-indigo-500'
+                  : 'border-transparent text-[var(--muted)] hover:text-[var(--ink)]'
               }`}
             >
               My Submissions ({mySubmissions.length})
@@ -282,12 +292,12 @@ export const Projects = () => {
             />
 
             {hackathons.length > 0 && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 w-full sm:w-auto">
                 <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                 <select
                   value={selectedHackathonId}
                   onChange={(e) => handleHackathonFilterChange(e.target.value)}
-                  className="text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
+                  className="text-xs px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:bg-white dark:focus:bg-slate-800 w-full sm:w-auto max-w-full sm:max-w-xs truncate"
                 >
                   <option value="">All Hackathons</option>
                   {hackathons.map((h) => (
@@ -322,26 +332,30 @@ export const Projects = () => {
           <span>Loading projects...</span>
         </div>
       ) : displayList.length === 0 ? (
-        <div className="py-12 text-center space-y-3 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-          <FolderGit2 className="w-8 h-8 text-slate-300 mx-auto" />
-          <p className="text-xs text-slate-500">
-            {activeTab === 'all'
-              ? 'No projects submitted yet matching your criteria.'
-              : "You haven't submitted any projects yet."}
-          </p>
-          {user && activeTab === 'my' && (
-            <Button
-              size="sm"
-              variant="primary"
-              onClick={() => {
-                setEditingSubmission(null);
-                setIsSubmitModalOpen(true);
-              }}
-            >
-              <Sparkles className="w-3.5 h-3.5" /> Submit Your First Project
-            </Button>
-          )}
-        </div>
+        <EmptyState
+          icon={FolderGit2}
+          badgeText={activeTab === 'all' ? 'SHOWCASE // ZERO_ENTRIES' : 'PROJECTS // NO_SUBMISSIONS'}
+          title={activeTab === 'all' ? 'No Projects in the Showcase' : 'No Submissions Filed Yet'}
+          description={
+            activeTab === 'all'
+              ? 'No projects have been submitted for the selected hackathon or filter criteria yet. Check back when the arena closes.'
+              : 'You haven\'t submitted any projects yet. Create your first entry to compete in an active hackathon arena.'
+          }
+          action={
+            user && activeTab === 'my' ? (
+              <Button
+                size="md"
+                variant="primary"
+                onClick={() => {
+                  setEditingSubmission(null);
+                  setIsSubmitModalOpen(true);
+                }}
+              >
+                <Sparkles className="w-4 h-4" /> Submit Your First Project
+              </Button>
+            ) : null
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {displayList.map((sub) => (

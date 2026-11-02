@@ -41,22 +41,24 @@ export const HackathonCard = ({
   const hasStarted = effectiveStatus !== 'upcoming';
 
   return (
-    <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-xs hover:shadow-md hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between gap-5 relative overflow-hidden">
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-violet-500 to-sky-400" />
+    <div className="group bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 rounded-2xl p-5 shadow-xs hover:shadow-xl dark:hover:border-indigo-500/50 hover:-translate-y-1 transition-all duration-200 flex flex-col justify-between gap-5 relative overflow-hidden backdrop-blur-md">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-indigo-500 via-cyan-400 to-pink-500 group-hover:h-1.5 transition-all duration-200" />
       {/* Top Section */}
-      <div className="space-y-2.5">
-        <div className="flex items-start justify-between gap-2">
-          <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase rounded-full border ${statusBadge}`}>
+      <div className="space-y-3">
+        <div className="flex flex-wrap sm:flex-nowrap items-start justify-between gap-2">
+          <span className={`px-2.5 py-0.5 text-[10px] font-mono font-semibold uppercase rounded-full border tracking-wide ${statusBadge}`}>
             {effectiveStatus}
           </span>
-          <div className="flex items-center gap-1 text-xs font-bold text-indigo-600 shrink-0">
-            <Trophy className="w-3.5 h-3.5" /> {prizePool || 'N/A'}
+          <div className="flex items-center gap-1.5 text-xs font-bold text-amber-500 dark:text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20 shrink-0 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
+            <Trophy className="w-3.5 h-3.5 text-amber-400 animate-pulse" /> {prizePool || 'N/A'}
           </div>
         </div>
 
         <div>
-          <h2 className="text-base font-bold text-slate-900 line-clamp-1">{title}</h2>
-          <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mt-0.5">
+          <h2 className="text-base font-bold text-slate-900 dark:text-white line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+            {title}
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed mt-1">
             {tagline || 'No description available'}
           </p>
         </div>
@@ -138,7 +140,7 @@ export const HackathonCard = ({
 
         {/* Actions */}
         {showActions && (
-          <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-white/10">
             <Link to={`/hackathons/${_id}`} className="flex-1">
               <Button size="sm" variant="outline" className="w-full">
                 View Details <ArrowRight className="w-3.5 h-3.5" />

@@ -48,7 +48,7 @@ export const DataTable = ({
           onChange={handleSearchTerm}
           placeholder={searchPlaceholder}
           loading={loading}
-          className="flex-1 max-w-xs"
+          className="w-full sm:max-w-xs"
         />
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -57,14 +57,14 @@ export const DataTable = ({
               {filters.map((f) => (
                 <div key={f.id} className="flex items-center gap-1.5">
                   {f.label && (
-                    <span className="text-[11px] font-semibold text-slate-500">
+                    <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                       {f.label}:
                     </span>
                   )}
                   <select
                     value={f.value}
                     onChange={(e) => f.onChange(e.target.value)}
-                    className="py-1 px-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 focus:outline-none focus:bg-white focus:border-indigo-500"
+                    className="py-1 px-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-slate-700 dark:text-slate-200 focus:outline-none focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500"
                   >
                     {f.options.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -89,19 +89,19 @@ export const DataTable = ({
       </div>
 
       {/* Table Container */}
-      <div className="bg-white border border-slate-200/80 rounded-xl shadow-2xs overflow-hidden">
+      <div className="bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 rounded-xl shadow-2xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="bg-slate-50/70 border-b border-slate-200/80 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              <tr className="bg-slate-50/70 dark:bg-slate-800/50 border-b border-slate-200/80 dark:border-white/10 text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                 {columns.map((col, idx) => (
-                  <th key={idx} className="px-4 py-2.5">
+                  <th key={idx} className="px-4 py-2.5 whitespace-nowrap">
                     {col.header}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-slate-700">
+            <tbody className="divide-y divide-slate-100 dark:divide-white/5 text-slate-700 dark:text-slate-300">
               {loading ? (
                 <tr>
                   <td colSpan={columns.length} className="px-4 py-8 text-center">

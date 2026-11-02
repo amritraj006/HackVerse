@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Button } from './Button';
 import { Input } from './Input';
 import { Alert } from './Alert';
@@ -16,6 +17,16 @@ export const CreateTeamModal = ({ isOpen, onClose, onSuccess }) => {
 
   useEffect(() => {
     if (!isOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && !loading) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
     let isMounted = true;
     hackathonService.getAll({ status: 'upcoming', limit: 50 })
       .then((res) => {
@@ -27,8 +38,12 @@ export const CreateTeamModal = ({ isOpen, onClose, onSuccess }) => {
       .catch(() => {})
       .finally(() => { if (isMounted) setFetching(false); });
 
-    return () => { isMounted = false; };
-  }, [isOpen]);
+    return () => {
+      isMounted = false;
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, loading, onClose]);
 
   if (!isOpen) return null;
 
@@ -55,61 +70,76 @@ export const CreateTeamModal = ({ isOpen, onClose, onSuccess }) => {
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4">
-      <div className="bg-white rounded-xl shadow-xl border border-slate-200 w-full max-w-md p-5 space-y-4 animate-in fade-in zoom-in-95 duration-150">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-          <div className="flex items-center gap-2 text-indigo-600">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-3 sm:p-5 overflow-y-auto"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !loading) onClose();
+      }}
+    >
+      <div
+        className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-white/10 w-full max-w-md max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden my-auto backdrop-blur-xl animate-fade-in"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between p-4 sm:p-5 pb-3 border-b border-slate-100 dark:border-white/10 shrink-0">
+          <div className="flex items-center gap-2 text-indigo-500">
             <Users className="w-4 h-4" />
-            <h2 className="text-sm font-bold text-slate-900">Create New Team</h2>
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Create New Team</h2>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 p-1 rounded-md">
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-white p-1 rounded-md hover:bg-white/10 transition-colors cursor-pointer"
+            aria-label="Close dialog"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <Alert type={alert.type} message={alert.message} onClose={() => setAlert({ type: 'info', message: '' })} />
+        <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 min-h-0">
+          <Alert type={alert.type} message={alert.message} onClose={() => setAlert({ type: 'info', message: '' })} />
 
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <Input
-            label="Team Name"
-            placeholder="e.g. Neural Ninjas"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
+          <form id="create-team-form" onSubmit={handleSubmit} className="space-y-3">
+            <Input
+              label="Team Name"
+              placeholder="e.g. Neural Ninjas"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
 
-          <div className="space-y-1">
-            <label className="block text-xs font-semibold text-slate-700">Select Hackathon</label>
-            {fetching ? (
-              <div className="text-xs text-slate-400 py-1">Loading hackathons...</div>
-            ) : hackathons.length === 0 ? (
-              <div className="text-xs text-rose-500 py-1">No active hackathons available to form teams for.</div>
-            ) : (
-              <select
-                value={hackathonId}
-                onChange={(e) => setHackathonId(e.target.value)}
-                className="w-full text-xs px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500"
-              >
-                {hackathons.map((h) => (
-                  <option key={h._id} value={h._id}>
-                    {h.title} (Max {h.maxTeamSize || 4} per team{h.maxParticipants > 0 ? ` • ${h.availableSlots ?? 0} slots left` : ''})
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">Select Hackathon</label>
+              {fetching ? (
+                <div className="text-xs text-slate-400 py-1">Loading hackathons...</div>
+              ) : hackathons.length === 0 ? (
+                <div className="text-xs text-rose-500 py-1">No active hackathons available to form teams for.</div>
+              ) : (
+                <select
+                  value={hackathonId}
+                  onChange={(e) => setHackathonId(e.target.value)}
+                  className="w-full text-xs px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:bg-white dark:focus:bg-slate-700 focus:border-indigo-500"
+                >
+                  {hackathons.map((h) => (
+                    <option key={h._id} value={h._id}>
+                      {h.title} (Max {h.maxTeamSize || 4} per team{h.maxParticipants > 0 ? ` • ${h.availableSlots ?? 0} slots left` : ''})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </form>
+        </div>
 
-          <div className="pt-3 border-t border-slate-100 flex items-center justify-end gap-2">
-            <Button size="sm" variant="outline" type="button" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button size="sm" variant="primary" type="submit" disabled={loading || hackathons.length === 0}>
-              {loading ? 'Creating...' : 'Create Team'}
-            </Button>
-          </div>
-        </form>
+        <div className="p-4 sm:p-5 pt-3 border-t border-slate-100 dark:border-white/10 flex items-center justify-end gap-2 shrink-0">
+          <Button size="sm" variant="outline" type="button" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button size="sm" variant="primary" type="submit" form="create-team-form" disabled={loading || hackathons.length === 0}>
+            {loading ? 'Creating...' : 'Create Team'}
+          </Button>
+        </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

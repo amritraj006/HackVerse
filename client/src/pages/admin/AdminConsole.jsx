@@ -523,7 +523,7 @@ export const AdminConsole = () => {
             Manage users, organizers, judges, hackathons, and platform-wide configurations.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="outline" onClick={loadAnalytics}>
             <RefreshCw className="w-3.5 h-3.5" /> Refresh Analytics
           </Button>
@@ -568,10 +568,10 @@ export const AdminConsole = () => {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-1 overflow-x-auto whitespace-nowrap min-w-0">
         <button
           onClick={() => handleTabChange('users')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
             activeTab === 'users'
               ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
               : 'text-slate-600 hover:bg-slate-100'
@@ -581,7 +581,7 @@ export const AdminConsole = () => {
         </button>
         <button
           onClick={() => handleTabChange('hackathons')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
             activeTab === 'hackathons'
               ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
               : 'text-slate-600 hover:bg-slate-100'
@@ -591,7 +591,7 @@ export const AdminConsole = () => {
         </button>
         <button
           onClick={() => handleTabChange('submissions')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
             activeTab === 'submissions'
               ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
               : 'text-slate-600 hover:bg-slate-100'

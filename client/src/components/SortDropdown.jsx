@@ -32,7 +32,7 @@ export const SortDropdown = ({
       <select
         value={sortBy}
         onChange={handleFieldChange}
-        className="text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-500 transition-colors"
+        className="text-xs px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:bg-white dark:focus:bg-slate-800 focus:border-indigo-500 transition-colors"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -43,7 +43,7 @@ export const SortDropdown = ({
       <button
         type="button"
         onClick={toggleOrder}
-        className="p-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900 cursor-pointer transition-colors"
+        className="p-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-colors"
         title={order === 'asc' ? 'Ascending (click for Descending)' : 'Descending (click for Ascending)'}
       >
         {order === 'asc' ? (

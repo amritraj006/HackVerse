@@ -561,7 +561,7 @@ export const ManageHackathon = () => {
       {/* Header Banner */}
       <div className="bg-white border border-slate-200/80 rounded-xl p-5 shadow-xs space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className={`px-2 py-0.5 text-[10px] font-semibold uppercase bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full`}>
               {effectiveStatus}
             </span>
@@ -586,7 +586,7 @@ export const ManageHackathon = () => {
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {hasStarted ? (
               <>
                 {/* Once ended, editing/re-opening registrations is blocked */}
@@ -679,10 +679,10 @@ export const ManageHackathon = () => {
       <Alert type={alert.type} message={alert.message} onClose={() => setAlert({ type: 'info', message: '' })} />
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-200 pb-1">
+      <div className="flex items-center gap-2 border-b border-slate-200 pb-1 overflow-x-auto whitespace-nowrap min-w-0">
         <button
           onClick={() => setActiveTab('overview')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
             activeTab === 'overview' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -690,7 +690,7 @@ export const ManageHackathon = () => {
         </button>
         <button
           onClick={() => setActiveTab('judges')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
             activeTab === 'judges' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -698,7 +698,7 @@ export const ManageHackathon = () => {
         </button>
         <button
           onClick={() => setActiveTab('teams')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
             activeTab === 'teams' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -706,7 +706,7 @@ export const ManageHackathon = () => {
         </button>
         <button
           onClick={() => setActiveTab('participants')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
             activeTab === 'participants' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -714,7 +714,7 @@ export const ManageHackathon = () => {
         </button>
         <button
           onClick={() => setActiveTab('submissions')}
-          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer ${
+          className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors cursor-pointer shrink-0 ${
             activeTab === 'submissions' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : 'text-slate-600 hover:bg-slate-100'
           }`}
         >
@@ -878,7 +878,7 @@ export const ManageHackathon = () => {
                           : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100'
                       }`}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-700 font-bold flex items-center justify-center text-xs shrink-0">
                           {j.name?.charAt(0).toUpperCase()}
                         </div>
@@ -921,7 +921,7 @@ export const ManageHackathon = () => {
               </div>
             )}
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 size="sm"
                 variant="primary"

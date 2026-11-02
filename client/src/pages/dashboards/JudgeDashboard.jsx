@@ -360,7 +360,7 @@ export const JudgeDashboard = ({ user }) => {
                       </p>
                       {submission.tagline && <p className="text-[11px] text-slate-500 truncate">{submission.tagline}</p>}
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
                       {submission.demoUrl && (
                         <a href={submission.demoUrl} target="_blank" rel="noreferrer">
                           <Button size="sm" variant="outline"><ExternalLink className="w-3.5 h-3.5" /> View Demo</Button>
@@ -692,18 +692,18 @@ export const JudgeDashboard = ({ user }) => {
 
       {/* Evaluation Modal */}
       {selectedSubmission && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 p-4 flex items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="evaluation-title">
-          <form onSubmit={submitEvaluation} className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl bg-white shadow-xl">
-            <div className="sticky top-0 bg-white px-5 py-4 border-b border-slate-200 flex items-start justify-between gap-3">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs p-3 sm:p-5 flex items-center justify-center overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="evaluation-title">
+          <form onSubmit={submitEvaluation} className="w-full max-w-2xl max-h-[calc(100vh-2rem)] sm:max-h-[calc(100vh-3.5rem)] flex flex-col overflow-hidden rounded-xl bg-white shadow-xl my-auto animate-fade-in">
+            <div className="shrink-0 bg-white px-4 sm:px-5 py-4 border-b border-slate-200 flex items-start justify-between gap-3">
               <div>
                 <h2 id="evaluation-title" className="text-sm font-bold text-slate-900">Evaluate {selectedSubmission.title}</h2>
                 <p className="text-xs text-slate-500 mt-0.5">Score each criterion from 0 to its maximum. Total is calculated automatically.</p>
               </div>
               <Button variant="ghost" size="sm" onClick={closeEvaluation} disabled={submitting} aria-label="Close evaluation"><X className="w-4 h-4" /></Button>
             </div>
-            <div className="p-5 space-y-4">
+            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 min-h-0">
               {criteria.map(({ criterion, maxScore }) => (
-                <div key={criterion} className="grid grid-cols-[1fr_100px] items-center gap-4">
+                <div key={criterion} className="grid grid-cols-1 sm:grid-cols-[1fr_100px] items-start sm:items-center gap-1.5 sm:gap-4">
                   <label htmlFor={`score-${criterion}`} className="text-xs font-semibold text-slate-700">{criterion} <span className="font-normal text-slate-400">/ {maxScore}</span></label>
                   <input id={`score-${criterion}`} type="number" min="0" max={maxScore} step="1" required value={scores[criterion] ?? ''} onChange={(event) => setScores((current) => ({ ...current, [criterion]: event.target.value }))} className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" />
                 </div>
@@ -717,7 +717,7 @@ export const JudgeDashboard = ({ user }) => {
                 <textarea id="judge-feedback" required rows="4" value={feedback} onChange={(event) => setFeedback(event.target.value)} placeholder="Share specific strengths and actionable suggestions..." className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" />
               </div>
             </div>
-            <div className="px-5 py-4 border-t border-slate-200 flex justify-end gap-2">
+            <div className="px-4 sm:px-5 py-4 border-t border-slate-200 flex justify-end gap-2 shrink-0">
               <Button variant="outline" onClick={closeEvaluation} disabled={submitting}>Cancel</Button>
               <Button type="submit" disabled={submitting}>{submitting ? 'Submitting...' : 'Submit Evaluation'}</Button>
             </div>

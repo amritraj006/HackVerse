@@ -8,9 +8,9 @@ import { DataTable } from '../components/DataTable';
 import { RegisterHackathonModal } from '../components/RegisterHackathonModal';
 import { hackathonService } from '../services/hackathonService';
 import { registrationService } from '../services/registrationService';
-import { useAuth } from '../hooks/useAuth';
 import { formatDate, formatDateTime } from '../utils/helpers';
 import { getEffectiveStatus, isHackathonEnded, isRegistrationEffectivelyOpen, STATUS_BADGE_CLASS } from '../utils/hackathonStatus';
+import { notify } from '../utils/toast';
 import {
   ArrowLeft,
   Trophy,
@@ -102,6 +102,7 @@ export const HackathonDetail = () => {
     setIsRegistered(true);
     fetchRegStatus();
     setAlert({ type: 'success', message: msg });
+    notify.success('Registration Confirmed! 🎯', msg || 'You are registered for this hackathon');
   };
 
   const handleCancelConfirm = async () => {
@@ -111,9 +112,13 @@ export const HackathonDetail = () => {
       setIsRegistered(false);
       setRegStatusData(null);
       setIsCancelModalOpen(false);
-      setAlert({ type: 'success', message: 'Registration cancelled successfully.' });
+      const successMsg = 'Registration cancelled successfully.';
+      setAlert({ type: 'success', message: successMsg });
+      notify.info('Registration Cancelled', successMsg);
     } catch (err) {
-      setAlert({ type: 'error', message: err.message || 'Failed to cancel registration.' });
+      const errorMsg = err.message || 'Failed to cancel registration.';
+      setAlert({ type: 'error', message: errorMsg });
+      notify.error('Cancellation Failed', errorMsg);
     } finally {
       setIsCancelling(false);
     }
@@ -514,19 +519,19 @@ export const HackathonDetail = () => {
         {/* Right: Sidebar */}
         <div className="space-y-4">
           {/* Key Dates */}
-          <Card header={<span className="font-semibold text-xs text-slate-800">Key Dates</span>}>
+          <Card header={<span className="font-semibold text-xs text-slate-800 dark:text-slate-200">Key Dates</span>}>
             <div className="space-y-2 text-xs">
-              <div className="flex justify-between py-1 border-b border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between py-1 border-b border-slate-100 dark:border-white/10 gap-0.5 sm:gap-2">
                 <span className="text-slate-500">Reg. Deadline</span>
-                <span className="font-semibold text-slate-800 text-right">{formatDateTime(hackathon.registrationDeadline)}</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200 sm:text-right">{formatDateTime(hackathon.registrationDeadline)}</span>
               </div>
-              <div className="flex justify-between py-1 border-b border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between py-1 border-b border-slate-100 dark:border-white/10 gap-0.5 sm:gap-2">
                 <span className="text-slate-500">Event Starts</span>
-                <span className="font-semibold text-slate-800 text-right">{formatDateTime(hackathon.startDate)}</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200 sm:text-right">{formatDateTime(hackathon.startDate)}</span>
               </div>
-              <div className="flex justify-between py-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between py-1 gap-0.5 sm:gap-2">
                 <span className="text-slate-500">Event Ends</span>
-                <span className="font-semibold text-slate-800 text-right">{formatDateTime(hackathon.endDate)}</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200 sm:text-right">{formatDateTime(hackathon.endDate)}</span>
               </div>
             </div>
           </Card>

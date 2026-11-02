@@ -61,13 +61,13 @@ export const SubmissionCard = ({
     <Card className="flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
       {/* Top Header */}
       <div className="space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <span className="px-2 py-0.5 text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-full shrink-0">
+        <div className="flex flex-wrap sm:flex-nowrap items-start justify-between gap-2">
+          <span className="px-2 py-0.5 text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 rounded-full truncate max-w-[200px]">
             {hackathon?.title || 'Hackathon'}
           </span>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex flex-wrap items-center gap-1.5 shrink-0">
             {isWinner && (
-              <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-300 rounded-full flex items-center gap-1">
+              <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700 rounded-full flex items-center gap-1">
                 <Trophy className="w-3 h-3 text-amber-600 fill-amber-500" />
                 {winnerPosition || 'Winner'}
               </span>
@@ -75,8 +75,8 @@ export const SubmissionCard = ({
             <span
               className={`px-2 py-0.5 text-[10px] font-semibold rounded-full border shrink-0 ${
                 status === 'submitted'
-                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
+                  : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
               }`}
             >
               {status === 'submitted' ? (
@@ -169,8 +169,8 @@ export const SubmissionCard = ({
         </div>
 
         {/* Team / Author info & Card Actions */}
-        <div className="flex items-center justify-between text-xs text-slate-500">
-          <div className="flex items-center gap-1 truncate max-w-[160px]">
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+          <div className="flex items-center gap-1 truncate max-w-[140px] sm:max-w-[180px]">
             <Users className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <span className="truncate">{team ? team.name : submittedBy?.name || 'Participant'}</span>
           </div>

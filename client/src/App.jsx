@@ -27,10 +27,19 @@ function App() {
       <AuthProvider>
         <Toaster
           position="top-right"
-          gutter={8}
-          containerStyle={{ top: 24, right: 24 }}
+          gutter={10}
+          containerStyle={{
+            top: 24,
+            right: 24,
+            zIndex: 99999,
+          }}
           toastOptions={{
             duration: 4500,
+            style: {
+              background: 'transparent',
+              boxShadow: 'none',
+              padding: 0,
+            },
           }}
         />
         <BrowserRouter>

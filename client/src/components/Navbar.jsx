@@ -3,16 +3,19 @@ import { Link } from 'react-router-dom';
 import {
   Bell, Menu, Plus, CheckCheck,
   Sparkles, Trophy, Info, Check, XCircle, UserCheck, Scale,
+  Sun, Moon,
 } from 'lucide-react';
 import { Button } from './Button';
 import { Logo } from './Logo';
 import { useAuth } from '../hooks/useAuth';
+import { useTheme } from '../context/ThemeContext';
 import { notificationService } from '../services/notificationService';
 import { notify } from '../utils/toast';
 
 
 export const Navbar = ({ onToggleSidebar }) => {
   const { user, isAuthenticated, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
 
   const [showNotifications, setShowNotifications] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -21,6 +24,15 @@ export const Navbar = ({ onToggleSidebar }) => {
 
   const popoverRef = useRef(null);
   const avatarUrl = user?.avatar;
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      notify.info('Signed out of HackVerse.');
+    } catch {
+      notify.error('Logout error occurred.');
+    }
+  };
 
   // Fetch real notifications from API
   const fetchNotifications = useCallback(async () => {
@@ -132,31 +144,51 @@ export const Navbar = ({ onToggleSidebar }) => {
   };
 
   return (
-    <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200/80 px-4 py-2.5 flex items-center justify-between shadow-2xs">
+    <header className="sticky top-0 z-30 h-14 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200/80 dark:border-white/10 px-3 sm:px-4 flex items-center justify-between shadow-2xs">
       {/* Left section: Brand logo & sidebar toggle */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         <button
           onClick={onToggleSidebar}
-          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors md:hidden"
+          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors md:hidden"
           aria-label="Toggle navigation menu"
         >
           <Menu className="w-4 h-4" />
         </button>
 
-        <Logo to="/" size="md" showBadge={true} badgeText="Platform" />
+        <Logo to="/" size="md" showBadge={true} badgeText="Platform" badgeClassName="hidden sm:inline-flex" />
       </div>
 
       {/* Right section: Actions & Profile */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         {/* Host Hackathon — only for organizers */}
         {user?.role === 'organizer' && (
           <Link to="/dashboard">
             <Button size="sm" variant="primary">
               <Plus className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Host Hackathon</span>
+              <span className="hidden md:inline">Host Hackathon</span>
             </Button>
           </Link>
         )}
+
+        {/* Cyber Theme Toggle Button */}
+        <button
+          onClick={toggleTheme}
+          className="relative flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-xl border border-[var(--line)] bg-[var(--surface-subtle)] hover:bg-[var(--surface-hover)] text-[var(--ink)] transition-all duration-200 cursor-pointer text-xs font-mono group"
+          aria-label={isDark ? 'Switch to light mode' : 'Switch to hackathon dark mode'}
+          title={isDark ? 'Switch to Light Mode' : 'Switch to Hackathon Cyber Dark Mode'}
+        >
+          {isDark ? (
+            <>
+              <Sun className="w-3.5 h-3.5 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.6)] transition-transform duration-300 group-hover:rotate-45" />
+              <span className="hidden sm:inline text-[10px] text-amber-400 font-semibold tracking-wider">CYBER</span>
+            </>
+          ) : (
+            <>
+              <Moon className="w-3.5 h-3.5 text-indigo-600 drop-shadow-[0_0_6px_rgba(99,102,241,0.5)] transition-transform duration-300 group-hover:-rotate-12" />
+              <span className="hidden sm:inline text-[10px] text-indigo-600 font-semibold tracking-wider">LIGHT</span>
+            </>
+          )}
+        </button>
 
         {/* Notifications Button & Popover */}
         {isAuthenticated && (
@@ -166,27 +198,27 @@ export const Navbar = ({ onToggleSidebar }) => {
                 setShowNotifications((prev) => !prev);
                 if (!showNotifications) fetchNotifications();
               }}
-              className="relative p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+              className="relative p-2 text-[var(--muted)] hover:text-[var(--ink-heading)] hover:bg-[var(--surface-hover)] border border-[var(--line)] rounded-xl transition-colors cursor-pointer"
               aria-label="View notifications"
               title="Notifications"
             >
               <Bell className="w-4 h-4" />
               {unreadCount > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-[16px] px-1 bg-indigo-600 text-white font-bold text-[9px] rounded-full flex items-center justify-center ring-2 ring-white">
+                <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-indigo-600 text-white font-bold text-[9px] rounded-full flex items-center justify-center ring-2 ring-[var(--surface)] shadow-[0_0_8px_rgba(99,102,241,0.7)] animate-pulse">
                   {unreadCount}
                 </span>
               )}
             </button>
 
-            {/* Notifications Dropdown Panel */}
+            {/* Notifications Dropdown Panel - Responsive Viewport Positioning */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-slate-200/90 z-50 overflow-hidden text-xs">
-                <div className="p-3 bg-slate-50 border-b border-slate-200/80 flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 font-bold text-slate-900">
-                    <Bell className="w-3.5 h-3.5 text-indigo-600" />
+              <div className="fixed inset-x-2 top-14 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 w-auto sm:w-96 max-w-[calc(100vw-1rem)] bg-[var(--surface-card)] rounded-2xl shadow-2xl border border-[var(--line)] z-50 overflow-hidden text-xs backdrop-blur-xl animate-enter">
+                <div className="p-3 bg-[var(--surface-subtle)] border-b border-[var(--line)] flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-[var(--ink-heading)] font-display">
+                    <Bell className="w-3.5 h-3.5 text-indigo-500" />
                     <span>Notifications</span>
                     {unreadCount > 0 && (
-                      <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-indigo-100 text-indigo-700 rounded-full">
+                      <span className="px-1.5 py-0.5 text-[10px] font-mono font-semibold bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 rounded-full">
                         {unreadCount} pending
                       </span>
                     )}
@@ -196,7 +228,7 @@ export const Navbar = ({ onToggleSidebar }) => {
                     {unreadCount > 0 && (
                       <button
                         onClick={handleMarkAllRead}
-                        className="p-1 text-[11px] text-indigo-600 hover:bg-indigo-50 rounded font-medium flex items-center gap-1 transition-colors cursor-pointer"
+                        className="px-2 py-0.5 text-[11px] font-mono text-indigo-400 hover:bg-indigo-500/10 rounded font-medium flex items-center gap-1 transition-colors cursor-pointer"
                         title="Mark all as read"
                       >
                         <CheckCheck className="w-3 h-3" /> Read all
@@ -206,7 +238,7 @@ export const Navbar = ({ onToggleSidebar }) => {
                 </div>
 
                 {/* Notification Items List */}
-                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                <div className="max-h-80 overflow-y-auto divide-y divide-[var(--line)]">
                   {notifLoading ? (
                     <div className="py-8 text-center text-slate-400 space-y-1">
                       <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto" />
@@ -225,21 +257,21 @@ export const Navbar = ({ onToggleSidebar }) => {
                       return (
                         <div
                           key={n._id}
-                          className={`p-3 flex gap-2.5 ${isPending ? 'bg-indigo-50/40' : 'bg-white'}`}
+                          className={`p-3 flex gap-2.5 transition-colors ${isPending ? 'bg-indigo-500/10' : 'hover:bg-[var(--surface-hover)]'}`}
                         >
-                          <div className="p-1.5 bg-slate-100 rounded-lg shrink-0 h-fit mt-0.5">
+                          <div className="p-1.5 bg-[var(--surface-subtle)] rounded-lg shrink-0 h-fit mt-0.5 border border-[var(--line)]">
                             {getNotificationIcon(n.type)}
                           </div>
                           <div className="flex-1 min-w-0 space-y-1">
                             <div className="flex items-center justify-between gap-1">
-                              <p className={`font-semibold truncate ${isPending ? 'text-slate-900' : 'text-slate-700'}`}>
+                              <p className={`font-semibold truncate ${isPending ? 'text-[var(--ink-heading)]' : 'text-[var(--ink)]'}`}>
                                 {n.title}
                               </p>
-                              <span className="text-[10px] text-slate-400 shrink-0">
+                              <span className="text-[10px] font-mono text-[var(--muted)] shrink-0">
                                 {new Date(n.createdAt).toLocaleDateString()}
                               </span>
                             </div>
-                            <p className="text-[11px] text-slate-600 leading-snug">{n.message}</p>
+                            <p className="text-[11px] text-[var(--muted)] leading-snug">{n.message}</p>
 
                             {/* Accept / Reject buttons for pending team invites */}
                             {n.type === 'team_invite' && n.status === 'pending' && (
@@ -322,13 +354,13 @@ export const Navbar = ({ onToggleSidebar }) => {
 
         {/* Profile / Auth Button */}
         {isAuthenticated ? (
-          <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+          <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-slate-200 dark:border-white/10 shrink-0">
             <Link
               to="/profile"
-              className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-slate-100 transition-colors"
+              className="flex items-center gap-1.5 p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
               title="View Profile"
             >
-              <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-semibold overflow-hidden border border-slate-200">
+              <div className="w-7 h-7 rounded-full bg-indigo-600 text-white flex items-center justify-center text-xs font-semibold overflow-hidden border border-slate-200 dark:border-white/10 shrink-0">
                 {avatarUrl ? (
                   <img
                     src={
@@ -346,26 +378,26 @@ export const Navbar = ({ onToggleSidebar }) => {
                   <span>{user?.name ? user.name.charAt(0).toUpperCase() : 'U'}</span>
                 )}
               </div>
-              <span className="hidden lg:inline text-xs font-medium text-slate-800">
+              <span className="hidden md:inline text-xs font-medium text-slate-800 dark:text-slate-200">
                 {user?.name?.split(' ')[0]}
               </span>
             </Link>
             <button
-              onClick={logout}
-              className="text-xs text-slate-500 hover:text-rose-600 font-medium transition-colors cursor-pointer"
+              onClick={handleLogout}
+              className="text-xs text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 font-medium transition-colors cursor-pointer"
             >
               Logout
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-1.5 pl-2">
+          <div className="flex items-center gap-1 sm:gap-1.5 pl-1.5 sm:pl-2 border-l border-slate-200 dark:border-white/10 shrink-0">
             <Link to="/login">
-              <Button size="sm" variant="ghost">
+              <Button size="sm" variant="ghost" className="px-2 sm:px-3 text-xs">
                 Sign In
               </Button>
             </Link>
             <Link to="/register">
-              <Button size="sm" variant="secondary">
+              <Button size="sm" variant="secondary" className="px-2 sm:px-3 text-xs">
                 Register
               </Button>
             </Link>

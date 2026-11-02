@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Button } from './Button';
 import { Upload, Camera, Check, AlertCircle } from 'lucide-react';
 import { userService } from '../services/userService';
+import { notify } from '../utils/toast';
 
 export const AvatarUpload = ({ currentAvatar, userName, onAvatarUpdated }) => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -18,12 +19,14 @@ export const AvatarUpload = ({ currentAvatar, userName, onAvatarUpdated }) => {
     // Check size limit (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError('File size must be under 5MB');
+      notify.error('File too large', 'Avatar image must be under 5MB');
       return;
     }
 
     // Check file type
     if (!file.type.startsWith('image/')) {
       setError('Please select a valid image file (JPEG, PNG, GIF, WEBP)');
+      notify.error('Invalid format', 'Please select a valid image file (JPEG, PNG, GIF, WEBP)');
       return;
     }
 
@@ -43,12 +46,15 @@ export const AvatarUpload = ({ currentAvatar, userName, onAvatarUpdated }) => {
     try {
       const res = await userService.uploadAvatar(selectedFile);
       setSuccess('Avatar uploaded successfully!');
+      notify.success('Avatar uploaded successfully! 📸', 'Your new profile avatar is live');
       setSelectedFile(null);
       if (onAvatarUpdated && res.data) {
         onAvatarUpdated(res.data.avatar, res.data.user);
       }
     } catch (err) {
-      setError(err.message || 'Failed to upload avatar image');
+      const msg = err.message || 'Failed to upload avatar image';
+      setError(msg);
+      notify.error('Upload Failed', msg);
     } finally {
       setIsUploading(false);
     }

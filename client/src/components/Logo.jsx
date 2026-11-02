@@ -67,6 +67,7 @@ export const Logo = ({
   variant = 'default', // 'default' | 'white' | 'dark'
   showBadge = false,
   badgeText = 'Platform',
+  badgeClassName = '',
   to = null,
   className = '',
 }) => {
@@ -112,7 +113,7 @@ export const Logo = ({
                 variant === 'white'
                   ? 'bg-white/10 text-indigo-200 border-white/20'
                   : 'bg-indigo-50 text-indigo-700 border-indigo-200'
-              } ${badgeSizeMap[size] || badgeSizeMap.md}`}
+              } ${badgeSizeMap[size] || badgeSizeMap.md} ${badgeClassName}`}
             >
               {badgeText}
             </span>

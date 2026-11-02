@@ -1,22 +1,32 @@
 import { useEffect, useRef } from 'react';
-import { AlertCircle, CheckCircle2, Info, XCircle, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Info, XOctagon, X } from 'lucide-react';
 import { notify } from '../utils/toast';
 
 const alertStyles = {
-  error: 'bg-rose-50/90 text-rose-900 border-rose-200/90 shadow-xs',
-  success: 'bg-emerald-50/90 text-emerald-900 border-emerald-200/90 shadow-xs',
-  warning: 'bg-amber-50/90 text-amber-900 border-amber-200/90 shadow-xs',
-  info: 'bg-indigo-50/90 text-indigo-900 border-indigo-200/90 shadow-xs',
+  error:
+    'bg-rose-500/10 text-rose-400 dark:text-rose-300 border-rose-500/30 shadow-[0_4px_20px_rgba(244,63,94,0.15)]',
+  success:
+    'bg-emerald-500/10 text-emerald-400 dark:text-emerald-300 border-emerald-500/30 shadow-[0_4px_20px_rgba(16,185,129,0.15)]',
+  warning:
+    'bg-amber-500/10 text-amber-400 dark:text-amber-300 border-amber-500/30 shadow-[0_4px_20px_rgba(245,158,11,0.15)]',
+  info:
+    'bg-indigo-500/10 text-indigo-400 dark:text-indigo-300 border-indigo-500/30 shadow-[0_4px_20px_rgba(99,102,241,0.15)]',
 };
 
 const alertIcons = {
-  error: XCircle,
+  error: XOctagon,
   success: CheckCircle2,
-  warning: AlertCircle,
+  warning: AlertTriangle,
   info: Info,
 };
 
-export const Alert = ({ type = 'info', message, onClose, className = '', showToast = true }) => {
+export const Alert = ({
+  type = 'info',
+  message,
+  onClose,
+  className = '',
+  showToast = false,
+}) => {
   const lastToastRef = useRef('');
 
   useEffect(() => {
@@ -35,14 +45,14 @@ export const Alert = ({ type = 'info', message, onClose, className = '', showToa
 
   return (
     <div
-      className={`p-3.5 rounded-xl border text-xs flex items-start gap-3 transition-all duration-200 animate-in fade-in slide-in-from-top-1 ${alertStyles[type]} ${className}`}
+      className={`p-3.5 rounded-xl border text-xs flex items-start gap-3 backdrop-blur-md transition-all duration-200 animate-in fade-in slide-in-from-top-1 ${alertStyles[type]} ${className}`}
     >
       <IconComponent className="w-4 h-4 shrink-0 mt-0.5" />
       <div className="flex-1 min-w-0 font-medium leading-relaxed">{message}</div>
       {onClose && (
         <button
           onClick={onClose}
-          className="p-1 hover:bg-black/5 rounded-lg transition-colors text-slate-500 hover:text-slate-800 cursor-pointer"
+          className="p-1 hover:bg-white/10 rounded-lg transition-colors text-slate-400 hover:text-white cursor-pointer"
           aria-label="Close alert"
         >
           <X className="w-3.5 h-3.5" />
@@ -51,4 +61,3 @@ export const Alert = ({ type = 'info', message, onClose, className = '', showToa
     </div>
   );
 };
-

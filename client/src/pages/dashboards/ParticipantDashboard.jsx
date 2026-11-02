@@ -134,7 +134,7 @@ export const ParticipantDashboard = ({ user }) => {
             Track your registered hackathons, project submissions, and team invitations.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="outline" onClick={loadRegistrations}>
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </Button>
@@ -233,7 +233,7 @@ export const ParticipantDashboard = ({ user }) => {
                           )}
                           <h3 className="text-xs font-bold text-slate-900">{h.title}</h3>
                         </div>
-                        <p className="text-[11px] text-slate-500 flex items-center gap-3">
+                        <p className="text-[11px] text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1">
                           <span className="flex items-center gap-1">
                             <Calendar className="w-3 h-3 text-slate-400" />
                             Ends {formatDate(h.endDate)}

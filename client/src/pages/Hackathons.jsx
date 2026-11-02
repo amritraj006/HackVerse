@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Filter, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { Filter, RefreshCw, SlidersHorizontal, Trophy } from 'lucide-react';
 import { Button } from '../components/Button';
 import { Alert } from '../components/Alert';
 import { HackathonCard } from '../components/HackathonCard';
@@ -7,6 +7,7 @@ import { SearchBar } from '../components/SearchBar';
 import { SortDropdown } from '../components/SortDropdown';
 import { PaginationControls } from '../components/PaginationControls';
 import { RegisterHackathonModal } from '../components/RegisterHackathonModal';
+import { EmptyState } from '../components/EmptyState';
 import { hackathonService } from '../services/hackathonService';
 import { registrationService } from '../services/registrationService';
 import { useAuth } from '../hooks/useAuth';
@@ -168,13 +169,13 @@ export const Hackathons = () => {
   return (
     <div className="space-y-5">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--line)]">
         <div>
-          <h1 className="text-base font-bold text-slate-900">Explore Hackathons</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-base font-bold text-[var(--ink-heading)]">Explore Hackathons</h1>
+          <p className="text-xs text-[var(--muted)]">
             Browse and discover hackathons on the platform.
             {pagination.total > 0 && (
-              <span className="ml-1 font-semibold text-slate-700">{pagination.total} total events.</span>
+              <span className="ml-1 font-semibold text-[var(--ink)]">{pagination.total} total events.</span>
             )}
           </p>
         </div>
@@ -193,21 +194,21 @@ export const Hackathons = () => {
           onChange={handleSearchChange}
           placeholder="Search hackathons by title, description, tags..."
           loading={loading}
-          className="flex-1 max-w-md"
+          className="w-full md:max-w-md"
         />
 
         <div className="flex flex-wrap items-center gap-2.5">
           {/* Status Filters */}
-          <div className="flex items-center gap-1">
-            <SlidersHorizontal className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-1" />
+          <div className="flex flex-wrap items-center gap-1">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--muted)] shrink-0 mr-1" />
             {STATUS_FILTER_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
                 onClick={() => handleStatusChange(opt.value)}
                 className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition-colors cursor-pointer ${
                   statusFilter === opt.value
-                    ? 'bg-indigo-50 text-indigo-700 border-indigo-300'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    ? 'bg-indigo-500/15 text-indigo-400 border-indigo-500/40'
+                    : 'bg-[var(--surface-subtle)] text-[var(--muted)] border-[var(--line)] hover:text-[var(--ink)] hover:bg-[var(--surface-hover)]'
                 }`}
               >
                 {opt.label}
@@ -232,14 +233,19 @@ export const Hackathons = () => {
           <span>Loading hackathons...</span>
         </div>
       ) : hackathons.length === 0 ? (
-        <div className="flex flex-col items-center justify-center min-h-[200px] text-center gap-2 bg-slate-50/50 rounded-xl border border-dashed border-slate-200 py-10">
-          <p className="text-xs text-slate-500">No hackathons found matching your criteria.</p>
-          {(search || statusFilter) && (
-            <Button size="sm" variant="outline" onClick={resetQueryParams}>
-              <Filter className="w-3.5 h-3.5" /> Clear Filters
-            </Button>
-          )}
-        </div>
+        <EmptyState
+          icon={Trophy}
+          badgeText="ARENAS // DISCOVERY_OFFLINE"
+          title="No Hackathon Arenas Found"
+          description="We couldn't find any hackathons matching your active filters. Try modifying your search keywords or resetting your filter criteria."
+          action={
+            (search || statusFilter) ? (
+              <Button size="md" variant="outline" onClick={resetQueryParams}>
+                <Filter className="w-4 h-4" /> Reset Search Filters
+              </Button>
+            ) : null
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {hackathons.map((item) => (

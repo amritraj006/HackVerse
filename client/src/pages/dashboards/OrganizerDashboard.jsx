@@ -86,7 +86,7 @@ export const OrganizerDashboard = ({ user }) => {
             Manage your hosted hackathons, monitor participant registrations, assign judges, and publish results.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="outline" onClick={loadMyEvents}>
             <RefreshCw className="w-3.5 h-3.5" /> Refresh
           </Button>
@@ -164,7 +164,7 @@ export const OrganizerDashboard = ({ user }) => {
                     </span>
                     <h3 className="text-xs font-bold text-slate-900">{item.title}</h3>
                   </div>
-                  <p className="text-[11px] text-slate-500 flex items-center gap-3">
+                  <p className="text-[11px] text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3 text-slate-400" /> Deadline: {formatDate(item.registrationDeadline)}
                     </span>

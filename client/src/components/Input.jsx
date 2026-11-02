@@ -13,9 +13,9 @@ export const Input = ({
   ...props
 }) => {
   return (
-    <div className={`space-y-1 ${className}`}>
+    <div className={`space-y-1.5 ${className}`}>
       {label && (
-        <label htmlFor={id} className="block text-xs font-semibold text-slate-700">
+        <label htmlFor={id} className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
           {label} {required && <span className="text-rose-500">*</span>}
         </label>
       )}
@@ -31,12 +31,12 @@ export const Input = ({
           placeholder={placeholder}
           required={required}
           disabled={disabled}
-          className={`w-full py-1.5 text-xs bg-slate-50 border rounded-lg text-slate-800 placeholder-slate-400 transition-all duration-150 focus:outline-none focus:bg-white disabled:opacity-60 disabled:cursor-not-allowed ${
+          className={`w-full py-2 text-xs bg-slate-50 dark:bg-slate-900/80 border rounded-lg text-slate-800 dark:text-slate-100 placeholder-slate-400 transition-all duration-150 focus:outline-none focus:bg-white dark:focus:bg-slate-900 disabled:opacity-60 disabled:cursor-not-allowed ${
             Icon ? 'pl-8 pr-3' : 'px-3'
           } ${
             error
-              ? 'border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
-              : 'border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
+              ? 'border-rose-400 dark:border-rose-500/50 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+              : 'border-slate-200 dark:border-white/10 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20'
           }`}
           {...props}
         />

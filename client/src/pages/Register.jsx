@@ -6,6 +6,7 @@ import { Button } from '../components/Button';
 import { Alert } from '../components/Alert';
 import { useAuth } from '../hooks/useAuth';
 import { User, Mail, Lock, UserCheck, UserPlus } from 'lucide-react';
+import { notify } from '../utils/toast';
 
 const ROLE_OPTIONS = [
   { value: 'participant', label: 'Participant (Build & Compete)' },
@@ -69,9 +70,11 @@ export const Register = () => {
     setIsSubmitting(false);
 
     if (result.success) {
+      notify.success('Account Created! 🚀', `Welcome to HackVerse, ${result.user?.name || 'Developer'}!`);
       navigate('/dashboard', { replace: true });
     } else {
       setFormError(result.error);
+      notify.error('Registration Failed', result.error);
     }
   };
 

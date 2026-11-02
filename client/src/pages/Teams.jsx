@@ -14,6 +14,8 @@ import { teamService } from '../services/teamService';
 import { hackathonService } from '../services/hackathonService';
 import { useAuth } from '../hooks/useAuth';
 import { useQueryParams } from '../hooks/useQueryParams';
+import { notify } from '../utils/toast';
+import { EmptyState } from '../components/EmptyState';
 import {
   Users,
   UserPlus,
@@ -182,25 +184,33 @@ export const Teams = () => {
   // Handlers
   const handleCreateSuccess = async (data) => {
     await teamService.create(data);
-    setAlert({ type: 'success', message: 'Team created successfully! 🎉' });
+    const msg = 'Team created successfully! 🎉';
+    setAlert({ type: 'success', message: msg });
+    notify.success('Team Created! 🛡️', `Team "${data.name}" has been registered.`);
     loadMyTeams();
   };
 
   const handleJoinSuccess = async (joinCode) => {
     await teamService.joinByCode(joinCode);
-    setAlert({ type: 'success', message: 'Successfully joined team! 🎉' });
+    const msg = 'Successfully joined team! 🎉';
+    setAlert({ type: 'success', message: msg });
+    notify.success('Team Joined! 🤝', 'You are now an active team member.');
     loadMyTeams();
   };
 
   const handleInviteSuccess = async (teamId, email) => {
     await teamService.inviteMember(teamId, email);
-    setAlert({ type: 'success', message: `Added ${email} to team successfully!` });
+    const msg = `Added ${email} to team successfully!`;
+    setAlert({ type: 'success', message: msg });
+    notify.success('Teammate Added', msg);
     loadMyTeams();
   };
 
   const handleTransferSuccess = async (teamId, newLeaderId) => {
     await teamService.transferLeadership(teamId, newLeaderId);
-    setAlert({ type: 'success', message: 'Leadership transferred successfully!' });
+    const msg = 'Leadership transferred successfully!';
+    setAlert({ type: 'success', message: msg });
+    notify.success('Leadership Transferred 👑', msg);
     loadMyTeams();
   };
 
@@ -213,7 +223,9 @@ export const Teams = () => {
       confirmText: 'Remove',
       action: async () => {
         await teamService.removeMember(teamId, memberId);
-        setAlert({ type: 'success', message: `Removed ${memberName} from team.` });
+        const msg = `Removed ${memberName} from team.`;
+        setAlert({ type: 'success', message: msg });
+        notify.info('Member Removed', msg);
         loadMyTeams();
       },
       loading: false,
@@ -229,7 +241,9 @@ export const Teams = () => {
       confirmText: 'Leave Team',
       action: async () => {
         await teamService.leaveTeam(teamId);
-        setAlert({ type: 'success', message: `Left team "${teamName}".` });
+        const msg = `Left team "${teamName}".`;
+        setAlert({ type: 'success', message: msg });
+        notify.info('Left Team', msg);
         loadMyTeams();
       },
       loading: false,
@@ -245,7 +259,9 @@ export const Teams = () => {
       confirmText: 'Delete Team',
       action: async () => {
         await teamService.deleteTeam(teamId);
-        setAlert({ type: 'success', message: `Team "${teamName}" deleted.` });
+        const msg = `Team "${teamName}" deleted.`;
+        setAlert({ type: 'success', message: msg });
+        notify.info('Team Deleted', msg);
         loadMyTeams();
       },
       loading: false,
@@ -259,7 +275,9 @@ export const Teams = () => {
       await confirmState.action();
       setConfirmState({ open: false, title: '', message: '', confirmText: '', action: null, loading: false });
     } catch (err) {
-      setAlert({ type: 'error', message: err.message || 'Action failed.' });
+      const errText = err.message || 'Action failed.';
+      setAlert({ type: 'error', message: errText });
+      notify.error('Action Failed', errText);
       setConfirmState((prev) => ({ ...prev, loading: false }));
     }
   };
@@ -293,17 +311,17 @@ export const Teams = () => {
   return (
     <div className="space-y-5">
       {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[var(--line)]">
         <div>
-          <h1 className="text-base font-bold text-slate-900">Teams Workspace</h1>
-          <p className="text-xs text-slate-500">
+          <h1 className="text-base font-bold text-[var(--ink-heading)]">Teams Workspace</h1>
+          <p className="text-xs text-[var(--muted)]">
             {isReadOnlyView
               ? 'Browse registered teams for hackathons.'
               : 'Create or join teams, manage members, transfer leadership, and collaborate.'}
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {!isReadOnlyView && (
             <>
               <Button size="sm" variant="outline" onClick={() => setIsJoinOpen(true)}>
@@ -324,7 +342,7 @@ export const Teams = () => {
 
       {/* Tabs Header & Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-1 border-b border-slate-200 w-full md:w-auto">
+        <div className="flex items-center gap-1 border-b border-[var(--line)] w-full md:w-auto">
           {!isReadOnlyView && (
             <button
               onClick={() => {
@@ -332,8 +350,8 @@ export const Teams = () => {
               }}
               className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
                 activeTab === 'my'
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-700'
+                  ? 'border-indigo-500 text-indigo-500'
+                  : 'border-transparent text-[var(--muted)] hover:text-[var(--ink)]'
               }`}
             >
               My Teams
@@ -345,8 +363,8 @@ export const Teams = () => {
             }}
             className={`px-3 py-2 text-xs font-semibold border-b-2 transition-colors cursor-pointer ${
               activeTab === 'hackathon'
-                ? 'border-indigo-600 text-indigo-600'
-                : 'border-transparent text-slate-500 hover:text-slate-700'
+                ? 'border-indigo-500 text-indigo-500'
+                : 'border-transparent text-[var(--muted)] hover:text-[var(--ink)]'
             }`}
           >
             All Hackathon Teams
@@ -365,12 +383,12 @@ export const Teams = () => {
 
           {/* Hackathon Selector for "All Hackathon Teams" tab */}
           {activeTab === 'hackathon' && hackathons.length > 0 && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 w-full sm:w-auto">
               <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               <select
                 value={selectedHackathonId}
                 onChange={(e) => handleHackathonChange(e.target.value)}
-                className="text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
+                className="text-xs px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:bg-white dark:focus:bg-slate-800 w-full sm:w-auto max-w-full sm:max-w-xs truncate"
               >
                 {hackathons.map((h) => (
                   <option key={h._id} value={h._id}>
@@ -385,7 +403,7 @@ export const Teams = () => {
           <select
             value={statusFilter}
             onChange={(e) => handleStatusChange(e.target.value)}
-            className="text-xs px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:bg-white"
+            className="text-xs px-2.5 py-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg text-slate-800 dark:text-slate-200 focus:outline-none focus:bg-white dark:focus:bg-slate-800"
           >
             {STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -417,24 +435,30 @@ export const Teams = () => {
           <span>Loading teams...</span>
         </div>
       ) : currentTeamsList.length === 0 ? (
-        <div className="py-12 text-center space-y-3 bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-          <Users className="w-8 h-8 text-slate-300 mx-auto" />
-          <p className="text-xs text-slate-500">
-            {activeTab === 'my'
-              ? "You aren't a member of any teams yet."
-              : 'No teams created for this hackathon yet matching criteria.'}
-          </p>
-          {!isReadOnlyView && activeTab === 'my' && (
-            <div className="flex items-center justify-center gap-2">
-              <Button size="sm" variant="primary" onClick={() => setIsCreateOpen(true)}>
-                <UserPlus className="w-3.5 h-3.5" /> Create a Team
+        <EmptyState
+          icon={Users}
+          badgeText={activeTab === 'my' ? 'SQUADS // ZERO_ASSIGNMENT' : 'ARENA // NO_TEAMS'}
+          title={activeTab === 'my' ? 'No Squads Formed Yet' : 'No Teams Registered in this Arena'}
+          description={
+            activeTab === 'my'
+              ? 'Form a high-impact team, invite collaborators, or join an existing squad using an access code.'
+              : 'Be the first squad to register for this hackathon or adjust your filter query.'
+          }
+          action={
+            !isReadOnlyView && activeTab === 'my' ? (
+              <Button size="md" variant="primary" onClick={() => setIsCreateOpen(true)}>
+                <UserPlus className="w-4 h-4" /> Create a Squad
               </Button>
-              <Button size="sm" variant="outline" onClick={() => setIsJoinOpen(true)}>
-                <KeyRound className="w-3.5 h-3.5" /> Enter Join Code
+            ) : null
+          }
+          secondaryAction={
+            !isReadOnlyView && activeTab === 'my' ? (
+              <Button size="md" variant="outline" onClick={() => setIsJoinOpen(true)}>
+                <KeyRound className="w-4 h-4" /> Enter Join Code
               </Button>
-            </div>
-          )}
-        </div>
+            ) : null
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentTeamsList.map((team) => (
