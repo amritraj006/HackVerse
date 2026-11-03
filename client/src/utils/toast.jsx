@@ -147,7 +147,7 @@ const CyberToast = ({ t, type = 'info', title, description }) => {
  * notify.promise(promise, { loading, success, error })
  */
 const parseArgs = (titleOrMessage, descriptionOrOptions) => {
-  let title = '';
+  let title;
   let description = '';
   let duration = 4200;
 

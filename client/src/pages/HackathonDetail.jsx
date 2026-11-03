@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
 import { Alert } from '../components/Alert';
