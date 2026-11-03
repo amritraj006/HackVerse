@@ -415,7 +415,8 @@ export const ManageHackathon = () => {
     !hackathon.isResultsPublished;
   // Has the hackathon started = either ongoing or ended
   const hasStarted = isEnded ||
-    (hackathon.startDate && new Date() >= new Date(hackathon.startDate));
+    effectiveStatus === 'ongoing' ||
+    (!hackathon.isManualStatus && hackathon.startDate && new Date() >= new Date(hackathon.startDate));
 
   const isOngoing = effectiveStatus === 'ongoing' || (hackathon.status === 'ongoing' && !isEnded);
   const hasAcceptedJudge = (hackathon.assignedJudges || []).length > 0;

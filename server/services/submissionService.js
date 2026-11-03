@@ -67,8 +67,9 @@ class SubmissionService {
       throw error;
     }
 
-    if (hackathon.status !== 'ongoing') {
-      const statusMessage = hackathon.status === 'upcoming'
+    const effectiveStatus = getEffectiveStatus(hackathon, now);
+    if (effectiveStatus !== 'ongoing') {
+      const statusMessage = effectiveStatus === 'upcoming'
         ? 'Submissions are not open yet. The hackathon has not started.'
         : 'Submissions are closed for this hackathon.';
       const error = new Error(statusMessage);
@@ -76,7 +77,7 @@ class SubmissionService {
       throw error;
     }
 
-    if (hackathon.startDate && now < new Date(hackathon.startDate)) {
+    if (!hackathon.isManualStatus && hackathon.startDate && now < new Date(hackathon.startDate)) {
       const error = new Error('Submissions are not open yet. The hackathon start date has not been reached.');
       error.statusCode = 400;
       throw error;

@@ -53,12 +53,14 @@ export const updateHackathonStatuses = async () => {
     const toEndedHackathons = await Hackathon.find({
       status: { $ne: 'ended' },
       endDate: { $lte: now },
+      isManualStatus: { $ne: true },
     }).select('_id title');
 
     const toEndedResult = await Hackathon.updateMany(
       {
         status: { $ne: 'ended' },
         endDate: { $lte: now },
+        isManualStatus: { $ne: true },
       },
       {
         $set: { status: 'ended', isRegistrationOpen: false },
@@ -80,6 +82,7 @@ export const updateHackathonStatuses = async () => {
       status: 'upcoming',
       startDate: { $lte: now },
       endDate: { $gt: now },
+      isManualStatus: { $ne: true },
     }).select('_id title');
 
     const toOngoingResult = await Hackathon.updateMany(
@@ -87,6 +90,7 @@ export const updateHackathonStatuses = async () => {
         status: 'upcoming',
         startDate: { $lte: now },
         endDate: { $gt: now },
+        isManualStatus: { $ne: true },
       },
       {
         $set: { status: 'ongoing' },
@@ -109,6 +113,7 @@ export const updateHackathonStatuses = async () => {
         status: 'ended',
         startDate: { $lte: now },
         endDate: { $gt: now },
+        isManualStatus: { $ne: true },
       },
       {
         $set: { status: 'ongoing' },
@@ -121,6 +126,7 @@ export const updateHackathonStatuses = async () => {
         status: 'ended',
         startDate: { $gt: now },
         endDate: { $gt: now },
+        isManualStatus: { $ne: true },
       },
       {
         $set: { status: 'upcoming' },

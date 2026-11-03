@@ -15,6 +15,10 @@
 export const getEffectiveStatus = (hackathon, now = new Date()) => {
   if (!hackathon) return 'upcoming';
 
+  if (hackathon.isManualStatus && hackathon.status) {
+    return hackathon.status;
+  }
+
   const endDate = hackathon.endDate ? new Date(hackathon.endDate) : null;
   const startDate = hackathon.startDate ? new Date(hackathon.startDate) : null;
 
@@ -31,6 +35,11 @@ export const getEffectiveStatus = (hackathon, now = new Date()) => {
  */
 export const isHackathonEnded = (hackathon, now = new Date()) => {
   if (!hackathon) return false;
+
+  if (hackathon.isManualStatus && hackathon.status) {
+    return hackathon.status === 'ended';
+  }
+
   const endDate = hackathon.endDate ? new Date(hackathon.endDate) : null;
   if (endDate) {
     return now >= endDate;

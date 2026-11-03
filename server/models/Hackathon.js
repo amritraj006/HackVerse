@@ -37,6 +37,10 @@ const hackathonSchema = new mongoose.Schema(
       enum: ['upcoming', 'ongoing', 'ended'],
       default: 'upcoming',
     },
+    isManualStatus: {
+      type: Boolean,
+      default: false,
+    },
     resultStatus: {
       type: String,
       enum: ['pending', 'published'],

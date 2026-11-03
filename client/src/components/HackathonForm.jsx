@@ -10,7 +10,12 @@ import api from '../services/api';
 const STATUS_OPTIONS = [
   { value: 'upcoming', label: 'Upcoming' },
   { value: 'ongoing', label: 'Ongoing' },
-  { value: 'draft', label: 'Draft' },
+];
+
+const EDIT_STATUS_OPTIONS = [
+  { value: 'upcoming', label: 'Upcoming' },
+  { value: 'ongoing', label: 'Ongoing' },
+  { value: 'ended', label: 'Ended' },
 ];
 
 const HOUR_OPTIONS = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
@@ -376,7 +381,7 @@ export const HackathonForm = ({
 
   // Check if current submission deadline has passed (Rules 2 & 6: host cannot increase once reached)
   const isSubmissionDeadlinePassed = Boolean(
-    initialData?.endDate && new Date() >= new Date(initialData.endDate)
+    !initialData?.isManualStatus && initialData?.endDate && new Date() >= new Date(initialData.endDate)
   );
 
   const handleChange = (e) => {
@@ -846,9 +851,9 @@ export const HackathonForm = ({
               />
 
               <Select
-                label="Initial Event Status"
+                label={initialData ? "Event Status" : "Initial Event Status"}
                 id="status"
-                options={STATUS_OPTIONS}
+                options={initialData ? EDIT_STATUS_OPTIONS : STATUS_OPTIONS}
                 value={formData.status}
                 onChange={handleChange}
               />

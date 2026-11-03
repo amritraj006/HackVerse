@@ -40,10 +40,15 @@ class HackathonService {
       query.status = status;
     } else if (!showEnded) {
       // Public discovery: hide hackathons that have already ended
-      // Use both the DB status field and the endDate to be safe
+      // Use both the DB status field and the endDate to be safe, respecting manual status
       query.$and = [
         { status: { $ne: 'ended' } },
-        { endDate: { $gt: now } },
+        {
+          $or: [
+            { isManualStatus: true },
+            { endDate: { $gt: now } },
+          ],
+        },
       ];
     }
 
@@ -252,6 +257,14 @@ class HackathonService {
         ? Math.max(0, parseInt(maxParticipants, 10) || 0)
         : 0;
 
+    const selectedStatus = status || 'upcoming';
+    const now = new Date();
+    const autoStatus = getEffectiveStatus({ startDate, endDate, isManualStatus: false }, now);
+    const manualStatusFlag =
+      data.isManualStatus !== undefined
+        ? Boolean(data.isManualStatus)
+        : selectedStatus !== autoStatus;
+
     const hackathon = await Hackathon.create({
       title,
       description,
@@ -265,8 +278,9 @@ class HackathonService {
       prizePool: prizePool || '$0',
       bannerImage: bannerImage || '',
       tags: tagsArray,
-      status: status || 'upcoming',
-      isRegistrationOpen: true,
+      status: selectedStatus,
+      isManualStatus: manualStatusFlag,
+      isRegistrationOpen: selectedStatus !== 'ended',
     });
 
     return hackathon;
@@ -303,15 +317,15 @@ class HackathonService {
       }
 
       if (newSubmissionDeadline.getTime() !== currentSubmissionDeadline.getTime()) {
-        // Rule 6 & Rule 2: Once current submission deadline has been reached, host cannot increase it anymore
-        if (now >= currentSubmissionDeadline) {
+        // Rule 6 & Rule 2: Once current submission deadline has been reached, host cannot increase it anymore (unless forceful status change is provided)
+        if (now >= currentSubmissionDeadline && !data.status) {
           const error = new Error('Once the current submission deadline has been reached, the host cannot increase it anymore.');
           error.statusCode = 400;
           throw error;
         }
 
         // Rule 4 & Rule 5: Host can ONLY increase the submission deadline; cannot decrease it
-        if (newSubmissionDeadline <= currentSubmissionDeadline) {
+        if (newSubmissionDeadline <= currentSubmissionDeadline && !data.status) {
           const error = new Error('The submission deadline can only be increased and cannot be decreased.');
           error.statusCode = 400;
           throw error;
@@ -329,15 +343,15 @@ class HackathonService {
       }
     }
 
-    // Block ALL edits (including deadline extension) on hackathons whose submission deadline has already passed
-    if (now >= currentSubmissionDeadline && !isDeadlineExtended) {
+    // Block ALL edits on ended hackathons if no status change is being performed
+    if (now >= currentSubmissionDeadline && !isDeadlineExtended && !data.status && hackathon.status === 'ended') {
       const error = new Error('Hackathon has already ended. The submission deadline cannot be extended.');
       error.statusCode = 400;
       throw error;
     }
 
-    // Do not allow changing startDate if the hackathon is already ongoing
-    if (hackathon.status === 'ongoing' && data.startDate) {
+    // Do not allow changing startDate if the hackathon is already ongoing (unless a forceful status change is provided)
+    if (hackathon.status === 'ongoing' && data.startDate && !data.status) {
       delete data.startDate;
     }
 
@@ -360,12 +374,30 @@ class HackathonService {
       data.maxParticipants = parsedLimit;
     }
 
-    Object.assign(hackathon, data);
+    // Handle forceful or manual status change
+    if (data.status) {
+      const effectiveStart = data.startDate ? new Date(data.startDate) : new Date(hackathon.startDate);
+      const effectiveEnd = data.endDate ? new Date(data.endDate) : new Date(hackathon.endDate);
+      const autoStatus = getEffectiveStatus({ startDate: effectiveStart, endDate: effectiveEnd, isManualStatus: false }, now);
+
+      hackathon.status = data.status;
+      if (data.isManualStatus !== undefined) {
+        hackathon.isManualStatus = Boolean(data.isManualStatus);
+      } else {
+        // If the chosen status diverges from natural timeline, mark manual
+        hackathon.isManualStatus = data.status !== autoStatus;
+      }
+
+      if (data.status === 'ended') {
+        hackathon.isRegistrationOpen = false;
+      }
+    }
 
     // Rule 3: If the host increases the submission deadline after the hackathon was ended,
     // restore the hackathon status to 'ongoing' (or 'upcoming' if before startDate) so participants regain access
-    if (isDeadlineExtended) {
+    if (isDeadlineExtended && !data.status) {
       hackathon.status = (now >= new Date(hackathon.startDate)) ? 'ongoing' : 'upcoming';
+      hackathon.isManualStatus = false;
     }
 
     // If registration deadline is extended into the future and hackathon hasn't ended,
@@ -378,6 +410,9 @@ class HackathonService {
     ) {
       hackathon.isRegistrationOpen = true;
     }
+
+    const { status: _st, isManualStatus: _ms, ...restData } = data;
+    Object.assign(hackathon, restData);
 
     await hackathon.save();
     return await this.getHackathonById(id);
