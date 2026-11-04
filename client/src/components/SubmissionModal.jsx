@@ -112,7 +112,7 @@ export const SubmissionModal = ({
 
   const selectedHackathon = hackathons.find((h) => h._id === hackathonId);
   const now = new Date();
-  const isNotStarted = selectedHackathon && (getEffectiveStatus(selectedHackathon, now) === 'upcoming' || (!selectedHackathon.isManualStatus && selectedHackathon.startDate && now < new Date(selectedHackathon.startDate)));
+  const isNotStarted = selectedHackathon && getEffectiveStatus(selectedHackathon, now) === 'upcoming';
   const isDeadlinePassed = selectedHackathon && isHackathonEnded(selectedHackathon, now);
 
   // ─── One-submission-per-hackathon guard ──────────────────────────────────

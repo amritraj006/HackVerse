@@ -53,6 +53,17 @@ const updateHackathon = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @desc    Forcefully update hackathon status (upcoming, ongoing, ended)
+ * @route   PUT /api/v1/hackathons/:id/status
+ * @access  Private (Organizer/Admin)
+ */
+const updateStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+  const updated = await hackathonService.updateStatus(req.params.id, status, req.user);
+  return successResponse(res, 200, `Hackathon status updated to ${status}`, updated);
+});
+
+/**
  * @desc    Delete hackathon
  * @route   DELETE /api/v1/hackathons/:id
  * @access  Private (Organizer/Admin)
@@ -173,6 +184,7 @@ export {
   getMyEvents,
   createHackathon,
   updateHackathon,
+  updateStatus,
   deleteHackathon,
   toggleRegistration,
   assignJudges,
@@ -192,6 +204,7 @@ export default {
   getMyEvents,
   createHackathon,
   updateHackathon,
+  updateStatus,
   deleteHackathon,
   toggleRegistration,
   assignJudges,

@@ -16,6 +16,9 @@ export const hackathonService = {
   update: async (id, data) => {
     return await api.put(`/hackathons/${id}`, data);
   },
+  updateStatus: async (id, status) => {
+    return await api.put(`/hackathons/${id}/status`, { status });
+  },
   delete: async (id) => {
     return await api.delete(`/hackathons/${id}`);
   },

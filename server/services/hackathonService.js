@@ -376,17 +376,8 @@ class HackathonService {
 
     // Handle forceful or manual status change
     if (data.status) {
-      const effectiveStart = data.startDate ? new Date(data.startDate) : new Date(hackathon.startDate);
-      const effectiveEnd = data.endDate ? new Date(data.endDate) : new Date(hackathon.endDate);
-      const autoStatus = getEffectiveStatus({ startDate: effectiveStart, endDate: effectiveEnd, isManualStatus: false }, now);
-
       hackathon.status = data.status;
-      if (data.isManualStatus !== undefined) {
-        hackathon.isManualStatus = Boolean(data.isManualStatus);
-      } else {
-        // If the chosen status diverges from natural timeline, mark manual
-        hackathon.isManualStatus = data.status !== autoStatus;
-      }
+      hackathon.isManualStatus = true;
 
       if (data.status === 'ended') {
         hackathon.isRegistrationOpen = false;
@@ -413,6 +404,40 @@ class HackathonService {
 
     const { status: _st, isManualStatus: _ms, ...restData } = data;
     Object.assign(hackathon, restData);
+
+    await hackathon.save();
+    return await this.getHackathonById(id);
+  }
+
+  /**
+   * Forcefully update hackathon status (upcoming, ongoing, ended)
+   */
+  async updateStatus(id, newStatus, user) {
+    if (!['upcoming', 'ongoing', 'ended'].includes(newStatus)) {
+      const error = new Error('Invalid status. Allowed values: upcoming, ongoing, ended.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const hackathon = await Hackathon.findById(id);
+    if (!hackathon) {
+      const error = new Error('Hackathon not found');
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (hackathon.organizer.toString() !== user.id && user.role !== 'admin') {
+      const error = new Error('Not authorized to modify this hackathon');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    hackathon.status = newStatus;
+    hackathon.isManualStatus = true;
+
+    if (newStatus === 'ended') {
+      hackathon.isRegistrationOpen = false;
+    }
 
     await hackathon.save();
     return await this.getHackathonById(id);

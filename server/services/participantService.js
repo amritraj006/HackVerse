@@ -5,7 +5,7 @@ import Team from '../models/Team.js';
 import Notification from '../models/Notification.js';
 import Submission from '../models/Submission.js';
 import hackathonService from './hackathonService.js';
-import { isHackathonEnded, isRegistrationEffectivelyOpen } from '../utils/hackathonLifecycle.js';
+import { isHackathonEnded, isRegistrationEffectivelyOpen, getEffectiveStatus } from '../utils/hackathonLifecycle.js';
 
 class ParticipantService {
   /**

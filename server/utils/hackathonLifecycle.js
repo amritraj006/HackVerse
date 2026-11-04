@@ -22,9 +22,13 @@
 export const getEffectiveStatus = (hackathon, now = new Date()) => {
   if (!hackathon) return 'upcoming';
 
-  // If a manual status was explicitly set, honour it directly
-  if (hackathon.isManualStatus && hackathon.status) {
-    return hackathon.status;
+  // Explicit status takes precedence
+  if (hackathon.status === 'ongoing') return 'ongoing';
+  if (hackathon.status === 'ended') return 'ended';
+
+  // If explicitly upcoming and manual, keep it upcoming
+  if (hackathon.status === 'upcoming' && hackathon.isManualStatus) {
+    return 'upcoming';
   }
 
   const endDate = hackathon.endDate ? new Date(hackathon.endDate) : null;
@@ -51,12 +55,12 @@ export const getEffectiveStatus = (hackathon, now = new Date()) => {
 export const isHackathonEnded = (hackathon, now = new Date()) => {
   if (!hackathon) return false;
 
-  // If a manual status was explicitly set, honour it directly
-  if (hackathon.isManualStatus && hackathon.status) {
-    return hackathon.status === 'ended';
-  }
+  // Explicit status takes precedence
+  if (hackathon.status === 'ended') return true;
+  if (hackathon.status === 'ongoing') return false;
+  if (hackathon.status === 'upcoming' && hackathon.isManualStatus) return false;
 
-  // If endDate is defined, compute strictly from the submission deadline
+  // If endDate is defined, compute from submission deadline
   const endDate = hackathon.endDate ? new Date(hackathon.endDate) : null;
   if (endDate) {
     return now >= endDate;

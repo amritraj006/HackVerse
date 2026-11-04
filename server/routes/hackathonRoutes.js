@@ -5,6 +5,7 @@ import {
   getMyEvents,
   createHackathon,
   updateHackathon,
+  updateStatus,
   deleteHackathon,
   toggleRegistration,
   assignJudges,
@@ -49,6 +50,13 @@ router.put(
   authorize('organizer', 'admin'),
   updateHackathonValidationRules,
   updateHackathon
+);
+
+router.put(
+  '/:id/status',
+  protect,
+  authorize('organizer', 'admin'),
+  updateStatus
 );
 
 router.delete(

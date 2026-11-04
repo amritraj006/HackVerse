@@ -6,6 +6,7 @@ import Registration from '../models/Registration.js';
 import User from '../models/User.js';
 import Notification from '../models/Notification.js';
 import {
+  getEffectiveStatus,
   isHackathonEnded,
   getWinnerDeclarationState,
   recordMissedJudgeDeadlines,
@@ -23,9 +24,9 @@ class SubmissionService {
    * Create or update project submission
    */
   async submitProject(data, files, userId, userRole) {
-    // 1. Role restriction: Hosts (organizers), Judges, and Admins cannot submit projects
-    if (userRole && ['organizer', 'judge', 'admin'].includes(userRole)) {
-      const error = new Error('Organizers, judges, and admins cannot submit projects.');
+    // 1. Role restriction: Hosts (organizers) and Judges cannot submit projects (Participants and Admins can)
+    if (userRole && ['organizer', 'judge'].includes(userRole)) {
+      const error = new Error('Organizers and judges cannot submit projects.');
       error.statusCode = 403;
       throw error;
     }
@@ -45,54 +46,53 @@ class SubmissionService {
       throw error;
     }
 
-    // 2. Must be registered for the hackathon
-    const registration = await Registration.findOne({
-      hackathon: hackathonId,
-      participant: userId,
-      status: 'active',
-    });
-
-    if (!registration) {
-      const error = new Error('Only registered participants can submit a project for this hackathon.');
-      error.statusCode = 403;
-      throw error;
-    }
-
-    // 3. Enforce submission window: must be ongoing and within startDate → endDate range
-    const now = new Date();
-
-    if (isHackathonEnded(hackathon, now)) {
-      const error = new Error('Submissions are closed. The hackathon submission deadline has passed.');
-      error.statusCode = 400;
-      throw error;
-    }
-
-    const effectiveStatus = getEffectiveStatus(hackathon, now);
-    if (effectiveStatus !== 'ongoing') {
-      const statusMessage = effectiveStatus === 'upcoming'
-        ? 'Submissions are not open yet. The hackathon has not started.'
-        : 'Submissions are closed for this hackathon.';
-      const error = new Error(statusMessage);
-      error.statusCode = 400;
-      throw error;
-    }
-
-    if (!hackathon.isManualStatus && hackathon.startDate && now < new Date(hackathon.startDate)) {
-      const error = new Error('Submissions are not open yet. The hackathon start date has not been reached.');
-      error.statusCode = 400;
-      throw error;
-    }
-
-    // 3. Check if user is in a team for this hackathon
+    // 2. Check if user is in a team for this hackathon
     const userTeam = await Team.findOne({
       hackathon: hackathonId,
       $or: [{ leader: userId }, { members: userId }],
     });
 
+    // Must be registered for the hackathon (or registered via team)
+    let registration = await Registration.findOne({
+      hackathon: hackathonId,
+      participant: userId,
+      status: 'active',
+    });
+
+    if (!registration && userTeam) {
+      registration = await Registration.findOneAndUpdate(
+        { hackathon: hackathonId, participant: userId },
+        { status: 'active', registeredAt: new Date() },
+        { upsert: true, new: true }
+      );
+    }
+
+    if (!registration && userRole !== 'admin') {
+      const error = new Error('Only registered participants can submit a project for this hackathon.');
+      error.statusCode = 403;
+      throw error;
+    }
+
+    // 3. Enforce submission window
+    const now = new Date();
+
+    if (isHackathonEnded(hackathon, now)) {
+      const error = new Error('Submissions are closed. The hackathon has ended.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const effectiveStatus = getEffectiveStatus(hackathon, now);
+    if (effectiveStatus === 'upcoming') {
+      const error = new Error('Submissions are not open yet. The hackathon has not started.');
+      error.statusCode = 400;
+      throw error;
+    }
+
     if (userTeam) {
-      // User is in a team: only the team creator (leader) can submit or edit the project
+      // User is in a team: team leader (or admin) can submit project
       const isLeader = userTeam.leader.toString() === userId.toString();
-      if (!isLeader) {
+      if (!isLeader && userRole !== 'admin') {
         const error = new Error('Only the team creator (leader) can submit or edit project submissions for a team. Team members cannot submit projects.');
         error.statusCode = 403;
         throw error;
@@ -325,7 +325,7 @@ class SubmissionService {
     }
 
     // Judges may only evaluate after the hackathon has ended.
-    const evalHackathon = await Hackathon.findById(submission.hackathon).select('endDate submissionDeadline status');
+    const evalHackathon = await Hackathon.findById(submission.hackathon).select('endDate submissionDeadline status isManualStatus startDate');
     if (!evalHackathon) {
       const error = new Error('Hackathon not found');
       error.statusCode = 404;
